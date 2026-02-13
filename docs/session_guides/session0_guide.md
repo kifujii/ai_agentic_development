@@ -42,23 +42,26 @@ aws sts get-caller-identity
 
 **注意**: `.env`ファイルを環境変数としてエクスポートすれば、AWS CLIとTerraformの両方が認証情報を使用できます。`aws configure`は不要です。
 
-#### 1.3 Groq APIキーの設定確認
+#### 1.3 認証情報の確認
 ```bash
+# .envファイルが存在するか確認
+ls -la .env
+
+# .envファイルを環境変数として読み込む（まだ読み込んでいない場合）
+export $(cat .env | grep -v '^#' | xargs)
+
 # 環境変数の確認
 echo $GROQ_API_KEY
+echo $AWS_ACCESS_KEY_ID
 
-# 設定されていない場合は設定（READMEの手順で取得したAPIキーを使用）
-export GROQ_API_KEY="gsk_xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx"
-
-# 永続的な設定（推奨）
-echo 'export GROQ_API_KEY="gsk_xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx"' >> ~/.bashrc
-source ~/.bashrc
-
-# 接続テスト（事前に作成されたスクリプトを使用）
+# Groq API接続テスト
 python3 scripts/test_groq.py
+
+# AWS認証情報の確認
+aws sts get-caller-identity
 ```
 
-**注意**: Groq APIキーの取得方法は、README.mdの「3. Groq APIのセットアップ」セクションを参照してください。
+**注意**: `.env`ファイルの作成と設定は、README.mdの「4. 認証情報の設定」セクションを参照してください。
 
 #### 1.4 必要なツールのインストール確認
 ```bash

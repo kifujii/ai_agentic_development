@@ -202,10 +202,11 @@ AWS_ACCESS_KEY_ID=your-access-key-here
 AWS_SECRET_ACCESS_KEY=your-secret-key-here
 AWS_DEFAULT_REGION=ap-northeast-1
 
-# 生成AI APIキー（Gemini）
-GOOGLE_API_KEY=your-google-api-key-here
+# 生成AI APIキー（Groq）
+GROQ_API_KEY=your-groq-api-key-here
 EOF
-    log_info ".env.templateファイルを作成しました。.envファイルを作成して認証情報を設定してください。"
+    log_info ".env.templateファイルを作成しました。"
+    log_info "次のステップ: .env.templateをコピーして.envファイルを作成し、APIキーを設定してください。"
 else
     log_warn ".envファイルは既に存在します"
 fi

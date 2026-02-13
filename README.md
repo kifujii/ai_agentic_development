@@ -73,7 +73,35 @@ git checkout training
 cd ai_agentic
 ```
 
-### 2. 環境セットアップ
+### 2. Groq APIキーの取得（先に実行）
+
+トレーニングでは、生成AIエージェント開発のためにGroq APIを使用します。**先にAPIキーを取得**してください。
+
+#### 2.1 Groqアカウントの作成とAPIキー取得
+
+1. **Groq公式サイトにアクセス**
+   - URL: https://console.groq.com/
+   - 「Sign Up」または「Get Started」をクリック
+
+2. **アカウント登録**
+   - メールアドレスを入力
+   - パスワードを設定
+   - メール認証を完了（メールボックスを確認）
+   - **注意**: クレジットカード情報は不要
+
+3. **APIキーの取得**
+   - ログイン後、左側メニューから「API Keys」を選択
+   - または、URL: https://console.groq.com/keys に直接アクセス
+   - 「Create API Key」ボタンをクリック
+   - APIキー名を入力（例: "training-handson"）
+   - 「Create」をクリック
+   - 表示されたAPIキーをコピー（`gsk_`で始まる文字列）
+   - **重要**: この画面を閉じると再度確認できないため、必ずコピーして安全な場所に保存
+   - 例: `gsk_xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx`
+
+**次のステップ**: APIキーを取得したら、以下の「3. 環境セットアップ」に進んでください。
+
+### 3. 環境セットアップ
 
 **DevSpaces環境内**で以下のコマンドを実行：
 
@@ -92,144 +120,72 @@ source ~/.bashrc
 
 **よくある質問**: セットアップに関する質問は `docs/setup/FAQ.md` を参照してください。
 
-### 3. Groq APIのセットアップ
+### 4. 認証情報の設定（.envファイル）
 
-トレーニングでは、生成AIエージェント開発のためにGroq APIを使用します。以下の手順でセットアップしてください。
-
-#### 3.1 Groqアカウントの作成
-
-1. **Groq公式サイトにアクセス**
-   - URL: https://console.groq.com/
-   - 「Sign Up」または「Get Started」をクリック
-
-2. **アカウント登録**
-   - メールアドレスを入力
-   - パスワードを設定
-   - メール認証を完了（メールボックスを確認）
-   - **注意**: クレジットカード情報は不要
-
-3. **ログイン**
-   - 登録したメールアドレスとパスワードでログイン
-
-#### 3.2 APIキーの取得
-
-1. **API Keysページにアクセス**
-   - ログイン後、左側メニューから「API Keys」を選択
-   - または、URL: https://console.groq.com/keys に直接アクセス
-
-2. **APIキーの作成**
-   - 「Create API Key」ボタンをクリック
-   - APIキー名を入力（例: "training-handson"）
-   - 「Create」をクリック
-
-3. **APIキーのコピー**
-   - 表示されたAPIキーをコピー（`gsk_`で始まる文字列）
-   - **重要**: この画面を閉じると再度確認できないため、必ずコピーして安全な場所に保存
-   - 例: `gsk_xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx`
-
-#### 3.3 環境変数への設定
-
-DevSpaces環境内で、Groq APIキーを環境変数に設定します：
+セットアップスクリプトが`.env.template`ファイルを作成します。このテンプレートから`.env`ファイルを作成し、取得したAPIキーを設定してください：
 
 ```bash
-# 一時的な設定（現在のセッションのみ）
-export GROQ_API_KEY="gsk_xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx"
+# .env.templateをコピーして.envファイルを作成
+cp .env.template .env
 
-# 永続的な設定（推奨）
-echo 'export GROQ_API_KEY="gsk_xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx"' >> ~/.bashrc
-source ~/.bashrc
-
-# 設定の確認
-echo $GROQ_API_KEY
-# APIキーが表示されればOK
+# .envファイルを編集してAPIキーを設定
+# エディタで開くか、以下のコマンドで直接編集
+nano .env
+# または
+vi .env
 ```
 
-#### 3.4 接続テスト
-
-Groq APIが正しく設定されているか確認します：
+`.env`ファイルの内容を以下のように設定してください：
 
 ```bash
-# 必要なPythonパッケージのインストール（初回のみ）
-# セットアップスクリプトを実行済みの場合は、既にインストールされています
-pip3 install --user -r requirements.txt
-
-# 接続テストスクリプトの実行
-python3 scripts/test_groq.py
-```
-
-**期待される結果**: 「✅ 接続成功!」と表示され、Terraformコードが生成されればOKです。
-
-**注意**: 接続テストスクリプト（`scripts/test_groq.py`）は事前に作成されています。コマンドラインでスクリプトを作成する必要はありません。
-
-#### トラブルシューティング
-
-**問題1: `ModuleNotFoundError: No module named 'groq'`**
-```bash
-# groqモジュールをインストール
-pip3 install --user groq
-
-# または、requirements.txtからすべてのパッケージをインストール
-pip3 install --user -r requirements.txt
-```
-
-**問題2: APIキーが認識されない**
-```bash
-# 環境変数が正しく設定されているか確認
-echo $GROQ_API_KEY
-
-# 設定されていない場合は再設定
-export GROQ_API_KEY="gsk_xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx"
-
-# 永続的に設定する場合
-echo 'export GROQ_API_KEY="gsk_xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx"' >> ~/.bashrc
-source ~/.bashrc
-```
-
-**問題3: 接続エラーが発生する**
-- インターネット接続を確認
-- APIキーが正しくコピーされているか確認（先頭の`gsk_`を含む）
-- GroqコンソールでAPIキーが有効か確認
-
-**問題4: レート制限エラー**
-- 無料枠は非常に大きいが、短時間に大量のリクエストを送ると制限される場合がある
-- リクエスト間に少し待機時間を入れる
-
-**問題5: モデルが見つからないエラー**
-- 利用可能なモデル名を確認:
-  - `llama3-8b-8192`（推奨）
-  - `llama3-70b-8192`
-  - `mixtral-8x7b-32768`
-  - `gemma-7b-it`
-
-### 4. 認証情報の設定
-
-セットアップスクリプトが`.env.template`ファイルを作成します。`.env`ファイルを作成して認証情報を設定してください：
-
-```bash
-# .envファイルを作成（.env.templateを参考に）
-cat > .env << EOF
+# AWS認証情報
 AWS_ACCESS_KEY_ID=your-access-key-here
 AWS_SECRET_ACCESS_KEY=your-secret-key-here
 AWS_DEFAULT_REGION=ap-northeast-1
-GROQ_API_KEY=your-groq-api-key-here
-EOF
 
-# .envファイルを環境変数として読み込む
-# これにより、AWS CLIとTerraformの両方が環境変数から認証情報を読み取れます
-export $(cat .env | grep -v '^#' | xargs)
-
-# 認証情報の確認（AWS CLI）
-aws sts get-caller-identity
+# 生成AI APIキー（Groq）- 上記で取得したAPIキーを設定
+GROQ_API_KEY=gsk_xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx
 ```
 
-**重要**: `.env`ファイルにAWS認証情報を設定し、環境変数としてエクスポートすれば、AWS CLIとTerraformの両方が使用できます。`aws configure`は不要です。
+**重要**: `GROQ_API_KEY`の部分に、上記「2. Groq APIキーの取得」で取得したAPIキーを設定してください。
 
-**理由**:
-- Terraformは環境変数（`AWS_ACCESS_KEY_ID`、`AWS_SECRET_ACCESS_KEY`）から認証情報を読み取ります
-- AWS CLIも環境変数から認証情報を読み取ることができます
-- `.env`ファイルを環境変数としてエクスポートすることで、両方のツールが同じ認証情報を使用できます
+### 5. 環境変数の読み込みと確認
 
-### 4. トレーニングの開始
+`.env`ファイルを環境変数として読み込めば、すべての設定が完了します：
+
+```bash
+# .envファイルを環境変数として読み込む
+# これにより、AWS CLI、Terraform、Groq APIのすべてが環境変数から認証情報を読み取れます
+export $(cat .env | grep -v '^#' | xargs)
+
+# 認証情報の確認
+# AWS認証情報の確認
+aws sts get-caller-identity
+
+# Groq APIキーの確認
+echo $GROQ_API_KEY
+
+# Groq API接続テスト
+python3 scripts/test_groq.py
+```
+
+**重要**: `.env`ファイルを環境変数としてエクスポートすれば、以下がすべて使用できます：
+- AWS CLI（環境変数から認証情報を読み取る）
+- Terraform（環境変数から認証情報を読み取る）
+- Groq API（環境変数からAPIキーを読み取る）
+
+`aws configure`は不要です。
+
+**永続的な設定（推奨）**: 新しいターミナルを開くたびに`.env`を読み込むには、`~/.bashrc`に以下を追加：
+
+```bash
+# .envファイルを自動的に読み込む（プロジェクトディレクトリにいる場合）
+if [ -f .env ]; then
+    export $(cat .env | grep -v '^#' | xargs)
+fi
+```
+
+### 6. トレーニングの開始
 
 セットアップが完了したら、各セッションのガイドを参照してください：
 
@@ -238,13 +194,12 @@ aws sts get-caller-identity
 - 以降も同様
 
 **セットアップ完了後の確認事項**:
-- [ ] Groqアカウントを作成し、APIキーを取得した
-- [ ] Groq APIキーを環境変数に設定した（`export GROQ_API_KEY="..."`）
-- [ ] Groq APIの接続テストが成功した（`python3 test_groq.py`）
-- [ ] 新しいターミナルを開くか、`source ~/.bashrc`を実行してPATHを更新した
-- [ ] `.env`ファイルを作成して認証情報を設定した
-- [ ] `.env`ファイルを環境変数としてエクスポートした（`export $(cat .env | grep -v '^#' | xargs)`）
+- [ ] Groqアカウントを作成し、APIキーを取得した（手順2）
+- [ ] セットアップスクリプトを実行した（手順3）
+- [ ] `.env.template`から`.env`ファイルを作成し、Groq APIキーとAWS認証情報を設定した（手順4）
+- [ ] `.env`ファイルを環境変数として読み込んだ（`export $(cat .env | grep -v '^#' | xargs)`）（手順5）
 - [ ] AWS認証情報が正しく設定されていることを確認した（`aws sts get-caller-identity`）
+- [ ] Groq APIの接続テストが成功した（`python3 scripts/test_groq.py`）
 - [ ] すべてのツールが正しくインストールされていることを確認した（`terraform version`、`ansible --version`など）
 
 ## トレーニング概要
