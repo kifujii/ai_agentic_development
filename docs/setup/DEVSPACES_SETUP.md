@@ -114,8 +114,9 @@ terraform version
 
 **Ansibleのインストール（ユーザー権限）**
 ```bash
-# pipでユーザー権限でインストール
-pip3 install --user ansible
+# python3 -m pipでユーザー権限でインストール
+# 重要: python3 -m pipを使用することで、python3コマンドと同じPythonバージョンに確実にインストールされます
+python3 -m pip install --user ansible
 
 # PATHを確認（pipのbinディレクトリが含まれているか）
 echo $PATH
@@ -227,7 +228,8 @@ source venv/bin/activate
 #### 5.2 必要なパッケージのインストール
 ```bash
 # requirements.txtからインストール
-pip install -r requirements.txt
+# 重要: python3 -m pipを使用することで、python3コマンドと同じPythonバージョンに確実にインストールされます
+python3 -m pip install --user -r requirements.txt
 
 # または個別にインストール
 python3 -m pip install --user groq python-dotenv boto3 pyyaml jinja2
@@ -295,10 +297,10 @@ chmod +x scripts/*.sh
 ### パッケージインストールエラー
 ```bash
 # pipのアップグレード
-pip3 install --upgrade pip
+python3 -m pip install --user --upgrade pip
 
 # キャッシュのクリア
-pip3 cache purge
+python3 -m pip cache purge
 ```
 
 ### AWS認証エラー
