@@ -68,6 +68,9 @@ cd ai_agentic_development
 
 # trainingブランチに切り替え
 git checkout training
+
+# プロジェクトディレクトリに移動
+cd ai_agentic
 ```
 
 ### 2. 環境セットアップ
@@ -79,30 +82,47 @@ git checkout training
 chmod +x scripts/setup_devspaces.sh
 ./scripts/setup_devspaces.sh
 
-# Pythonパッケージのインストール
-pip install -r requirements.txt
+# スクリプト実行後、PATHを更新（新しいターミナルを開くか、以下を実行）
+source ~/.bashrc
 ```
+
+**注意**: セットアップスクリプトは自動的にPythonパッケージもインストールします（`pip3 install --user`を使用）。
 
 詳細は `docs/setup/DEVSPACES_SETUP.md` を参照してください。
 
 **よくある質問**: セットアップに関する質問は `docs/setup/FAQ.md` を参照してください。
 
-### 2. 認証情報の設定
+### 3. 認証情報の設定
 
-`.env` ファイルを作成して認証情報を設定してください：
+セットアップスクリプトが`.env.template`ファイルを作成します。`.env`ファイルを作成して認証情報を設定してください：
 
 ```bash
-cp .env.template .env
-# .envファイルを編集して認証情報を設定
+# .envファイルを作成（.env.templateを参考に）
+cat > .env << EOF
+AWS_ACCESS_KEY_ID=your-access-key-here
+AWS_SECRET_ACCESS_KEY=your-secret-key-here
+AWS_DEFAULT_REGION=ap-northeast-1
+OPENAI_API_KEY=your-openai-api-key-here
+ANTHROPIC_API_KEY=your-anthropic-api-key-here
+EOF
+
+# AWS認証情報の設定（オプション: .envファイルの代わりにaws configureを使用）
+aws configure
 ```
 
-### 3. トレーニングの開始
+### 4. トレーニングの開始
 
-各セッションのガイドを参照してください：
+セットアップが完了したら、各セッションのガイドを参照してください：
 
 - **セッション0**: `docs/session_guides/session0_guide.md`
 - **セッション1**: `docs/session_guides/session1_guide.md`
 - 以降も同様
+
+**セットアップ完了後の確認事項**:
+- [ ] 新しいターミナルを開くか、`source ~/.bashrc`を実行してPATHを更新した
+- [ ] `.env`ファイルを作成して認証情報を設定した
+- [ ] `aws configure`を実行してAWS認証情報を設定した（.envファイルを使用しない場合）
+- [ ] すべてのツールが正しくインストールされていることを確認した（`terraform version`、`ansible --version`など）
 
 ## トレーニング概要
 
