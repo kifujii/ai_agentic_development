@@ -123,7 +123,7 @@ if [ -f "requirements.txt" ]; then
 else
     log_warn "requirements.txtが見つかりません。基本的なパッケージをインストールします..."
     pip3 install --user --upgrade pip -q
-    pip3 install --user google-generativeai python-dotenv boto3 pyyaml jinja2 -q
+    pip3 install --user groq python-dotenv boto3 pyyaml jinja2 -q
     log_info "基本的なPythonパッケージのインストール完了"
 fi
 
