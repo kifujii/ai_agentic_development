@@ -118,13 +118,34 @@ fi
 log_info "Pythonパッケージのインストール中..."
 if [ -f "requirements.txt" ]; then
     pip3 install --user --upgrade pip -q
-    pip3 install --user -r requirements.txt -q
+    pip3 install --user -r requirements.txt -q || {
+        log_error "requirements.txtからのインストールに失敗しました"
+        log_info "基本的なパッケージを個別にインストールします..."
+        pip3 install --user groq python-dotenv boto3 pyyaml jinja2 requests colorama -q
+    }
     log_info "Pythonパッケージのインストール完了"
 else
     log_warn "requirements.txtが見つかりません。基本的なパッケージをインストールします..."
     pip3 install --user --upgrade pip -q
-    pip3 install --user groq python-dotenv boto3 pyyaml jinja2 -q
+    pip3 install --user groq python-dotenv boto3 pyyaml jinja2 requests colorama -q || {
+        log_error "Pythonパッケージのインストールに失敗しました"
+        exit 1
+    }
     log_info "基本的なPythonパッケージのインストール完了"
+fi
+
+# groqモジュールのインストール確認
+log_info "groqモジュールのインストール確認中..."
+if python3 -c "import groq" 2>/dev/null; then
+    log_info "✓ groqモジュールは正常にインストールされています"
+else
+    log_warn "groqモジュールのインポートに失敗しました。再インストールを試みます..."
+    pip3 install --user groq -q || {
+        log_error "groqモジュールのインストールに失敗しました"
+        log_error "手動でインストールしてください: pip3 install --user groq"
+        exit 1
+    }
+    log_info "groqモジュールの再インストール完了"
 fi
 
 # 6. Gitの確認（通常は既にインストールされている）
