@@ -148,6 +148,38 @@ source ~/.bashrc
 aws --version
 ```
 
+**jqのインストール（ユーザー権限、オプショナル）**
+```bash
+# ローカルbinディレクトリの作成
+mkdir -p ~/.local/bin
+
+# アーキテクチャの確認
+ARCH=$(uname -m)
+if [ "$ARCH" = "x86_64" ]; then
+    JQ_ARCH="amd64"
+elif [ "$ARCH" = "aarch64" ]; then
+    JQ_ARCH="arm64"
+else
+    JQ_ARCH="amd64"
+fi
+
+# jqの静的バイナリをダウンロード
+JQ_VERSION="1.7"
+wget "https://github.com/jqlang/jq/releases/download/jq-${JQ_VERSION}/jq-linux-${JQ_ARCH}" -O ~/.local/bin/jq
+chmod +x ~/.local/bin/jq
+
+# PATHを確認
+export PATH="$HOME/.local/bin:$PATH"
+echo 'export PATH="$HOME/.local/bin:$PATH"' >> ~/.bashrc
+
+# インストール確認
+source ~/.bashrc
+jq --version
+```
+
+**Gitについて**:
+DevSpaces環境には通常Gitが既にインストールされています。インストールされていない場合は、DevSpaces管理者に依頼するか、Gitが含まれるスタックを使用してください。
+
 **注意**: 手動インストール後は、新しいターミナルを開くか、`source ~/.bashrc`を実行してPATHを更新してください。
 
 ### 4. 認証情報の設定

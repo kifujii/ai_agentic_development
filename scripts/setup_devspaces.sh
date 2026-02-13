@@ -134,25 +134,56 @@ if ! command -v git &> /dev/null; then
         sudo apt-get install -y git
         log_info "Gitインストール完了: $(git --version)"
     else
-        log_error "Gitがインストールされていません。sudo権限がないため、手動でインストールしてください。"
-        log_info "代替方法: pip3 install --user gitpython"
+        log_warn "Gitがインストールされていません。"
+        log_info "Gitのバイナリをダウンロード中..."
+        # Gitの静的バイナリをダウンロード（GitHub Releasesから）
+        GIT_VERSION="2.42.0"
+        GIT_URL="https://github.com/git/git/releases/download/v${GIT_VERSION}/git-${GIT_VERSION}.tar.gz"
+        
+        # 注意: Gitのバイナリビルドは複雑なため、通常はDevSpaces環境に既にインストールされている
+        # ここでは警告のみを出し、ユーザーに手動インストールを促す
+        log_error "Gitの自動インストールは複雑なため、DevSpaces管理者に依頼するか、"
+        log_error "DevSpaces環境にGitが含まれるスタックを使用してください。"
+        log_info "一時的な代替: pip3 install --user gitpython (Python用のGitライブラリ)"
     fi
 else
-    log_warn "Gitは既にインストールされています: $(git --version)"
+    log_info "✓ Gitは既にインストールされています: $(git --version)"
 fi
 
-# 7. jqの確認（sudoが使える場合のみインストール）
-log_info "jqの確認中..."
+# 7. jqのインストール（ユーザー権限）
+log_info "jqのインストール中..."
 if ! command -v jq &> /dev/null; then
     if check_sudo; then
         sudo apt-get install -y jq
         log_info "jqインストール完了"
     else
-        log_warn "jqがインストールされていません（オプショナル）。sudo権限がないためスキップします。"
-        log_info "jqなしでもトレーニングは可能です。"
+        log_info "jqをユーザー権限でインストール中..."
+        # jqの静的バイナリをダウンロード
+        JQ_VERSION="1.7"
+        # アーキテクチャの検出
+        ARCH=$(uname -m)
+        if [ "$ARCH" = "x86_64" ]; then
+            JQ_ARCH="amd64"
+        elif [ "$ARCH" = "aarch64" ]; then
+            JQ_ARCH="arm64"
+        else
+            JQ_ARCH="amd64"  # デフォルト
+        fi
+        
+        JQ_URL="https://github.com/jqlang/jq/releases/download/jq-${JQ_VERSION}/jq-linux-${JQ_ARCH}"
+        
+        if wget -q "${JQ_URL}" -O /tmp/jq 2>/dev/null; then
+            chmod +x /tmp/jq
+            mv /tmp/jq "$LOCAL_BIN/jq"
+            log_info "jqインストール完了: $(jq --version 2>/dev/null || echo 'jq ${JQ_VERSION}')"
+        else
+            log_warn "jqのダウンロードに失敗しました（オプショナル）。"
+            log_info "jqなしでもトレーニングは可能です。"
+            log_info "手動インストール: wget ${JQ_URL} -O ~/.local/bin/jq && chmod +x ~/.local/bin/jq"
+        fi
     fi
 else
-    log_warn "jqは既にインストールされています"
+    log_info "✓ jqは既にインストールされています: $(jq --version)"
 fi
 
 # 8. 作業ディレクトリの作成
