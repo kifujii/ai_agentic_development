@@ -119,8 +119,22 @@ fi
 log_info "Pythonパッケージのインストール中..."
 log_info "使用するPythonバージョン: $(python3 --version)"
 
-if [ -f "requirements.txt" ]; then
+# pipのインストール確認とインストール
+log_info "pipの確認中..."
+if python3 -m pip --version &>/dev/null; then
+    log_info "✓ pipは既にインストールされています"
     python3 -m pip install --user --upgrade pip -q
+else
+    log_warn "pipがインストールされていません。インストールします..."
+    python3 -m ensurepip --user --upgrade || {
+        log_error "pipのインストールに失敗しました"
+        log_error "手動でインストールしてください: python3 -m ensurepip --user"
+        exit 1
+    }
+    log_info "pipのインストール完了"
+fi
+
+if [ -f "requirements.txt" ]; then
     python3 -m pip install --user -r requirements.txt -q || {
         log_error "requirements.txtからのインストールに失敗しました"
         log_info "基本的なパッケージを個別にインストールします..."
@@ -129,7 +143,6 @@ if [ -f "requirements.txt" ]; then
     log_info "Pythonパッケージのインストール完了"
 else
     log_warn "requirements.txtが見つかりません。基本的なパッケージをインストールします..."
-    python3 -m pip install --user --upgrade pip -q
     python3 -m pip install --user groq python-dotenv boto3 pyyaml jinja2 requests colorama -q || {
         log_error "Pythonパッケージのインストールに失敗しました"
         exit 1
