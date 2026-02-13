@@ -1,0 +1,22 @@
+# 生成AI関連
+openai>=1.0.0
+anthropic>=0.7.0
+
+# AWS関連
+boto3>=1.28.0
+botocore>=1.31.0
+
+# 環境変数管理
+python-dotenv>=1.0.0
+
+# YAML処理
+pyyaml>=6.0
+
+# テンプレート処理
+jinja2>=3.1.0
+
+# HTTPリクエスト
+requests>=2.31.0
+
+# ユーティリティ
+colorama>=0.4.6

@@ -1,0 +1,84 @@
+---
+# Prometheus node_exporterインストールPlaybook
+
+- name: Prometheus node_exporterのインストールと設定
+  hosts: webservers
+  become: yes
+  
+  vars:
+    node_exporter_version: "1.6.1"
+    node_exporter_user: "node_exporter"
+    node_exporter_group: "node_exporter"
+  
+  tasks:
+    - name: node_exporterユーザーの作成
+      user:
+        name: "{{ node_exporter_user }}"
+        group: "{{ node_exporter_group }}"
+        system: yes
+        shell: /sbin/nologin
+        home: /var/lib/node_exporter
+        create_home: yes
+    
+    - name: node_exporterディレクトリの作成
+      file:
+        path: /opt/node_exporter
+        state: directory
+        owner: "{{ node_exporter_user }}"
+        group: "{{ node_exporter_group }}"
+        mode: '0755'
+    
+    - name: node_exporterのダウンロード
+      get_url:
+        url: "https://github.com/prometheus/node_exporter/releases/download/v{{ node_exporter_version }}/node_exporter-{{ node_exporter_version }}.linux-amd64.tar.gz"
+        dest: /tmp/node_exporter.tar.gz
+        mode: '0644'
+    
+    - name: node_exporterの展開
+      unarchive:
+        src: /tmp/node_exporter.tar.gz
+        dest: /opt/node_exporter
+        remote_src: yes
+        owner: "{{ node_exporter_user }}"
+        group: "{{ node_exporter_group }}"
+    
+    - name: バイナリを適切な場所に移動
+      copy:
+        src: "/opt/node_exporter/node_exporter-{{ node_exporter_version }}.linux-amd64/node_exporter"
+        dest: /usr/local/bin/node_exporter
+        owner: root
+        group: root
+        mode: '0755'
+        remote_src: yes
+    
+    - name: systemdサービスファイルの作成
+      template:
+        src: node_exporter.service.j2
+        dest: /etc/systemd/system/node_exporter.service
+        mode: '0644'
+      notify: restart node_exporter
+    
+    - name: systemdのリロード
+      systemd:
+        daemon_reload: yes
+    
+    - name: node_exporterサービスの有効化と開始
+      systemd:
+        name: node_exporter
+        enabled: yes
+        state: started
+    
+    - name: サービスの状態確認
+      systemd:
+        name: node_exporter
+      register: service_status
+    
+    - name: サービス状態を表示
+      debug:
+        msg: "node_exporterサービスは {{ service_status.status.ActiveState }} です"
+  
+  handlers:
+    - name: restart node_exporter
+      systemd:
+        name: node_exporter
+        state: restarted
