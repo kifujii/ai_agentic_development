@@ -149,75 +149,52 @@ echo $GROQ_API_KEY
 Groq APIが正しく設定されているか確認します：
 
 ```bash
-# groqライブラリのインストール（初回のみ）
-pip3 install --user groq
+# 必要なPythonパッケージのインストール（初回のみ）
+# セットアップスクリプトを実行済みの場合は、既にインストールされています
+pip3 install --user -r requirements.txt
 
-# 接続テストスクリプトの作成
-cat > test_groq.py << 'EOF'
-import os
-from groq import Groq
-
-# APIキーを環境変数から取得
-api_key = os.getenv("GROQ_API_KEY")
-
-if not api_key:
-    print("❌ エラー: GROQ_API_KEYが設定されていません")
-    print("環境変数を設定してください: export GROQ_API_KEY='your-api-key'")
-    exit(1)
-
-# Groqクライアントの初期化
-client = Groq(api_key=api_key)
-
-# テストリクエスト
-try:
-    chat_completion = client.chat.completions.create(
-        messages=[
-            {
-                "role": "user",
-                "content": "Hello! Can you generate a simple Terraform code to create an S3 bucket?"
-            }
-        ],
-        model="llama3-8b-8192",
-    )
-    
-    print("✅ 接続成功!")
-    print("\nレスポンス:")
-    print(chat_completion.choices[0].message.content)
-except Exception as e:
-    print(f"❌ エラー: {e}")
-    print("\nトラブルシューティング:")
-    print("1. APIキーが正しく設定されているか確認: echo $GROQ_API_KEY")
-    print("2. インターネット接続を確認")
-    print("3. APIキーが正しくコピーされているか確認（gsk_で始まる）")
-EOF
-
-# テスト実行
-python3 test_groq.py
+# 接続テストスクリプトの実行
+python3 scripts/test_groq.py
 ```
 
 **期待される結果**: 「✅ 接続成功!」と表示され、Terraformコードが生成されればOKです。
 
+**注意**: 接続テストスクリプト（`scripts/test_groq.py`）は事前に作成されています。コマンドラインでスクリプトを作成する必要はありません。
+
 #### トラブルシューティング
 
-**問題1: APIキーが認識されない**
+**問題1: `ModuleNotFoundError: No module named 'groq'`**
+```bash
+# groqモジュールをインストール
+pip3 install --user groq
+
+# または、requirements.txtからすべてのパッケージをインストール
+pip3 install --user -r requirements.txt
+```
+
+**問題2: APIキーが認識されない**
 ```bash
 # 環境変数が正しく設定されているか確認
 echo $GROQ_API_KEY
 
 # 設定されていない場合は再設定
 export GROQ_API_KEY="gsk_xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx"
+
+# 永続的に設定する場合
+echo 'export GROQ_API_KEY="gsk_xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx"' >> ~/.bashrc
+source ~/.bashrc
 ```
 
-**問題2: 接続エラーが発生する**
+**問題3: 接続エラーが発生する**
 - インターネット接続を確認
 - APIキーが正しくコピーされているか確認（先頭の`gsk_`を含む）
 - GroqコンソールでAPIキーが有効か確認
 
-**問題3: レート制限エラー**
+**問題4: レート制限エラー**
 - 無料枠は非常に大きいが、短時間に大量のリクエストを送ると制限される場合がある
 - リクエスト間に少し待機時間を入れる
 
-**問題4: モデルが見つからないエラー**
+**問題5: モデルが見つからないエラー**
 - 利用可能なモデル名を確認:
   - `llama3-8b-8192`（推奨）
   - `llama3-70b-8192`

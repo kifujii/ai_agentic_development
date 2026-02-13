@@ -54,9 +54,8 @@ export GROQ_API_KEY="gsk_xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx"
 echo 'export GROQ_API_KEY="gsk_xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx"' >> ~/.bashrc
 source ~/.bashrc
 
-# 接続テスト
-python3 test_groq.py
-# または、READMEの「3.4 接続テスト」セクションを参照
+# 接続テスト（事前に作成されたスクリプトを使用）
+python3 scripts/test_groq.py
 ```
 
 **注意**: Groq APIキーの取得方法は、README.mdの「3. Groq APIのセットアップ」セクションを参照してください。
