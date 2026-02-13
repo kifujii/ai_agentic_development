@@ -258,6 +258,13 @@ fi
 
 if command -v python3 &> /dev/null; then
     log_info "✓ Python: $(python3 --version)"
+    # groqモジュールの確認
+    if python3 -c "import groq" 2>/dev/null; then
+        log_info "✓ groqモジュール: インストール済み"
+    else
+        log_error "✗ groqモジュール: インストールされていません"
+        log_info "  インストールコマンド: pip3 install --user groq"
+    fi
 else
     log_error "✗ Python: インストールされていません"
 fi
