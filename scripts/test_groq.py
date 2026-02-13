@@ -31,9 +31,9 @@ def main():
     except ImportError:
         print("❌ エラー: groqモジュールがインストールされていません")
         print("\ngroqモジュールをインストールしてください:")
-        print("  pip3 install --user groq")
+        print("  python3 -m pip install --user groq")
         print("\nまたは、requirements.txtからすべてのパッケージをインストール:")
-        print("  pip3 install --user -r requirements.txt")
+        print("  python3 -m pip install --user -r requirements.txt")
         sys.exit(1)
     
     # Groqクライアントの初期化
@@ -45,7 +45,7 @@ def main():
     
     # テストリクエスト
     print("🔄 Groq APIへの接続テストを実行中...")
-    print(f"   使用モデル: llama3-8b-8192")
+    print(f"   使用モデル: llama-3.1-8b-instant")
     print(f"   APIキー: {api_key[:10]}...{api_key[-4:]}")
     print()
     
@@ -57,7 +57,7 @@ def main():
                     "content": "Hello! Can you generate a simple Terraform code to create an S3 bucket?"
                 }
             ],
-            model="llama3-8b-8192",
+            model="llama-3.1-8b-instant",
         )
         
         print("✅ 接続成功!")
@@ -79,10 +79,11 @@ def main():
         print("3. APIキーが正しくコピーされているか確認（gsk_で始まる）")
         print("4. GroqコンソールでAPIキーが有効か確認")
         print("5. 利用可能なモデル名を確認:")
-        print("   - llama3-8b-8192（推奨）")
-        print("   - llama3-70b-8192")
+        print("   - llama-3.1-8b-instant（推奨、高速）")
+        print("   - llama-3.1-70b-versatile（高精度）")
         print("   - mixtral-8x7b-32768")
         print("   - gemma-7b-it")
+        print("   注意: llama3-8b-8192は廃止されました")
         sys.exit(1)
 
 if __name__ == "__main__":

@@ -22,13 +22,14 @@ except ImportError:
 class SimpleTerraformAgent:
     """シンプルなTerraformコード生成エージェント"""
     
-    def __init__(self, api_key: Optional[str] = None, model: str = "llama3-8b-8192"):
+    def __init__(self, api_key: Optional[str] = None, model: str = "llama-3.1-8b-instant"):
         """
         初期化
         
         Args:
             api_key: Groq APIキー（Noneの場合は環境変数から取得）
-            model: 使用するモデル名（デフォルト: llama3-8b-8192）
+            model: 使用するモデル名（デフォルト: llama-3.1-8b-instant）
+                    注意: llama3-8b-8192は廃止されました
         """
         self.api_key = api_key or os.getenv('GROQ_API_KEY')
         if not self.api_key:
