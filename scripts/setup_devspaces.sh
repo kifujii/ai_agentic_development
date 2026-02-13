@@ -2,6 +2,7 @@
 
 # OpenShift DevSpaces環境セットアップスクリプト
 # このスクリプトは、トレーニングに必要なツールを自動的にインストールします。
+# DevSpaces環境ではsudo権限がないため、ユーザー権限でインストールします。
 
 set -e  # エラー時に停止
 
@@ -28,44 +29,84 @@ log_error() {
     echo -e "${RED}[ERROR]${NC} $1"
 }
 
-# 1. システムの更新
-log_info "システムパッケージの更新中..."
-sudo apt-get update -qq
+# sudo権限のチェック
+check_sudo() {
+    if sudo -n true 2>/dev/null; then
+        return 0
+    else
+        return 1
+    fi
+}
 
-# 2. Terraformのインストール
+# ローカルbinディレクトリの設定
+LOCAL_BIN="$HOME/.local/bin"
+mkdir -p "$LOCAL_BIN"
+
+# PATHにローカルbinを追加（まだ追加されていない場合）
+if [[ ":$PATH:" != *":$LOCAL_BIN:"* ]]; then
+    export PATH="$LOCAL_BIN:$PATH"
+    echo 'export PATH="$HOME/.local/bin:$PATH"' >> ~/.bashrc
+    log_info "PATHに ~/.local/bin を追加しました"
+fi
+
+# 1. システムパッケージの更新（sudoが使える場合のみ）
+if check_sudo; then
+    log_info "システムパッケージの更新中..."
+    sudo apt-get update -qq || log_warn "システムパッケージの更新をスキップしました"
+else
+    log_warn "sudo権限がないため、システムパッケージの更新をスキップします"
+fi
+
+# 2. Terraformのインストール（ユーザー権限）
 log_info "Terraformのインストール中..."
 if ! command -v terraform &> /dev/null; then
     TERRAFORM_VERSION="1.6.0"
     TERRAFORM_URL="https://releases.hashicorp.com/terraform/${TERRAFORM_VERSION}/terraform_${TERRAFORM_VERSION}_linux_amd64.zip"
     
     log_info "Terraform ${TERRAFORM_VERSION}をダウンロード中..."
-    wget -q "${TERRAFORM_URL}" -O /tmp/terraform.zip
+    wget -q "${TERRAFORM_URL}" -O /tmp/terraform.zip || {
+        log_error "Terraformのダウンロードに失敗しました"
+        exit 1
+    }
     unzip -q /tmp/terraform.zip -d /tmp
-    sudo mv /tmp/terraform /usr/local/bin/
-    sudo chmod +x /usr/local/bin/terraform
+    mkdir -p "$LOCAL_BIN"
+    mv /tmp/terraform "$LOCAL_BIN/"
+    chmod +x "$LOCAL_BIN/terraform"
     rm /tmp/terraform.zip
     
-    log_info "Terraformインストール完了: $(terraform version | head -n 1)"
+    log_info "Terraformインストール完了: $($LOCAL_BIN/terraform version | head -n 1)"
 else
     log_warn "Terraformは既にインストールされています: $(terraform version | head -n 1)"
 fi
 
-# 3. Ansibleのインストール
+# 3. Ansibleのインストール（pipでユーザー権限）
 log_info "Ansibleのインストール中..."
 if ! command -v ansible &> /dev/null; then
-    sudo apt-get install -y ansible
+    # pipでインストール（ユーザー権限）
+    pip3 install --user ansible -q || {
+        log_error "Ansibleのインストールに失敗しました"
+        exit 1
+    }
     log_info "Ansibleインストール完了: $(ansible --version | head -n 1)"
 else
     log_warn "Ansibleは既にインストールされています: $(ansible --version | head -n 1)"
 fi
 
-# 4. AWS CLIのインストール
+# 4. AWS CLIのインストール（ユーザー権限）
 log_info "AWS CLIのインストール中..."
 if ! command -v aws &> /dev/null; then
     log_info "AWS CLI v2をダウンロード中..."
-    curl -s "https://awscli.amazonaws.com/awscli-exe-linux-x86_64.zip" -o "/tmp/awscliv2.zip"
+    curl -s "https://awscli.amazonaws.com/awscli-exe-linux-x86_64.zip" -o "/tmp/awscliv2.zip" || {
+        log_error "AWS CLIのダウンロードに失敗しました"
+        exit 1
+    }
     unzip -q /tmp/awscliv2.zip -d /tmp
-    sudo /tmp/aws/install
+    
+    # ユーザー権限でインストール
+    /tmp/aws/install --install-dir "$HOME/.local/aws-cli" --bin-dir "$LOCAL_BIN" || {
+        log_error "AWS CLIのインストールに失敗しました"
+        exit 1
+    }
     rm -rf /tmp/awscliv2.zip /tmp/aws
     
     log_info "AWS CLIインストール完了: $(aws --version)"
@@ -76,30 +117,40 @@ fi
 # 5. Pythonパッケージのインストール
 log_info "Pythonパッケージのインストール中..."
 if [ -f "requirements.txt" ]; then
-    pip3 install --upgrade pip -q
-    pip3 install -r requirements.txt -q
+    pip3 install --user --upgrade pip -q
+    pip3 install --user -r requirements.txt -q
     log_info "Pythonパッケージのインストール完了"
 else
     log_warn "requirements.txtが見つかりません。基本的なパッケージをインストールします..."
-    pip3 install --upgrade pip -q
-    pip3 install openai anthropic python-dotenv boto3 pyyaml jinja2 -q
+    pip3 install --user --upgrade pip -q
+    pip3 install --user openai anthropic python-dotenv boto3 pyyaml jinja2 -q
     log_info "基本的なPythonパッケージのインストール完了"
 fi
 
-# 6. Gitのインストール（必要に応じて）
+# 6. Gitの確認（通常は既にインストールされている）
 log_info "Gitの確認中..."
 if ! command -v git &> /dev/null; then
-    sudo apt-get install -y git
-    log_info "Gitインストール完了: $(git --version)"
+    if check_sudo; then
+        sudo apt-get install -y git
+        log_info "Gitインストール完了: $(git --version)"
+    else
+        log_error "Gitがインストールされていません。sudo権限がないため、手動でインストールしてください。"
+        log_info "代替方法: pip3 install --user gitpython"
+    fi
 else
     log_warn "Gitは既にインストールされています: $(git --version)"
 fi
 
-# 7. jqのインストール（JSON処理用）
-log_info "jqのインストール中..."
+# 7. jqの確認（sudoが使える場合のみインストール）
+log_info "jqの確認中..."
 if ! command -v jq &> /dev/null; then
-    sudo apt-get install -y jq
-    log_info "jqインストール完了"
+    if check_sudo; then
+        sudo apt-get install -y jq
+        log_info "jqインストール完了"
+    else
+        log_warn "jqがインストールされていません（オプショナル）。sudo権限がないためスキップします。"
+        log_info "jqなしでもトレーニングは可能です。"
+    fi
 else
     log_warn "jqは既にインストールされています"
 fi
@@ -170,7 +221,8 @@ log_info "=========================================="
 log_info "セットアップ完了！"
 log_info "=========================================="
 log_info "次のステップ:"
-log_info "1. .envファイルを作成して認証情報を設定してください"
-log_info "2. 'aws configure'を実行してAWS認証情報を設定してください"
-log_info "3. 'source venv/bin/activate'で仮想環境を有効化してください（作成済みの場合）"
-log_info "4. docs/session_guides/session0_guide.mdを参照してトレーニングを開始してください"
+log_info "1. 新しいターミナルを開くか、'source ~/.bashrc'を実行してPATHを更新してください"
+log_info "2. .envファイルを作成して認証情報を設定してください"
+log_info "3. 'aws configure'を実行してAWS認証情報を設定してください"
+log_info "4. 'source venv/bin/activate'で仮想環境を有効化してください（作成済みの場合）"
+log_info "5. docs/session_guides/session0_guide.mdを参照してトレーニングを開始してください"

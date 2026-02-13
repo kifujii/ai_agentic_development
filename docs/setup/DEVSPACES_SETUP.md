@@ -62,6 +62,8 @@ ls -la
 #### 3.1 自動インストールスクリプトの実行
 **重要**: このスクリプトは **DevSpaces環境内** で実行してください。
 
+**注意**: DevSpaces環境ではsudo権限が制限されているため、スクリプトはユーザー権限でインストールを行います。
+
 ```bash
 # プロジェクトディレクトリにいることを確認
 pwd
@@ -72,45 +74,81 @@ chmod +x scripts/setup_devspaces.sh
 ./scripts/setup_devspaces.sh
 ```
 
-このスクリプトは以下のツールを自動的にインストールします：
-- Terraform
-- Ansible
-- AWS CLI
-- Pythonパッケージ（requirements.txtから）
-- Git
-- jq
+このスクリプトは以下のツールを自動的にインストールします（ユーザー権限）：
+- Terraform（~/.local/binにインストール）
+- Ansible（pipでユーザー権限インストール）
+- AWS CLI（~/.local/binにインストール）
+- Pythonパッケージ（requirements.txtから、--userオプションでインストール）
+- Git（既にインストールされている場合が多い）
+- jq（sudoが使える場合のみ）
+
+**インストール後の注意**:
+- スクリプト実行後、新しいターミナルを開くか、`source ~/.bashrc`を実行してPATHを更新してください
+- ツールは`~/.local/bin`にインストールされ、自動的にPATHに追加されます
 
 #### 3.2 手動インストール（必要な場合）
 
-**Terraformのインストール**
+スクリプトが失敗した場合や、特定のツールのみをインストールしたい場合は、以下の手順を参照してください。
+
+**Terraformのインストール（ユーザー権限）**
 ```bash
+# ローカルbinディレクトリの作成
+mkdir -p ~/.local/bin
+
+# PATHに追加（まだ追加されていない場合）
+export PATH="$HOME/.local/bin:$PATH"
+echo 'export PATH="$HOME/.local/bin:$PATH"' >> ~/.bashrc
+
 # Terraformのダウンロードとインストール
-wget https://releases.hashicorp.com/terraform/1.6.0/terraform_1.6.0_linux_amd64.zip
-unzip terraform_1.6.0_linux_amd64.zip
-sudo mv terraform /usr/local/bin/
+TERRAFORM_VERSION="1.6.0"
+wget https://releases.hashicorp.com/terraform/${TERRAFORM_VERSION}/terraform_${TERRAFORM_VERSION}_linux_amd64.zip
+unzip terraform_${TERRAFORM_VERSION}_linux_amd64.zip
+mv terraform ~/.local/bin/
+chmod +x ~/.local/bin/terraform
+rm terraform_${TERRAFORM_VERSION}_linux_amd64.zip
+
+# 新しいターミナルを開くか、PATHを再読み込み
+source ~/.bashrc
 terraform version
 ```
 
-**Ansibleのインストール**
+**Ansibleのインストール（ユーザー権限）**
 ```bash
-# Ansibleのインストール
-pip3 install ansible
+# pipでユーザー権限でインストール
+pip3 install --user ansible
 
-# または
-sudo apt-get update
-sudo apt-get install -y ansible
+# PATHを確認（pipのbinディレクトリが含まれているか）
+echo $PATH
 
+# インストール確認
 ansible --version
 ```
 
-**AWS CLIのインストール**
+**AWS CLIのインストール（ユーザー権限）**
 ```bash
-# AWS CLI v2のインストール
+# ローカルbinディレクトリの作成
+mkdir -p ~/.local/bin
+
+# AWS CLI v2のダウンロード
 curl "https://awscli.amazonaws.com/awscli-exe-linux-x86_64.zip" -o "awscliv2.zip"
 unzip awscliv2.zip
-sudo ./aws/install
+
+# ユーザー権限でインストール
+./aws/install --install-dir ~/.local/aws-cli --bin-dir ~/.local/bin
+
+# クリーンアップ
+rm -rf awscliv2.zip aws
+
+# PATHを確認
+export PATH="$HOME/.local/bin:$PATH"
+echo 'export PATH="$HOME/.local/bin:$PATH"' >> ~/.bashrc
+
+# 新しいターミナルを開くか、PATHを再読み込み
+source ~/.bashrc
 aws --version
 ```
+
+**注意**: 手動インストール後は、新しいターミナルを開くか、`source ~/.bashrc`を実行してPATHを更新してください。
 
 ### 4. 認証情報の設定
 
