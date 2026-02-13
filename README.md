@@ -105,9 +105,20 @@ AWS_DEFAULT_REGION=ap-northeast-1
 GOOGLE_API_KEY=your-google-api-key-here
 EOF
 
-# AWS認証情報の設定（オプション: .envファイルの代わりにaws configureを使用）
-aws configure
+# .envファイルを環境変数として読み込む
+# これにより、AWS CLIとTerraformの両方が環境変数から認証情報を読み取れます
+export $(cat .env | grep -v '^#' | xargs)
+
+# 認証情報の確認（AWS CLI）
+aws sts get-caller-identity
 ```
+
+**重要**: `.env`ファイルにAWS認証情報を設定し、環境変数としてエクスポートすれば、AWS CLIとTerraformの両方が使用できます。`aws configure`は不要です。
+
+**理由**:
+- Terraformは環境変数（`AWS_ACCESS_KEY_ID`、`AWS_SECRET_ACCESS_KEY`）から認証情報を読み取ります
+- AWS CLIも環境変数から認証情報を読み取ることができます
+- `.env`ファイルを環境変数としてエクスポートすることで、両方のツールが同じ認証情報を使用できます
 
 ### 4. トレーニングの開始
 
@@ -120,7 +131,8 @@ aws configure
 **セットアップ完了後の確認事項**:
 - [ ] 新しいターミナルを開くか、`source ~/.bashrc`を実行してPATHを更新した
 - [ ] `.env`ファイルを作成して認証情報を設定した
-- [ ] `aws configure`を実行してAWS認証情報を設定した（.envファイルを使用しない場合）
+- [ ] `.env`ファイルを環境変数としてエクスポートした（`export $(cat .env | grep -v '^#' | xargs)`）
+- [ ] AWS認証情報が正しく設定されていることを確認した（`aws sts get-caller-identity`）
 - [ ] すべてのツールが正しくインストールされていることを確認した（`terraform version`、`ansible --version`など）
 
 ## トレーニング概要
