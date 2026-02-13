@@ -114,7 +114,7 @@ chmod +x scripts/setup_devspaces.sh
 source ~/.bashrc
 ```
 
-**注意**: セットアップスクリプトは自動的にPythonパッケージもインストールします（`pip3 install --user`を使用）。
+**注意**: セットアップスクリプトは自動的にPythonパッケージもインストールします（`python3 -m pip install --user`を使用）。これにより、`python3`コマンドと同じPythonバージョンに確実にインストールされます。
 
 詳細は `docs/setup/DEVSPACES_SETUP.md` を参照してください。
 
