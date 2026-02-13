@@ -22,16 +22,65 @@
 - **スタック**: Python 3.11 または Node.js 18
 - **メモリ**: 4GB以上推奨
 
-### 2. 必要なツールのインストール
+### 2. トレーニング資材の取得
 
-#### 2.1 自動インストールスクリプトの実行
+**重要**: セットアップスクリプトは **DevSpaces環境内** で実行する必要があります。まず、Gitリポジトリから資材をクローンしてください。
+
+#### 2.1 Gitリポジトリのクローン
+DevSpaces環境内のターミナルで以下のコマンドを実行：
+
 ```bash
+# リポジトリをクローン
+git clone https://github.com/kifujii/ai_agentic_development.git
+cd ai_agentic_development
+
+# trainingブランチに切り替え
+git checkout training
+
+# プロジェクトディレクトリに移動
+cd ai_agentic
+```
+
+**注意**: リポジトリURLは実際のリポジトリに合わせて変更してください。
+
+#### 2.2 プロジェクト構造の確認
+```bash
+# ディレクトリ構造の確認
+ls -la
+
+# 期待される構造:
+# .
+# ├── docs/
+# ├── sample_code/
+# ├── templates/
+# ├── scripts/
+# └── evaluation/
+```
+
+### 3. 必要なツールのインストール
+
+#### 3.1 自動インストールスクリプトの実行
+**重要**: このスクリプトは **DevSpaces環境内** で実行してください。
+
+```bash
+# プロジェクトディレクトリにいることを確認
+pwd
+# 出力例: /projects/ai_agentic_development/ai_agentic
+
 # セットアップスクリプトを実行
 chmod +x scripts/setup_devspaces.sh
 ./scripts/setup_devspaces.sh
 ```
 
-#### 2.2 手動インストール（必要な場合）
+このスクリプトは以下のツールを自動的にインストールします：
+- Terraform
+- Ansible
+- AWS CLI
+- Pythonパッケージ（requirements.txtから）
+- Git
+- jq
+
+#### 3.2 手動インストール（必要な場合）
 
 **Terraformのインストール**
 ```bash
@@ -63,9 +112,9 @@ sudo ./aws/install
 aws --version
 ```
 
-### 3. 認証情報の設定
+### 4. 認証情報の設定
 
-#### 3.1 AWS認証情報の設定
+#### 4.1 AWS認証情報の設定
 ```bash
 # AWS認証情報の設定
 aws configure
@@ -78,7 +127,7 @@ aws configure
 aws sts get-caller-identity
 ```
 
-#### 3.2 生成AI APIキーの設定
+#### 4.2 生成AI APIキーの設定
 ```bash
 # 環境変数の設定
 export OPENAI_API_KEY="your-api-key-here"
@@ -98,16 +147,16 @@ echo 'export $(cat .env | xargs)' >> ~/.bashrc
 source ~/.bashrc
 ```
 
-### 4. Python環境のセットアップ
+### 5. Python環境のセットアップ
 
-#### 4.1 仮想環境の作成
+#### 5.1 仮想環境の作成
 ```bash
 # 仮想環境の作成
 python3 -m venv venv
 source venv/bin/activate
 ```
 
-#### 4.2 必要なパッケージのインストール
+#### 5.2 必要なパッケージのインストール
 ```bash
 # requirements.txtからインストール
 pip install -r requirements.txt
@@ -116,9 +165,9 @@ pip install -r requirements.txt
 pip install openai anthropic python-dotenv boto3 pyyaml jinja2
 ```
 
-### 5. プロジェクト構造の確認
+### 6. プロジェクト構造の確認
 
-#### 5.1 ディレクトリ構造の確認
+#### 6.1 ディレクトリ構造の確認
 ```bash
 # プロジェクト構造の確認
 tree -L 2
@@ -132,7 +181,7 @@ tree -L 2
 # └── evaluation/
 ```
 
-#### 5.2 Git設定（オプション）
+#### 6.2 Git設定（オプション）
 ```bash
 # Gitの初期化（必要に応じて）
 git init
@@ -140,9 +189,9 @@ git config user.name "Your Name"
 git config user.email "your.email@example.com"
 ```
 
-### 6. 動作確認
+### 7. 動作確認
 
-#### 6.1 ツールの動作確認
+#### 7.1 ツールの動作確認
 ```bash
 # Terraformの確認
 terraform version
@@ -158,7 +207,7 @@ python3 --version
 pip3 list
 ```
 
-#### 6.2 接続テスト
+#### 7.2 接続テスト
 ```bash
 # AWS接続テスト
 aws sts get-caller-identity

@@ -49,7 +49,30 @@
 
 ## クイックスタート
 
-### 1. 環境セットアップ
+### 1. DevSpaces環境への資材の持ち込み
+
+**重要**: セットアップスクリプトは **OpenShift DevSpaces環境内** で実行する想定です。
+
+#### 1.1 DevSpacesワークスペースの作成
+1. OpenShift DevSpacesのURLにアクセス
+2. ログイン
+3. 新しいワークスペースを作成（スタック: Python 3.11 または Node.js 18）
+
+#### 1.2 Gitリポジトリのクローン
+DevSpaces環境内のターミナルで以下のコマンドを実行：
+
+```bash
+# リポジトリをクローン
+git clone https://github.com/kifujii/ai_agentic_development.git
+cd ai_agentic_development
+
+# trainingブランチに切り替え
+git checkout training
+```
+
+### 2. 環境セットアップ
+
+**DevSpaces環境内**で以下のコマンドを実行：
 
 ```bash
 # セットアップスクリプトの実行
@@ -61,6 +84,8 @@ pip install -r requirements.txt
 ```
 
 詳細は `docs/setup/DEVSPACES_SETUP.md` を参照してください。
+
+**よくある質問**: セットアップに関する質問は `docs/setup/FAQ.md` を参照してください。
 
 ### 2. 認証情報の設定
 
