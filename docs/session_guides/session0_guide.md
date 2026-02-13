@@ -6,7 +6,9 @@ Prompt Engineering、Context Engineering、AI Agentの実践を通じて、AI x 
 ## 事前準備
 - OpenShift DevSpaces環境へのアクセス
 - AWS認証情報（アクセスキー、シークレットキー）
-- 生成AI APIキー（Google Gemini）
+- Groq APIキー（無料、クレジットカード不要）
+  - アカウント作成: https://console.groq.com/
+  - セットアップ手順: README.mdの「3. Groq APIのセットアップ」を参照
 - 必要なツールのインストール確認
 
 ## 手順
@@ -19,7 +21,7 @@ Prompt Engineering、Context Engineering、AI Agentの実践を通じて、AI x 
 pwd
 
 # 環境変数の確認
-env | grep -E "AWS|GOOGLE_API"
+env | grep -E "AWS|GROQ_API"
 
 # Python/Node.jsのバージョン確認
 python3 --version
@@ -40,19 +42,24 @@ aws sts get-caller-identity
 
 **注意**: `.env`ファイルを環境変数としてエクスポートすれば、AWS CLIとTerraformの両方が認証情報を使用できます。`aws configure`は不要です。
 
-#### 1.3 生成AI APIキーの設定確認
+#### 1.3 Groq APIキーの設定確認
 ```bash
-# 環境変数の設定（Gemini）
-export GOOGLE_API_KEY="your-api-key-here"
+# 環境変数の確認
+echo $GROQ_API_KEY
 
-# または .envファイルの作成
-cat > .env << EOF
-GOOGLE_API_KEY=your-api-key-here
-EOF
+# 設定されていない場合は設定（READMEの手順で取得したAPIキーを使用）
+export GROQ_API_KEY="gsk_xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx"
 
-# .envファイルの読み込み（Pythonの場合）
-# pip install python-dotenv
+# 永続的な設定（推奨）
+echo 'export GROQ_API_KEY="gsk_xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx"' >> ~/.bashrc
+source ~/.bashrc
+
+# 接続テスト
+python3 test_groq.py
+# または、READMEの「3.4 接続テスト」セクションを参照
 ```
+
+**注意**: Groq APIキーの取得方法は、README.mdの「3. Groq APIのセットアップ」セクションを参照してください。
 
 #### 1.4 必要なツールのインストール確認
 ```bash
@@ -63,7 +70,7 @@ terraform version
 ansible --version
 
 # Pythonパッケージのインストール
-pip install google-generativeai python-dotenv boto3
+pip3 install --user groq python-dotenv boto3
 ```
 
 ### 2. Prompt Engineering実践（30分）
@@ -186,9 +193,11 @@ def load_existing_terraform_code(directory):
 #### 4.2 エージェントの動作確認
 ```python
 # エージェントのテスト
+import os
 from simple_agent import SimpleTerraformAgent
 
-agent = SimpleTerraformAgent(api_key=os.getenv('GOOGLE_API_KEY'))
+# Groq APIキーを環境変数から取得
+agent = SimpleTerraformAgent(api_key=os.getenv('GROQ_API_KEY'))
 
 result = agent.generate_code(
     prompt="EC2インスタンスを作成するTerraformコードを生成してください。"
@@ -197,6 +206,8 @@ result = agent.generate_code(
 print(result['code'])
 print(result['validation'])
 ```
+
+**注意**: `simple_agent_template.py`はGroq APIを使用するように実装されています。詳細は`templates/ai_agents/simple_agent_template.py`を参照してください。
 
 ### 5. AI x IaCを使ったEC2の設計・構築・検証（20分）
 

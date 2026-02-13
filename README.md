@@ -92,7 +92,139 @@ source ~/.bashrc
 
 **よくある質問**: セットアップに関する質問は `docs/setup/FAQ.md` を参照してください。
 
-### 3. 認証情報の設定
+### 3. Groq APIのセットアップ
+
+トレーニングでは、生成AIエージェント開発のためにGroq APIを使用します。以下の手順でセットアップしてください。
+
+#### 3.1 Groqアカウントの作成
+
+1. **Groq公式サイトにアクセス**
+   - URL: https://console.groq.com/
+   - 「Sign Up」または「Get Started」をクリック
+
+2. **アカウント登録**
+   - メールアドレスを入力
+   - パスワードを設定
+   - メール認証を完了（メールボックスを確認）
+   - **注意**: クレジットカード情報は不要
+
+3. **ログイン**
+   - 登録したメールアドレスとパスワードでログイン
+
+#### 3.2 APIキーの取得
+
+1. **API Keysページにアクセス**
+   - ログイン後、左側メニューから「API Keys」を選択
+   - または、URL: https://console.groq.com/keys に直接アクセス
+
+2. **APIキーの作成**
+   - 「Create API Key」ボタンをクリック
+   - APIキー名を入力（例: "training-handson"）
+   - 「Create」をクリック
+
+3. **APIキーのコピー**
+   - 表示されたAPIキーをコピー（`gsk_`で始まる文字列）
+   - **重要**: この画面を閉じると再度確認できないため、必ずコピーして安全な場所に保存
+   - 例: `gsk_xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx`
+
+#### 3.3 環境変数への設定
+
+DevSpaces環境内で、Groq APIキーを環境変数に設定します：
+
+```bash
+# 一時的な設定（現在のセッションのみ）
+export GROQ_API_KEY="gsk_xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx"
+
+# 永続的な設定（推奨）
+echo 'export GROQ_API_KEY="gsk_xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx"' >> ~/.bashrc
+source ~/.bashrc
+
+# 設定の確認
+echo $GROQ_API_KEY
+# APIキーが表示されればOK
+```
+
+#### 3.4 接続テスト
+
+Groq APIが正しく設定されているか確認します：
+
+```bash
+# groqライブラリのインストール（初回のみ）
+pip3 install --user groq
+
+# 接続テストスクリプトの作成
+cat > test_groq.py << 'EOF'
+import os
+from groq import Groq
+
+# APIキーを環境変数から取得
+api_key = os.getenv("GROQ_API_KEY")
+
+if not api_key:
+    print("❌ エラー: GROQ_API_KEYが設定されていません")
+    print("環境変数を設定してください: export GROQ_API_KEY='your-api-key'")
+    exit(1)
+
+# Groqクライアントの初期化
+client = Groq(api_key=api_key)
+
+# テストリクエスト
+try:
+    chat_completion = client.chat.completions.create(
+        messages=[
+            {
+                "role": "user",
+                "content": "Hello! Can you generate a simple Terraform code to create an S3 bucket?"
+            }
+        ],
+        model="llama3-8b-8192",
+    )
+    
+    print("✅ 接続成功!")
+    print("\nレスポンス:")
+    print(chat_completion.choices[0].message.content)
+except Exception as e:
+    print(f"❌ エラー: {e}")
+    print("\nトラブルシューティング:")
+    print("1. APIキーが正しく設定されているか確認: echo $GROQ_API_KEY")
+    print("2. インターネット接続を確認")
+    print("3. APIキーが正しくコピーされているか確認（gsk_で始まる）")
+EOF
+
+# テスト実行
+python3 test_groq.py
+```
+
+**期待される結果**: 「✅ 接続成功!」と表示され、Terraformコードが生成されればOKです。
+
+#### トラブルシューティング
+
+**問題1: APIキーが認識されない**
+```bash
+# 環境変数が正しく設定されているか確認
+echo $GROQ_API_KEY
+
+# 設定されていない場合は再設定
+export GROQ_API_KEY="gsk_xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx"
+```
+
+**問題2: 接続エラーが発生する**
+- インターネット接続を確認
+- APIキーが正しくコピーされているか確認（先頭の`gsk_`を含む）
+- GroqコンソールでAPIキーが有効か確認
+
+**問題3: レート制限エラー**
+- 無料枠は非常に大きいが、短時間に大量のリクエストを送ると制限される場合がある
+- リクエスト間に少し待機時間を入れる
+
+**問題4: モデルが見つからないエラー**
+- 利用可能なモデル名を確認:
+  - `llama3-8b-8192`（推奨）
+  - `llama3-70b-8192`
+  - `mixtral-8x7b-32768`
+  - `gemma-7b-it`
+
+### 4. 認証情報の設定
 
 セットアップスクリプトが`.env.template`ファイルを作成します。`.env`ファイルを作成して認証情報を設定してください：
 
@@ -102,7 +234,7 @@ cat > .env << EOF
 AWS_ACCESS_KEY_ID=your-access-key-here
 AWS_SECRET_ACCESS_KEY=your-secret-key-here
 AWS_DEFAULT_REGION=ap-northeast-1
-GOOGLE_API_KEY=your-google-api-key-here
+GROQ_API_KEY=your-groq-api-key-here
 EOF
 
 # .envファイルを環境変数として読み込む
@@ -129,6 +261,9 @@ aws sts get-caller-identity
 - 以降も同様
 
 **セットアップ完了後の確認事項**:
+- [ ] Groqアカウントを作成し、APIキーを取得した
+- [ ] Groq APIキーを環境変数に設定した（`export GROQ_API_KEY="..."`）
+- [ ] Groq APIの接続テストが成功した（`python3 test_groq.py`）
 - [ ] 新しいターミナルを開くか、`source ~/.bashrc`を実行してPATHを更新した
 - [ ] `.env`ファイルを作成して認証情報を設定した
 - [ ] `.env`ファイルを環境変数としてエクスポートした（`export $(cat .env | grep -v '^#' | xargs)`）
@@ -149,7 +284,9 @@ aws sts get-caller-identity
 - AWSアカウント（トレーニング用）
 - AWS Admin権限を持つアクセスキーとシークレットキー
 - OpenShift DevSpacesへのアクセス
-- 生成AI APIキー（Google Gemini）
+- Groq APIキー（無料、クレジットカード不要）
+  - アカウント作成: https://console.groq.com/
+  - セットアップ手順は上記の「3. Groq APIのセットアップ」を参照
 
 ## 成果物
 

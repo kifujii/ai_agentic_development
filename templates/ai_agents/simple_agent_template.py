@@ -12,32 +12,32 @@ from dotenv import load_dotenv
 load_dotenv()
 
 try:
-    from openai import OpenAI
-    OPENAI_AVAILABLE = True
+    from groq import Groq
+    GROQ_AVAILABLE = True
 except ImportError:
-    OPENAI_AVAILABLE = False
-    print("Warning: OpenAI library not installed. Install with: pip install openai")
+    GROQ_AVAILABLE = False
+    print("Warning: Groq library not installed. Install with: pip install groq")
 
 
 class SimpleTerraformAgent:
     """シンプルなTerraformコード生成エージェント"""
     
-    def __init__(self, api_key: Optional[str] = None, model: str = "gpt-4"):
+    def __init__(self, api_key: Optional[str] = None, model: str = "llama3-8b-8192"):
         """
         初期化
         
         Args:
-            api_key: OpenAI APIキー（Noneの場合は環境変数から取得）
-            model: 使用するモデル名
+            api_key: Groq APIキー（Noneの場合は環境変数から取得）
+            model: 使用するモデル名（デフォルト: llama3-8b-8192）
         """
-        self.api_key = api_key or os.getenv('OPENAI_API_KEY')
+        self.api_key = api_key or os.getenv('GROQ_API_KEY')
         if not self.api_key:
-            raise ValueError("APIキーが設定されていません。環境変数OPENAI_API_KEYを設定するか、api_key引数を指定してください。")
+            raise ValueError("APIキーが設定されていません。環境変数GROQ_API_KEYを設定するか、api_key引数を指定してください。")
         
-        if OPENAI_AVAILABLE:
-            self.client = OpenAI(api_key=self.api_key)
+        if GROQ_AVAILABLE:
+            self.client = Groq(api_key=self.api_key)
         else:
-            raise ImportError("OpenAI library is required. Install with: pip install openai")
+            raise ImportError("Groq library is required. Install with: pip install groq")
         
         self.model = model
     
@@ -112,7 +112,7 @@ class SimpleTerraformAgent:
             )
             return response.choices[0].message.content
         except Exception as e:
-            raise RuntimeError(f"LLM API呼び出しエラー: {str(e)}")
+            raise RuntimeError(f"Groq API呼び出しエラー: {str(e)}")
     
     def _extract_code(self, response: str) -> str:
         """レスポンスからコードを抽出"""
