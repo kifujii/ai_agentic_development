@@ -251,6 +251,23 @@ else
     log_warn ".envファイルは既に存在します"
 fi
 
+# 9-1. .envファイルの自動読み込み設定を~/.bashrcに追加
+log_info ".envファイルの自動読み込み設定を追加中..."
+ENV_AUTO_LOAD="# .envファイルを自動的に読み込む（プロジェクトディレクトリにいる場合）
+if [ -f .env ]; then
+    export \$(cat .env | grep -v '^#' | xargs)
+fi"
+
+# 既に設定が存在するかチェック
+if ! grep -q "# .envファイルを自動的に読み込む" ~/.bashrc 2>/dev/null; then
+    echo "" >> ~/.bashrc
+    echo "$ENV_AUTO_LOAD" >> ~/.bashrc
+    log_info "✓ .envファイルの自動読み込み設定を~/.bashrcに追加しました"
+    log_info "  新しいターミナルを開くか、source ~/.bashrcを実行すると有効になります"
+else
+    log_warn ".envファイルの自動読み込み設定は既に存在します"
+fi
+
 # 10. 動作確認
 echo ""
 log_info "=========================================="
