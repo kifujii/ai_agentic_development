@@ -230,7 +230,7 @@ source venv/bin/activate
 pip install -r requirements.txt
 
 # または個別にインストール
-pip install google-generativeai python-dotenv boto3 pyyaml jinja2
+python3 -m pip install --user groq python-dotenv boto3 pyyaml jinja2
 ```
 
 ### 6. プロジェクト構造の確認

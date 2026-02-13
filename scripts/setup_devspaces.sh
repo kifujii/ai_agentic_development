@@ -79,11 +79,11 @@ else
     log_warn "Terraformは既にインストールされています: $(terraform version | head -n 1)"
 fi
 
-# 3. Ansibleのインストール（pipでユーザー権限）
+# 3. Ansibleのインストール（python3 -m pipでユーザー権限）
 log_info "Ansibleのインストール中..."
 if ! command -v ansible &> /dev/null; then
-    # pipでインストール（ユーザー権限）
-    pip3 install --user ansible -q || {
+    # python3 -m pipでインストール（ユーザー権限、python3と同じバージョンに確実にインストール）
+    python3 -m pip install --user ansible -q || {
         log_error "Ansibleのインストールに失敗しました"
         exit 1
     }
@@ -115,34 +115,40 @@ else
 fi
 
 # 5. Pythonパッケージのインストール
+# 重要: python3 -m pipを使用することで、python3コマンドと同じPythonバージョンに確実にインストールされます
 log_info "Pythonパッケージのインストール中..."
+log_info "使用するPythonバージョン: $(python3 --version)"
+
 if [ -f "requirements.txt" ]; then
-    pip3 install --user --upgrade pip -q
-    pip3 install --user -r requirements.txt -q || {
+    python3 -m pip install --user --upgrade pip -q
+    python3 -m pip install --user -r requirements.txt -q || {
         log_error "requirements.txtからのインストールに失敗しました"
         log_info "基本的なパッケージを個別にインストールします..."
-        pip3 install --user groq python-dotenv boto3 pyyaml jinja2 requests colorama -q
+        python3 -m pip install --user groq python-dotenv boto3 pyyaml jinja2 requests colorama -q
     }
     log_info "Pythonパッケージのインストール完了"
 else
     log_warn "requirements.txtが見つかりません。基本的なパッケージをインストールします..."
-    pip3 install --user --upgrade pip -q
-    pip3 install --user groq python-dotenv boto3 pyyaml jinja2 requests colorama -q || {
+    python3 -m pip install --user --upgrade pip -q
+    python3 -m pip install --user groq python-dotenv boto3 pyyaml jinja2 requests colorama -q || {
         log_error "Pythonパッケージのインストールに失敗しました"
         exit 1
     }
     log_info "基本的なPythonパッケージのインストール完了"
 fi
 
-# groqモジュールのインストール確認
+# groqモジュールのインストール確認（python3コマンドで確認）
 log_info "groqモジュールのインストール確認中..."
 if python3 -c "import groq" 2>/dev/null; then
     log_info "✓ groqモジュールは正常にインストールされています"
+    # インストールされたgroqのバージョン確認
+    GROQ_VERSION=$(python3 -c "import groq; print(groq.__version__)" 2>/dev/null || echo "unknown")
+    log_info "  groqバージョン: ${GROQ_VERSION}"
 else
     log_warn "groqモジュールのインポートに失敗しました。再インストールを試みます..."
-    pip3 install --user groq -q || {
+    python3 -m pip install --user groq -q || {
         log_error "groqモジュールのインストールに失敗しました"
-        log_error "手動でインストールしてください: pip3 install --user groq"
+        log_error "手動でインストールしてください: python3 -m pip install --user groq"
         exit 1
     }
     log_info "groqモジュールの再インストール完了"
@@ -165,7 +171,7 @@ if ! command -v git &> /dev/null; then
         # ここでは警告のみを出し、ユーザーに手動インストールを促す
         log_error "Gitの自動インストールは複雑なため、DevSpaces管理者に依頼するか、"
         log_error "DevSpaces環境にGitが含まれるスタックを使用してください。"
-        log_info "一時的な代替: pip3 install --user gitpython (Python用のGitライブラリ)"
+        log_info "一時的な代替: python3 -m pip install --user gitpython (Python用のGitライブラリ)"
     fi
 else
     log_info "✓ Gitは既にインストールされています: $(git --version)"
@@ -263,7 +269,7 @@ if command -v python3 &> /dev/null; then
         log_info "✓ groqモジュール: インストール済み"
     else
         log_error "✗ groqモジュール: インストールされていません"
-        log_info "  インストールコマンド: pip3 install --user groq"
+        log_info "  インストールコマンド: python3 -m pip install --user groq"
     fi
 else
     log_error "✗ Python: インストールされていません"

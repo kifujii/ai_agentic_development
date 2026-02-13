@@ -72,7 +72,8 @@ terraform version
 ansible --version
 
 # Pythonパッケージのインストール
-pip3 install --user groq python-dotenv boto3
+# 重要: python3 -m pipを使用することで、python3コマンドと同じPythonバージョンに確実にインストールされます
+python3 -m pip install --user groq python-dotenv boto3
 ```
 
 ### 2. Prompt Engineering実践（30分）
