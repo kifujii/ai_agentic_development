@@ -216,7 +216,7 @@ def execute_with_retry(self, code, max_retries=3):
 ```python
 # エージェントの初期化
 agent = TerraformAgent(
-    api_key=os.getenv('OPENAI_API_KEY'),
+    api_key=os.getenv('GOOGLE_API_KEY'),
     aws_context=get_aws_context()
 )
 

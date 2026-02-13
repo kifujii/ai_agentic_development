@@ -123,7 +123,7 @@ if [ -f "requirements.txt" ]; then
 else
     log_warn "requirements.txtが見つかりません。基本的なパッケージをインストールします..."
     pip3 install --user --upgrade pip -q
-    pip3 install --user openai anthropic python-dotenv boto3 pyyaml jinja2 -q
+    pip3 install --user google-generativeai python-dotenv boto3 pyyaml jinja2 -q
     log_info "基本的なPythonパッケージのインストール完了"
 fi
 
@@ -202,9 +202,8 @@ AWS_ACCESS_KEY_ID=your-access-key-here
 AWS_SECRET_ACCESS_KEY=your-secret-key-here
 AWS_DEFAULT_REGION=ap-northeast-1
 
-# 生成AI APIキー
-OPENAI_API_KEY=your-openai-api-key-here
-ANTHROPIC_API_KEY=your-anthropic-api-key-here
+# 生成AI APIキー（Gemini）
+GOOGLE_API_KEY=your-google-api-key-here
 EOF
     log_info ".env.templateファイルを作成しました。.envファイルを作成して認証情報を設定してください。"
 else
@@ -251,32 +250,4 @@ echo ""
 log_info "=========================================="
 log_info "セットアップ完了！"
 log_info "=========================================="
-log_info "次のステップ:"
-log_info ""
-log_info "1. PATHの更新"
-log_info "   新しいターミナルを開くか、以下のコマンドを実行してください:"
-log_info "   source ~/.bashrc"
-log_info ""
-log_info "2. 認証情報の設定"
-log_info "   .envファイルを作成して認証情報を設定してください:"
-log_info "   cat > .env << 'EOF'"
-log_info "   AWS_ACCESS_KEY_ID=your-access-key-here"
-log_info "   AWS_SECRET_ACCESS_KEY=your-secret-key-here"
-log_info "   AWS_DEFAULT_REGION=ap-northeast-1"
-log_info "   OPENAI_API_KEY=your-openai-api-key-here"
-log_info "   ANTHROPIC_API_KEY=your-anthropic-api-key-here"
-log_info "   EOF"
-log_info ""
-log_info "   または、aws configureを使用:"
-log_info "   aws configure"
-log_info ""
-log_info "3. インストール確認"
-log_info "   以下のコマンドでツールが正しくインストールされているか確認してください:"
-log_info "   terraform version"
-log_info "   ansible --version"
-log_info "   aws --version"
-log_info ""
-log_info "4. トレーニングの開始"
-log_info "   docs/session_guides/session0_guide.mdを参照してトレーニングを開始してください"
-log_info ""
-log_info "詳細な手順は README.md または docs/setup/DEVSPACES_SETUP.md を参照してください。"
+log_info "次のステップは README.md を参照してください。"

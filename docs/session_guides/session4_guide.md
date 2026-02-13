@@ -245,7 +245,7 @@ class AnsibleAgent:
 ```python
 # エージェントの初期化
 agent = AnsibleAgent(
-    api_key=os.getenv('OPENAI_API_KEY'),
+    api_key=os.getenv('GOOGLE_API_KEY'),
     inventory_file='inventory.ini'
 )
 

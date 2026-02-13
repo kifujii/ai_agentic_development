@@ -102,8 +102,7 @@ cat > .env << EOF
 AWS_ACCESS_KEY_ID=your-access-key-here
 AWS_SECRET_ACCESS_KEY=your-secret-key-here
 AWS_DEFAULT_REGION=ap-northeast-1
-OPENAI_API_KEY=your-openai-api-key-here
-ANTHROPIC_API_KEY=your-anthropic-api-key-here
+GOOGLE_API_KEY=your-google-api-key-here
 EOF
 
 # AWS認証情報の設定（オプション: .envファイルの代わりにaws configureを使用）
@@ -138,7 +137,7 @@ aws configure
 - AWSアカウント（トレーニング用）
 - AWS Admin権限を持つアクセスキーとシークレットキー
 - OpenShift DevSpacesへのアクセス
-- 生成AI APIキー（OpenAI、Anthropicなど）
+- 生成AI APIキー（Google Gemini）
 
 ## 成果物
 

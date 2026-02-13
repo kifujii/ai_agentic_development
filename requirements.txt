@@ -1,6 +1,5 @@
-# 生成AI関連
-openai>=1.0.0
-anthropic>=0.7.0
+# 生成AI関連（Gemini）
+google-generativeai>=0.3.0
 
 # AWS関連
 boto3>=1.28.0

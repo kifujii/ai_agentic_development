@@ -401,7 +401,7 @@ Ansibleを使った基本的な運用タスクの自動化を実践する。
   - AWSアカウント（トレーニング用）
   - AWS Admin権限を持つアクセスキーとシークレットキー（事前に用意）
   - OpenShift DevSpacesへのアクセス
-  - 生成AI APIキー（OpenAI、Anthropic、またはその他）
+  - 生成AI APIキー（Google Gemini）
 
 - **スキル**
   - 基本的なLinuxコマンドの知識

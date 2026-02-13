@@ -6,7 +6,7 @@ Prompt Engineering、Context Engineering、AI Agentの実践を通じて、AI x 
 ## 事前準備
 - OpenShift DevSpaces環境へのアクセス
 - AWS認証情報（アクセスキー、シークレットキー）
-- 生成AI APIキー（OpenAI、Anthropicなど）
+- 生成AI APIキー（Google Gemini）
 - 必要なツールのインストール確認
 
 ## 手順
@@ -19,7 +19,7 @@ Prompt Engineering、Context Engineering、AI Agentの実践を通じて、AI x 
 pwd
 
 # 環境変数の確認
-env | grep -E "AWS|OPENAI|ANTHROPIC"
+env | grep -E "AWS|GOOGLE_API"
 
 # Python/Node.jsのバージョン確認
 python3 --version
@@ -44,13 +44,12 @@ aws sts get-caller-identity
 
 #### 1.3 生成AI APIキーの設定確認
 ```bash
-# 環境変数の設定（例：OpenAI）
-export OPENAI_API_KEY="your-api-key-here"
+# 環境変数の設定（Gemini）
+export GOOGLE_API_KEY="your-api-key-here"
 
 # または .envファイルの作成
 cat > .env << EOF
-OPENAI_API_KEY=your-api-key-here
-ANTHROPIC_API_KEY=your-api-key-here
+GOOGLE_API_KEY=your-api-key-here
 EOF
 
 # .envファイルの読み込み（Pythonの場合）
@@ -66,7 +65,7 @@ terraform version
 ansible --version
 
 # Pythonパッケージのインストール
-pip install openai anthropic python-dotenv boto3
+pip install google-generativeai python-dotenv boto3
 ```
 
 ### 2. Prompt Engineering実践（30分）
@@ -191,7 +190,7 @@ def load_existing_terraform_code(directory):
 # エージェントのテスト
 from simple_agent import SimpleTerraformAgent
 
-agent = SimpleTerraformAgent(api_key=os.getenv('OPENAI_API_KEY'))
+agent = SimpleTerraformAgent(api_key=os.getenv('GOOGLE_API_KEY'))
 
 result = agent.generate_code(
     prompt="EC2インスタンスを作成するTerraformコードを生成してください。"

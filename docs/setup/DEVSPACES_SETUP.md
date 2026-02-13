@@ -6,7 +6,7 @@
 ## 前提条件
 - OpenShift DevSpacesへのアクセス権限
 - AWSアカウント（トレーニング用）
-- 生成AI APIキー（OpenAI、Anthropicなど）
+- 生成AI APIキー（Google Gemini）
 
 ## セットアップ手順
 
@@ -200,13 +200,11 @@ aws sts get-caller-identity
 #### 4.2 生成AI APIキーの設定
 ```bash
 # 環境変数の設定
-export OPENAI_API_KEY="your-api-key-here"
-export ANTHROPIC_API_KEY="your-api-key-here"
+export GOOGLE_API_KEY="your-api-key-here"
 
 # .envファイルの作成（推奨）
 cat > .env << EOF
-OPENAI_API_KEY=your-api-key-here
-ANTHROPIC_API_KEY=your-api-key-here
+GOOGLE_API_KEY=your-api-key-here
 AWS_ACCESS_KEY_ID=your-access-key
 AWS_SECRET_ACCESS_KEY=your-secret-key
 AWS_DEFAULT_REGION=ap-northeast-1
@@ -232,7 +230,7 @@ source venv/bin/activate
 pip install -r requirements.txt
 
 # または個別にインストール
-pip install openai anthropic python-dotenv boto3 pyyaml jinja2
+pip install google-generativeai python-dotenv boto3 pyyaml jinja2
 ```
 
 ### 6. プロジェクト構造の確認
@@ -283,7 +281,7 @@ pip3 list
 aws sts get-caller-identity
 
 # APIキーの確認（環境変数）
-echo $OPENAI_API_KEY
+echo $GOOGLE_API_KEY
 ```
 
 ## トラブルシューティング
