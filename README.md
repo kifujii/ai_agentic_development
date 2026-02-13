@@ -202,6 +202,42 @@ fi
 - [ ] Groq APIの接続テストが成功した（`python3 scripts/test_groq.py`）
 - [ ] すべてのツールが正しくインストールされていることを確認した（`terraform version`、`ansible --version`など）
 
+### トラブルシューティング
+
+**問題1: `/usr/bin/python3: No module named pip`**
+```bash
+# pipがインストールされていない場合、ensurepipでインストール
+python3 -m ensurepip --user --upgrade
+
+# インストール確認
+python3 -m pip --version
+
+# その後、パッケージをインストール
+python3 -m pip install --user -r requirements.txt
+```
+
+**問題2: `ModuleNotFoundError: No module named 'groq'`**
+```bash
+# 重要: python3 -m pipを使用することで、python3コマンドと同じPythonバージョンに確実にインストールされます
+
+# まず、pipがインストールされているか確認
+python3 -m pip --version
+
+# pipがインストールされていない場合
+python3 -m ensurepip --user --upgrade
+
+# groqモジュールをインストール
+python3 -m pip install --user groq
+
+# または、requirements.txtからすべてのパッケージをインストール
+python3 -m pip install --user -r requirements.txt
+
+# インストール確認
+python3 -c "import groq; print('groq version:', groq.__version__)"
+```
+
+詳細なトラブルシューティング情報は `docs/setup/FAQ.md` を参照してください。
+
 ## トレーニング概要
 
 - **期間**: 2日間（合計8時間、1日4時間）
