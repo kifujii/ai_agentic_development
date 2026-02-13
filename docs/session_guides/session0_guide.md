@@ -31,16 +31,14 @@ node --version
 # AWS CLIのインストール確認
 aws --version
 
-# AWS認証情報の設定
-aws configure
-# AWS Access Key ID: [入力]
-# AWS Secret Access Key: [入力]
-# Default region name: ap-northeast-1
-# Default output format: json
+# .envファイルから環境変数を読み込む（READMEの手順で作成済みの場合）
+export $(cat .env | grep -v '^#' | xargs)
 
 # 認証情報の確認
 aws sts get-caller-identity
 ```
+
+**注意**: `.env`ファイルを環境変数としてエクスポートすれば、AWS CLIとTerraformの両方が認証情報を使用できます。`aws configure`は不要です。
 
 #### 1.3 生成AI APIキーの設定確認
 ```bash
