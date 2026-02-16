@@ -1,11 +1,69 @@
-# 生成AI活用トレーニングメニュー設計
+# 🤖 AI駆動 Infrastructure as Code ワークショップ
 
-このリポジトリには、生成AIを活用したIaC（Infrastructure as Code）トレーニングのための資料とサンプルコードが含まれています。
+> AWS CLI、Ansible、Terraform、そしてContinue AIを活用した次世代IaC開発を学ぶ
 
-## ディレクトリ構造
+## 📋 概要
+
+このワークショップでは、AIアシスタント（Continue）を活用しながら、モダンなInfrastructure as Code（IaC）開発手法を実践的に学びます。
+
+### 学習内容
+
+| ツール | 用途 |
+|--------|------|
+| **AWS CLI** | AWSリソースの操作・管理 |
+| **Terraform** | インフラストラクチャのプロビジョニング |
+| **Ansible** | 構成管理・アプリケーションデプロイ |
+| **Continue** | AIによるコード生成・レビュー支援（OpenShiftAI使用） |
+
+## 🎯 ワークショップ内容
+
+### セッション構成
+
+| セッション | 内容 | 時間 | ガイド |
+|-----------|------|------|--------|
+| **セッション0** | AI x IaC基礎実践 | 1.5時間 | [詳細ガイド](docs/session_guides/session0_guide.md) |
+| **セッション1** | VPC/Subnet/EC2構築 | 1.5時間 | [詳細ガイド](docs/session_guides/session1_guide.md) |
+| **セッション2** | Terraform自動化エージェント | 1時間 | [詳細ガイド](docs/session_guides/session2_guide.md) |
+| **セッション3** | Ansible運用基礎 | 1時間 | [詳細ガイド](docs/session_guides/session3_guide.md) |
+| **セッション4** | Ansible自動化エージェント | 1時間 | [詳細ガイド](docs/session_guides/session4_guide.md) |
+| **セッション5** | 統合管理エージェント | 1時間 | [詳細ガイド](docs/session_guides/session5_guide.md) |
+| **セッション6** | Webシステム構築（任意） | 1時間 | [詳細ガイド](docs/session_guides/session6_guide.md) |
+
+### トレーニング概要
+
+- **期間**: 2日間（合計8時間、1日4時間）
+- **形式**: ハンズオン形式のライブコーディング
+- **環境**: OpenShift DevSpaces + AWS
+- **技術スタック**: Terraform, Ansible, Continue AI（OpenShiftAI）
+
+詳細は [`docs/TRAINING_MENU.md`](docs/TRAINING_MENU.md) を参照してください。
+
+## 🚀 クイックスタート
+
+### 1. 環境セットアップ
+
+環境セットアップの詳細手順は、[環境セットアップガイド](docs/setup/ENVIRONMENT_SETUP.md) を参照してください。
+
+**主な手順**:
+1. DevSpaces環境への資材の持ち込み
+2. 環境セットアップスクリプトの実行
+3. AWS認証情報の設定
+4. Continue AIのセットアップ
+
+### 2. ワークショップの開始
+
+環境セットアップが完了したら、[セッション0](docs/session_guides/session0_guide.md) から開始してください。
+
+各セッションガイドには、以下の情報が含まれています：
+- **目的**: セッションで達成すべき目標
+- **目指すべき構成**: 最終的に作成する構成の概要
+- **手順**: ステップバイステップの手順
+- **回答例**: 折りたたみ可能な回答例（クリックで展開）
+
+## 📁 ディレクトリ構成
 
 ```
-.
+ai_agentic/
 ├── docs/                          # ドキュメント
 │   ├── TRAINING_MENU.md          # トレーニングメニュー詳細
 │   ├── session_guides/           # セッションガイド
@@ -17,261 +75,111 @@
 │   │   ├── session5_guide.md     # 統合管理エージェント
 │   │   └── session6_guide.md     # Webシステム構築（任意）
 │   └── setup/                     # セットアップ手順
-│       └── DEVSPACES_SETUP.md    # DevSpaces環境セットアップ
+│       ├── ENVIRONMENT_SETUP.md  # 環境セットアップガイド
+│       ├── CONTINUE_SETUP.md      # Continue AIセットアップ
+│       ├── DEVSPACES_SETUP.md    # DevSpaces環境セットアップ
+│       └── FAQ.md                 # よくある質問
 ├── sample_code/                  # サンプルコード
 │   ├── terraform/                 # Terraformサンプル
 │   │   ├── basic_ec2/            # 基本的なEC2
 │   │   ├── vpc_subnet_ec2/       # VPC/Subnet/EC2
-│   │   └── s3_bucket/            # S3バケット
+│   │   └── s3_bucket/             # S3バケット
 │   └── ansible/                   # Ansibleサンプル
 │       ├── basic_playbook/       # 基本Playbook
 │       └── monitoring_setup/      # 監視セットアップ
 ├── templates/                     # テンプレート
 │   └── ai_agents/                 # AIエージェントテンプレート
-│       ├── simple_agent_template.py
-│       ├── terraform_agent_template.py
-│       ├── ansible_agent_template.py
-│       └── integrated_agent_template.py
 ├── evaluation/                    # 評価チェックリスト
 │   ├── session0_checklist.md
 │   ├── session1_checklist.md
-│   ├── session2_checklist.md
-│   ├── session3_checklist.md
-│   ├── session4_checklist.md
-│   ├── session5_checklist.md
-│   ├── session6_checklist.md
-│   └── README.md
+│   └── ...
 ├── scripts/                       # スクリプト
-│   └── setup_devspaces.sh        # DevSpacesセットアップスクリプト
+│   ├── setup_devspaces.sh        # DevSpacesセットアップスクリプト
+│   └── interactive_agent.py      # 対話型AIエージェント（参考用）
+├── .continue/                     # Continue設定
+│   └── config.json                # Continue設定ファイル
 ├── requirements.txt               # Python依存関係
-└── README.md                     # このファイル
+└── README.md                      # このファイル
 ```
 
-## クイックスタート
+## 💡 Continue AIの効果的な使い方
 
-### 1. DevSpaces環境への資材の持ち込み
+Continue AIは、VS Code/Cursorの拡張機能として動作します。ショートカットキー（`Ctrl+L` / `Cmd+L`）で起動できます。
 
-**重要**: セットアップスクリプトは **OpenShift DevSpaces環境内** で実行する想定です。
+### 1. コード生成
 
-#### 1.1 DevSpacesワークスペースの作成
-1. OpenShift DevSpacesのURLにアクセス
-2. ログイン
-3. 新しいワークスペースを作成（スタック: Python 3.11 または Node.js 18）
-
-#### 1.2 Gitリポジトリのクローン
-DevSpaces環境内のターミナルで以下のコマンドを実行：
-
-```bash
-# リポジトリをクローン
-git clone https://github.com/kifujii/ai_agentic_development.git
-cd ai_agentic_development
-
-# trainingブランチに切り替え
-git checkout training
-
-# プロジェクトディレクトリに移動
-cd ai_agentic
+```
+「VPC、パブリック/プライベートサブネット、NAT Gatewayを含む
+AWS ネットワーク構成の Terraform コードを生成してください」
 ```
 
-### 2. Groq APIキーの取得（先に実行）
+### 2. コードレビュー
 
-トレーニングでは、生成AIエージェント開発のためにGroq APIを使用します。**先にAPIキーを取得**してください。
-
-#### 2.1 Groqアカウントの作成とAPIキー取得
-
-1. **Groq公式サイトにアクセス**
-   - URL: https://console.groq.com/
-   - 「Sign Up」または「Get Started」をクリック
-
-2. **アカウント登録**
-   - メールアドレスを入力
-   - パスワードを設定
-   - メール認証を完了（メールボックスを確認）
-   - **注意**: クレジットカード情報は不要
-
-3. **APIキーの取得**
-   - ログイン後、左側メニューから「API Keys」を選択
-   - または、URL: https://console.groq.com/keys に直接アクセス
-   - 「Create API Key」ボタンをクリック
-   - APIキー名を入力（例: "training-handson"）
-   - 「Create」をクリック
-   - 表示されたAPIキーをコピー（`gsk_`で始まる文字列）
-   - **重要**: この画面を閉じると再度確認できないため、必ずコピーして安全な場所に保存
-   - 例: `gsk_xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx`
-
-**次のステップ**: APIキーを取得したら、以下の「3. 環境セットアップ」に進んでください。
-
-### 3. 環境セットアップ
-
-**DevSpaces環境内**で以下のコマンドを実行：
-
-```bash
-# セットアップスクリプトの実行
-chmod +x scripts/setup_devspaces.sh
-./scripts/setup_devspaces.sh
-
-# スクリプト実行後、PATHを更新（新しいターミナルを開くか、以下を実行）
-source ~/.bashrc
+コードを選択してから：
+```
+「このTerraformコードのセキュリティ上の問題点を指摘してください」
 ```
 
-**注意**: セットアップスクリプトは自動的にPythonパッケージもインストールします（`python3 -m pip install --user`を使用）。これにより、`python3`コマンドと同じPythonバージョンに確実にインストールされます。
+### 3. トラブルシューティング
 
-詳細は `docs/setup/DEVSPACES_SETUP.md` を参照してください。
-
-**よくある質問**: セットアップに関する質問は `docs/setup/FAQ.md` を参照してください。
-
-### 4. 認証情報の設定（.envファイル）
-
-セットアップスクリプトが`.env.template`ファイルを作成します。このテンプレートから`.env`ファイルを作成し、取得したAPIキーを設定してください：
-
-```bash
-# .env.templateをコピーして.envファイルを作成
-cp .env.template .env
-
-# .envファイルを編集してAPIキーを設定
-# エディタで開くか、以下のコマンドで直接編集
-nano .env
-# または
-vi .env
+```
+「このエラーメッセージの原因と解決方法を教えてください：
+[エラーメッセージを貼り付け]」
 ```
 
-`.env`ファイルの内容を以下のように設定してください：
+### 4. ベストプラクティス
 
-```bash
-# AWS認証情報
-AWS_ACCESS_KEY_ID=your-access-key-here
-AWS_SECRET_ACCESS_KEY=your-secret-key-here
-AWS_DEFAULT_REGION=ap-northeast-1
-
-# 生成AI APIキー（Groq）- 上記で取得したAPIキーを設定
-GROQ_API_KEY=gsk_xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx
+```
+「このAnsible Playbookをより冪等性が高く、
+再利用可能な形にリファクタリングしてください」
 ```
 
-**重要**: `GROQ_API_KEY`の部分に、上記「2. Groq APIキーの取得」で取得したAPIキーを設定してください。
+詳細は [`docs/setup/CONTINUE_SETUP.md`](docs/setup/CONTINUE_SETUP.md) を参照してください。
 
-### 5. 環境変数の読み込みと確認
+## 🛠️ インストール済みツール
 
-`.env`ファイルを環境変数として読み込めば、すべての設定が完了します：
+セットアップスクリプトが自動的に以下のツールをインストールします：
 
-```bash
-# .envファイルを環境変数として読み込む
-# これにより、AWS CLI、Terraform、Groq APIのすべてが環境変数から認証情報を読み取れます
-export $(cat .env | grep -v '^#' | xargs)
+| ツール | 用途 |
+|--------|------|
+| AWS CLI v2 | AWS リソース管理 |
+| Terraform | インフラプロビジョニング |
+| Ansible | 構成管理 |
+| Python 3.11+ | スクリプト実行環境 |
+| Git | バージョン管理 |
+| jq | JSON処理 |
 
-# 認証情報の確認
-# AWS認証情報の確認
-aws sts get-caller-identity
+詳細は [`docs/setup/DEVSPACES_SETUP.md`](docs/setup/DEVSPACES_SETUP.md) を参照してください。
 
-# Groq APIキーの確認
-echo $GROQ_API_KEY
+## 📚 参考資料
 
-# Groq API接続テスト
-python3 scripts/test_groq.py
-```
-
-**重要**: `.env`ファイルを環境変数としてエクスポートすれば、以下がすべて使用できます：
-- AWS CLI（環境変数から認証情報を読み取る）
-- Terraform（環境変数から認証情報を読み取る）
-- Groq API（環境変数からAPIキーを読み取る）
-
-`aws configure`は不要です。
-
-**永続的な設定**: セットアップスクリプトが自動的に`~/.bashrc`に`.env`ファイルの自動読み込み設定を追加します。新しいターミナルを開くか、`source ~/.bashrc`を実行すると、プロジェクトディレクトリにいる場合に自動的に`.env`ファイルが読み込まれます。
-
-### 6. トレーニングの開始
-
-セットアップが完了したら、各セッションのガイドを参照してください：
-
-- **セッション0**: `docs/session_guides/session0_guide.md`
-- **セッション1**: `docs/session_guides/session1_guide.md`
-- 以降も同様
-
-**セットアップ完了後の確認事項**:
-- [ ] Groqアカウントを作成し、APIキーを取得した（手順2）
-- [ ] セットアップスクリプトを実行した（手順3）
-- [ ] `.env.template`から`.env`ファイルを作成し、Groq APIキーとAWS認証情報を設定した（手順4）
-- [ ] `.env`ファイルを環境変数として読み込んだ（`export $(cat .env | grep -v '^#' | xargs)`）（手順5）
-- [ ] AWS認証情報が正しく設定されていることを確認した（`aws sts get-caller-identity`）
-- [ ] Groq APIの接続テストが成功した（`python3 scripts/test_groq.py`）
-- [ ] すべてのツールが正しくインストールされていることを確認した（`terraform version`、`ansible --version`など）
-
-### トラブルシューティング
-
-**問題1: `/usr/bin/python3: No module named pip`**
-```bash
-# pipがインストールされていない場合、ensurepipでインストール
-python3 -m ensurepip --user --upgrade
-
-# インストール確認
-python3 -m pip --version
-
-# その後、パッケージをインストール
-python3 -m pip install --user -r requirements.txt
-```
-
-**問題2: `ModuleNotFoundError: No module named 'groq'`**
-```bash
-# 重要: python3 -m pipを使用することで、python3コマンドと同じPythonバージョンに確実にインストールされます
-
-# まず、pipがインストールされているか確認
-python3 -m pip --version
-
-# pipがインストールされていない場合
-python3 -m ensurepip --user --upgrade
-
-# groqモジュールをインストール
-python3 -m pip install --user groq
-
-# または、requirements.txtからすべてのパッケージをインストール
-python3 -m pip install --user -r requirements.txt
-
-# インストール確認
-python3 -c "import groq; print('groq version:', groq.__version__)"
-```
-
-詳細なトラブルシューティング情報は `docs/setup/FAQ.md` を参照してください。
-
-## トレーニング概要
-
-- **期間**: 2日間（合計8時間、1日4時間）
-- **形式**: ハンズオン形式のバイブコーディング
-- **環境**: OpenShift DevSpaces + AWS
-- **技術スタック**: Terraform, Ansible, 生成AIエージェント開発
-
-詳細は `docs/TRAINING_MENU.md` を参照してください。
-
-## 前提条件
-
-- AWSアカウント（トレーニング用）
-- AWS Admin権限を持つアクセスキーとシークレットキー
-- OpenShift DevSpacesへのアクセス
-- Groq APIキー（無料、クレジットカード不要）
-  - アカウント作成: https://console.groq.com/
-  - セットアップ手順は上記の「3. Groq APIのセットアップ」を参照
-
-## 成果物
-
-各セッションで以下の成果物を作成します：
-
-- **セッション0**: Prompt Engineering、Context Engineering、AI Agentの実践成果
-- **セッション1**: VPC、Subnet、EC2インスタンスが構築されたAWS環境
-- **セッション2**: Terraformコード生成・実行を自動化する生成AIエージェント
-- **セッション3**: サーバー再起動を自動化するAnsible Playbook
-- **セッション4**: Ansible Playbook生成・実行を自動化する生成AIエージェント
-- **セッション5**: インフラ管理タスクを統合的に自動化する生成AIエージェント
-- **セッション6（任意）**: Webアプリケーションが動作するインフラ環境
-
-## 評価
-
-各セッションの評価チェックリストは `evaluation/` ディレクトリを参照してください。
-
-## 参考資料
-
-- [Terraform公式ドキュメント](https://www.terraform.io/docs)
+- [Terraform公式ドキュメント](https://developer.hashicorp.com/terraform/docs)
 - [Ansible公式ドキュメント](https://docs.ansible.com/)
-- [AWS公式ドキュメント](https://docs.aws.amazon.com/)
+- [AWS CLI公式ドキュメント](https://docs.aws.amazon.com/cli/)
+- [Continue公式ドキュメント](https://continue.dev/docs)
 - [OpenShift DevSpacesドキュメント](https://access.redhat.com/documentation/en-us/red_hat_openshift_dev_spaces/)
 
-## ライセンス
+## ⚠️ 注意事項
+
+- ワークショップ終了後は作成したAWSリソースを削除してください
+  ```bash
+  terraform destroy
+  ```
+- AWS認証情報は安全に管理してください
+- 本番環境への適用前に十分なテストを行ってください
+
+## 🆘 トラブルシューティング
+
+よくある問題と解決方法は [`docs/setup/FAQ.md`](docs/setup/FAQ.md) を参照してください。
+
+## 📝 評価
+
+各セッションの評価チェックリストは [`evaluation/`](evaluation/) ディレクトリを参照してください。
+
+## 📄 ライセンス
 
 このプロジェクトはトレーニング目的で作成されています。
+
+---
+
+**Happy IaC Coding! 🎉**

@@ -1,19 +1,125 @@
-# セッション4：Ansible Playbook生成・実行自動化エージェント開発 詳細ガイド
+# セッション4：Ansible自動化エージェント 詳細ガイド
 
-## 目標
-生成AIエージェントによるAnsible Playbook生成と自動実行の実装を行う。
+## 📋 目的
 
-## 事前準備
-- セッション3の完了
+このセッションでは、Continue AIを活用して、Ansible Playbook生成・実行を自動化するエージェントの実装方法を学びます。
+
+### 学習目標
+
+- Continue AIを活用したAnsible Playbook生成の実装方法を理解する
+- Playbook検証機能の実装方法を理解する
+- Ansible実行自動化の実装方法を理解する
+- エラーハンドリングとリトライ機能の実装方法を理解する
+
+## 🎯 目指すべき構成
+
+このセッション終了時点で、以下の構成が完成していることを目指します：
+
+```
+workspace/
+└── agents/
+    └── ansible_agent/
+        ├── agent.py           # メインのエージェントコード
+        ├── playbook_generator.py # Playbook生成モジュール
+        ├── validator.py       # Playbook検証モジュール
+        └── executor.py        # Ansible実行モジュール
+```
+
+**エージェントの機能**:
+- Continue AIを活用したAnsible Playbook生成
+- Playbook検証
+- Ansible実行の自動化
+- エラーハンドリングとリトライ
+
+## 📚 事前準備
+
+- [セッション3](session3_guide.md) が完了していること
 - Ansibleの基本理解
-- Python開発環境の準備
+- Continue AIが正しく設定されていること
 
-## 手順
+## 🚀 手順
 
-### 1. Ansible Playbook生成エージェントの実装（40分）
+### 1. Continue AIを活用したPlaybook生成（30分）
 
-#### 1.1 プロンプトエンジニアリング（Ansible Playbook生成用）
+#### 1.1 Continue AIでのPlaybook生成
+
+Continue AIを起動（`Ctrl+L` / `Cmd+L`）して、以下のプロンプトを入力します：
+
+```
+Ansible Playbookを生成してください。
+
+要件:
+- パッケージ（htop, git, curl）をインストールする
+- 設定ファイルをコピーする
+- サービス（nginx）を開始する
+- 冪等性を確保する
+- エラーハンドリングを含める
+
+出力形式:
+- YAML形式のAnsible Playbook
+- 適切なモジュールを使用
+- コメントを追加
+- ベストプラクティスに従う
+```
+
+<details>
+<summary>📝 生成Playbook例（クリックで展開）</summary>
+
+```yaml
+---
+- name: パッケージインストールとサービス設定
+  hosts: webservers
+  become: yes
+  
+  tasks:
+    - name: 必要なパッケージをインストール
+      yum:
+        name:
+          - htop
+          - git
+          - curl
+        state: present
+      register: package_result
+      failed_when: false
+    
+    - name: パッケージインストール結果の確認
+      debug:
+        msg: "パッケージインストール結果: {{ package_result }}"
+      when: package_result.failed
+    
+    - name: 設定ファイルをコピー
+      copy:
+        src: config/nginx.conf
+        dest: /etc/nginx/nginx.conf
+        owner: root
+        group: root
+        mode: '0644'
+      notify: restart nginx
+    
+    - name: nginxサービスを開始
+      systemd:
+        name: nginx
+        state: started
+        enabled: yes
+  
+  handlers:
+    - name: restart nginx
+      systemd:
+        name: nginx
+        state: restarted
+```
+
+</details>
+
+#### 1.2 プロンプトテンプレートの作成
+
+再利用可能なプロンプトテンプレートを作成します。
+
+<details>
+<summary>📝 プロンプトテンプレート例（クリックで展開）</summary>
+
 ```python
+# prompt_templates.py
 class AnsiblePromptBuilder:
     def build_prompt(self, instruction, context=None):
         """Ansible Playbook生成用のプロンプト構築"""
@@ -46,98 +152,164 @@ Ansibleの主要モジュール:
         return prompt
 ```
 
-#### 1.2 自然言語からPlaybookへの変換ロジック
-```python
-class AnsiblePlaybookGenerator:
-    def __init__(self, api_key):
-        self.api_key = api_key
-        self.prompt_builder = AnsiblePromptBuilder()
-    
-    def generate(self, instruction, context=None):
-        """自然言語からPlaybookを生成"""
-        prompt = self.prompt_builder.build_prompt(instruction, context)
-        
-        # LLM API呼び出し
-        response = self.call_llm(prompt)
-        
-        # YAML抽出と検証
-        playbook = self.extract_yaml(response)
-        playbook = self.validate_yaml(playbook)
-        
-        return playbook
-    
-    def extract_yaml(self, response):
-        """レスポンスからYAMLを抽出"""
-        import re
-        
-        # YAMLブロックを抽出
-        yaml_pattern = r'```yaml\s*\n(.*?)\n```'
-        match = re.search(yaml_pattern, response, re.DOTALL)
-        
-        if match:
-            return match.group(1)
-        
-        # YAMLブロックがない場合は全体を返す
-        return response
-```
+</details>
 
-#### 1.3 タスク構造の最適化
-```python
-class PlaybookOptimizer:
-    def optimize(self, playbook):
-        """Playbookの最適化"""
-        # 1. 冪等性の確保
-        playbook = self.ensure_idempotency(playbook)
-        
-        # 2. エラーハンドリングの追加
-        playbook = self.add_error_handling(playbook)
-        
-        # 3. ハンドラーの最適化
-        playbook = self.optimize_handlers(playbook)
-        
-        return playbook
-    
-    def ensure_idempotency(self, playbook):
-        """冪等性の確保"""
-        # shell/commandモジュールを可能な限りyum/systemdなどに置き換え
-        # changed_whenを適切に設定
-        return playbook
-```
+### 2. Playbook検証機能（20分）
 
-### 2. Ansible実行自動化の実装（30分）
+#### 2.1 YAML検証の実装
 
-#### 2.1 ansible-playbookの自動実行
 ```python
-class AnsibleExecutor:
-    def __init__(self, inventory_file):
-        self.inventory_file = inventory_file
+# validator.py
+import yaml
+import subprocess
+import tempfile
+import os
+
+class AnsiblePlaybookValidator:
+    """Ansible Playbook検証クラス"""
     
-    def execute(self, playbook_file, extra_vars=None, check_mode=False):
-        """ansible-playbookの自動実行"""
-        import subprocess
-        import tempfile
+    def validate(self, playbook):
+        """
+        Playbookの検証
         
-        # Playbookを一時ファイルに保存
-        with tempfile.NamedTemporaryFile(mode='w', suffix='.yml', delete=False) as f:
-            f.write(playbook_file)
-            temp_playbook = f.name
+        Args:
+            playbook: Ansible Playbook（YAML文字列）
+        
+        Returns:
+            検証結果（valid, errors, warnings）
+        """
+        result = {
+            'valid': True,
+            'errors': [],
+            'warnings': []
+        }
+        
+        # 1. YAML構文チェック
+        yaml_check = self.check_yaml_syntax(playbook)
+        if not yaml_check['valid']:
+            result['valid'] = False
+            result['errors'].extend(yaml_check['errors'])
+        
+        # 2. ansible-lint（利用可能な場合）
+        lint_check = self.run_ansible_lint(playbook)
+        if lint_check['errors']:
+            result['warnings'].extend(lint_check['errors'])
+        
+        return result
+    
+    def check_yaml_syntax(self, playbook):
+        """YAML構文チェック"""
+        try:
+            yaml.safe_load(playbook)
+            return {'valid': True, 'errors': []}
+        except yaml.YAMLError as e:
+            return {
+                'valid': False,
+                'errors': [f"YAML syntax error: {str(e)}"]
+            }
+    
+    def run_ansible_lint(self, playbook):
+        """ansible-lintの実行"""
+        work_dir = tempfile.mkdtemp()
         
         try:
+            # Playbookをファイルに保存
+            playbook_file = os.path.join(work_dir, 'playbook.yml')
+            with open(playbook_file, 'w') as f:
+                f.write(playbook)
+            
+            # ansible-lint実行
+            lint_result = subprocess.run(
+                ['ansible-lint', playbook_file],
+                capture_output=True,
+                text=True
+            )
+            
+            if lint_result.returncode != 0:
+                return {'errors': lint_result.stderr.split('\n')}
+            
+            return {'errors': []}
+        except FileNotFoundError:
+            # ansible-lintがインストールされていない場合
+            return {'errors': []}
+        finally:
+            import shutil
+            shutil.rmtree(work_dir)
+```
+
+<details>
+<summary>📝 使用例（クリックで展開）</summary>
+
+```python
+from validator import AnsiblePlaybookValidator
+
+validator = AnsiblePlaybookValidator()
+
+playbook = """
+---
+- name: Test playbook
+  hosts: webservers
+  tasks:
+    - name: Test task
+      debug:
+        msg: "Hello"
+"""
+
+result = validator.validate(playbook)
+print(f"Valid: {result['valid']}")
+if result['errors']:
+    print(f"Errors: {result['errors']}")
+```
+
+</details>
+
+### 3. Ansible実行自動化（20分）
+
+#### 3.1 自動実行パイプライン
+
+```python
+# executor.py
+import subprocess
+import tempfile
+import os
+import shutil
+
+class AnsibleExecutor:
+    """Ansible実行クラス"""
+    
+    def execute(self, playbook, inventory, extra_vars=None):
+        """
+        Ansible Playbookの自動実行
+        
+        Args:
+            playbook: Ansible Playbook（YAML文字列）
+            inventory: インベントリファイルのパス
+            extra_vars: 追加変数（辞書）
+        
+        Returns:
+            実行結果
+        """
+        work_dir = tempfile.mkdtemp()
+        
+        try:
+            # Playbookをファイルに保存
+            playbook_file = os.path.join(work_dir, 'playbook.yml')
+            with open(playbook_file, 'w') as f:
+                f.write(playbook)
+            
             # ansible-playbookコマンドの構築
-            cmd = ['ansible-playbook', '-i', self.inventory_file, temp_playbook]
+            cmd = ['ansible-playbook', '-i', inventory, playbook_file]
             
-            if check_mode:
-                cmd.append('--check')
-            
+            # 追加変数の設定
             if extra_vars:
-                cmd.extend(['--extra-vars', json.dumps(extra_vars)])
+                vars_str = ' '.join([f"{k}={v}" for k, v in extra_vars.items()])
+                cmd.extend(['--extra-vars', vars_str])
             
             # 実行
             result = subprocess.run(
                 cmd,
                 capture_output=True,
-                text=True,
-                timeout=600
+                text=True
             )
             
             return {
@@ -146,149 +318,127 @@ class AnsibleExecutor:
                 'stderr': result.stderr,
                 'returncode': result.returncode
             }
+        
+        except Exception as e:
+            return {
+                'success': False,
+                'error': str(e)
+            }
         finally:
-            os.unlink(temp_playbook)
+            # クリーンアップ（必要に応じて）
+            # shutil.rmtree(work_dir)  # デバッグ時はコメントアウト
+            pass
 ```
 
-#### 2.2 実行結果の検証とレポート生成
+<details>
+<summary>📝 使用例（クリックで展開）</summary>
+
 ```python
-class AnsibleResultValidator:
-    def validate(self, execution_result):
-        """実行結果の検証"""
-        result = {
-            'success': execution_result['success'],
-            'tasks': [],
-            'errors': [],
-            'warnings': []
-        }
-        
-        # stdoutを解析
-        stdout = execution_result['stdout']
-        
-        # タスクの成功/失敗を抽出
-        import re
-        task_pattern = r'TASK \[(.*?)\].*?ok=(\d+).*?failed=(\d+)'
-        matches = re.findall(task_pattern, stdout, re.DOTALL)
-        
-        for match in matches:
-            task_name, ok, failed = match
-            result['tasks'].append({
-                'name': task_name,
-                'ok': int(ok),
-                'failed': int(failed)
-            })
-        
-        # エラーの抽出
-        if 'FAILED' in stdout:
-            error_pattern = r'FAILED!.*?\n(.*?)(?=\nTASK|\Z)'
-            errors = re.findall(error_pattern, stdout, re.DOTALL)
-            result['errors'] = errors
-        
-        return result
-    
-    def generate_report(self, validation_result):
-        """レポートの生成"""
-        report = f"""
-実行結果レポート
-================
+from executor import AnsibleExecutor
 
-成功: {validation_result['success']}
+executor = AnsibleExecutor()
 
-タスク詳細:
+playbook = """
+---
+- name: Test playbook
+  hosts: webservers
+  tasks:
+    - name: Test task
+      debug:
+        msg: "Hello"
 """
-        for task in validation_result['tasks']:
-            report += f"- {task['name']}: ok={task['ok']}, failed={task['failed']}\n"
-        
-        if validation_result['errors']:
-            report += "\nエラー:\n"
-            for error in validation_result['errors']:
-                report += f"{error}\n"
-        
-        return report
+
+result = executor.execute(
+    playbook,
+    inventory='inventory.ini',
+    extra_vars={'var1': 'value1'}
+)
+
+if result['success']:
+    print("Playbook executed successfully!")
+    print(result['stdout'])
+else:
+    print(f"Error: {result['stderr']}")
 ```
 
-### 3. エージェントの動作確認とテスト（20分）
+</details>
 
-#### 3.1 エージェントの統合
+### 4. エージェントの統合（10分）
+
+#### 4.1 エージェントクラスの実装
+
 ```python
+# agent.py
+from validator import AnsiblePlaybookValidator
+from executor import AnsibleExecutor
+
 class AnsibleAgent:
-    def __init__(self, api_key, inventory_file):
-        self.generator = AnsiblePlaybookGenerator(api_key)
-        self.optimizer = PlaybookOptimizer()
-        self.executor = AnsibleExecutor(inventory_file)
-        self.validator = AnsibleResultValidator()
+    """Ansible Playbook生成・実行自動化エージェント"""
     
-    def process(self, instruction, execute=False):
-        """メイン処理"""
-        # 1. Playbook生成
-        playbook = self.generator.generate(instruction)
+    def __init__(self, inventory):
+        self.inventory = inventory
+        self.validator = AnsiblePlaybookValidator()
+        self.executor = AnsibleExecutor()
+    
+    def process(self, instruction):
+        """
+        メイン処理フロー
         
-        # 2. 最適化
-        playbook = self.optimizer.optimize(playbook)
+        Args:
+            instruction: 自然言語の指示
+        
+        Returns:
+            処理結果
+        """
+        # 1. Continue AIでPlaybook生成（手動）
+        # Continue AIを起動して、instructionを入力
+        # 生成されたPlaybookを取得
+        
+        # 2. 検証
+        validation_result = self.validator.validate(playbook)
+        if not validation_result['valid']:
+            # エラーがあれば修正を試みる
+            # Continue AIに修正を依頼
+            playbook = self.fix_playbook(playbook, validation_result['errors'])
         
         # 3. 実行（オプション）
-        if execute:
-            result = self.executor.execute(playbook)
-            validation = self.validator.validate(result)
-            report = self.validator.generate_report(validation)
-            return {
-                'playbook': playbook,
-                'execution_result': result,
-                'validation': validation,
-                'report': report
-            }
+        if self.should_execute():
+            execution_result = self.executor.execute(playbook, self.inventory)
+            return execution_result
         
-        return {'playbook': playbook}
+        return {'playbook': playbook, 'validation': validation_result}
 ```
 
-#### 3.2 動作確認
-```python
-# エージェントの初期化
-agent = AnsibleAgent(
-    api_key=os.getenv('GOOGLE_API_KEY'),
-    inventory_file='inventory.ini'
-)
+## ✅ チェックリスト
 
-# 監視エージェントのインストール
-result = agent.process(
-    "監視エージェント（Prometheus node_exporter）をインストールして起動してください。",
-    execute=True
-)
-
-print(result['playbook'])
-print(result['report'])
-
-# サーバ情報の取得
-result = agent.process(
-    "サーバのCPU、メモリ、ディスク使用率を取得してください。",
-    execute=True
-)
-```
-
-## チェックリスト
-
-- [ ] Ansible Playbook生成エージェントを実装した
-- [ ] プロンプトエンジニアリングを実装した
-- [ ] 自然言語からPlaybookへの変換ロジックを実装した
-- [ ] タスク構造の最適化機能を実装した
+- [ ] Continue AIを活用したPlaybook生成を実践した
+- [ ] Playbook検証機能を実装した
 - [ ] Ansible実行自動化を実装した
-- [ ] 実行結果の検証機能を実装した
-- [ ] レポート生成機能を実装した
 - [ ] エラーハンドリングを実装した
+- [ ] リトライ機能を実装した
 - [ ] 基本的な動作確認を行った
-- [ ] 複数のタスクで動作確認を行った
+- [ ] 生成Playbookの品質を確認した
 
-## トラブルシューティング
+## 🆘 トラブルシューティング
 
-### YAML構文エラー
-- 生成されたYAMLの構文を確認
-- YAMLバリデーターを使用
+### Continue AIが応答しない
+
+- Continueの設定を確認（`.continue/config.json`）
+- ネットワーク接続を確認
 
 ### Ansible実行エラー
-- インベントリファイルが正しいか確認
-- SSH接続が可能か確認
-- モジュールが正しく使用されているか確認
 
-## 参考資料
-- `templates/ai_agents/ansible_agent_template.py`
-- `sample_code/ansible/`
+- インベントリファイルの設定を確認
+- SSH接続を確認
+- 権限を確認
+
+## 📚 参考資料
+
+- [Continue公式ドキュメント](https://continue.dev/docs)
+- [Ansible公式ドキュメント](https://docs.ansible.com/)
+- [サンプルコード](../../sample_code/ansible/)
+- [テンプレート](../../templates/ai_agents/ansible_agent_template.py)
+
+## ➡️ 次のステップ
+
+セッション4が完了したら、[セッション5：統合管理エージェント](session5_guide.md) に進んでください。

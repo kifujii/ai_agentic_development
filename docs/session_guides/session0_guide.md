@@ -1,27 +1,46 @@
 # セッション0：AI x IaC基礎実践 詳細ガイド
 
-## 目標
-Prompt Engineering、Context Engineering、AI Agentの実践を通じて、AI x IaCの基礎を習得する。
+## 📋 目的
 
-## 事前準備
-- OpenShift DevSpaces環境へのアクセス
-- AWS認証情報（アクセスキー、シークレットキー）
-- Groq APIキー（無料、クレジットカード不要）
-  - アカウント作成: https://console.groq.com/
-  - セットアップ手順: README.mdの「3. Groq APIのセットアップ」を参照
-- 必要なツールのインストール確認
+このセッションでは、Continue AIを活用しながら、Prompt Engineering、Context Engineering、AI Agentの実践を通じて、AI x IaCの基礎を習得します。
 
-## 手順
+### 学習目標
+
+- Continue AIの基本的な使い方を習得する
+- 効果的なプロンプト設計方法を理解する
+- コンテキスト情報の活用方法を理解する
+- AIを活用したTerraformコード生成を実践する
+
+## 🎯 目指すべき構成
+
+このセッション終了時点で、以下の構成が完成していることを目指します：
+
+```
+workspace/
+├── terraform/
+│   └── ec2_instance.tf          # 生成されたTerraformコード
+└── prompts/
+    └── terraform_ec2_template.txt # プロンプトテンプレート
+```
+
+## 📚 事前準備
+
+- [環境セットアップガイド](../setup/ENVIRONMENT_SETUP.md) を完了していること
+- Continue AIが正しく設定されていること（[Continueセットアップガイド](../setup/CONTINUE_SETUP.md) を参照）
+- AWS認証情報が設定されていること
+
+## 🚀 手順
 
 ### 1. 環境セットアップ（15分）
 
 #### 1.1 OpenShift DevSpaces環境の確認
+
 ```bash
 # 現在のディレクトリ確認
 pwd
 
 # 環境変数の確認
-env | grep -E "AWS|GROQ_API"
+env | grep -E "AWS"
 
 # Python/Node.jsのバージョン確認
 python3 --version
@@ -29,11 +48,12 @@ node --version
 ```
 
 #### 1.2 AWS CLI/認証情報の設定
+
 ```bash
 # AWS CLIのインストール確認
 aws --version
 
-# .envファイルから環境変数を読み込む（READMEの手順で作成済みの場合）
+# .envファイルから環境変数を読み込む
 export $(cat .env | grep -v '^#' | xargs)
 
 # 認証情報の確認
@@ -42,28 +62,10 @@ aws sts get-caller-identity
 
 **注意**: `.env`ファイルを環境変数としてエクスポートすれば、AWS CLIとTerraformの両方が認証情報を使用できます。`aws configure`は不要です。
 
-#### 1.3 認証情報の確認
-```bash
-# .envファイルが存在するか確認
-ls -la .env
+詳細は [環境セットアップガイド](../setup/ENVIRONMENT_SETUP.md) を参照してください。
 
-# .envファイルを環境変数として読み込む（まだ読み込んでいない場合）
-export $(cat .env | grep -v '^#' | xargs)
+#### 1.3 必要なツールのインストール確認
 
-# 環境変数の確認
-echo $GROQ_API_KEY
-echo $AWS_ACCESS_KEY_ID
-
-# Groq API接続テスト
-python3 scripts/test_groq.py
-
-# AWS認証情報の確認
-aws sts get-caller-identity
-```
-
-**注意**: `.env`ファイルの作成と設定は、README.mdの「4. 認証情報の設定」セクションを参照してください。
-
-#### 1.4 必要なツールのインストール確認
 ```bash
 # Terraformのインストール確認
 terraform version
@@ -71,41 +73,39 @@ terraform version
 # Ansibleのインストール確認
 ansible --version
 
-# Pythonパッケージのインストール
-# 重要: python3 -m pipを使用することで、python3コマンドと同じPythonバージョンに確実にインストールされます
-python3 -m pip install --user groq python-dotenv boto3
+# Pythonパッケージのインストール確認
+python3 -m pip list | grep -E "boto3|python-dotenv"
 ```
 
-### 2. Prompt Engineering実践（30分）
+### 2. Continue AIの基本操作（10分）
 
-#### 2.1 対話型AIエージェントの起動
-チャット方式でAIエージェントを使用してTerraformコードを生成し、ファイルに保存します。
+#### 2.1 Continueの起動
 
-```bash
-# 対話型AIエージェントを起動
-python3 scripts/interactive_agent.py
-```
+Continue AIは、VS Code/Cursorの拡張機能です。以下の方法で起動できます：
 
-**使い方**:
-1. 起動後、自然言語で指示を入力
-2. 生成されたコードを確認
-3. `save <filename>`コマンドでファイルに保存
+**方法1: ショートカットキー**
+- **Windows/Linux**: `Ctrl + L`
+- **Mac**: `Cmd + L`
 
-**例**:
-```
-💬 あなた: ap-northeast-1リージョンにt3.microのEC2インスタンスを作成してください
-💬 あなた: save ec2_instance.tf
-```
+**方法2: サイドバーから**
+1. Continueアイコンをクリック（サイドバー左側）
+2. チャットパネルが開きます
 
-**コマンド**:
-- `exit` / `quit` / `q`: 終了
-- `help`: ヘルプを表示
-- `save <filename>`: 最後に生成したコードをファイルに保存
+#### 2.2 基本的な使い方
 
-生成されたファイルは `workspace/terraform/` ディレクトリに保存されます。
+1. **コード生成**: 自然言語で指示を入力
+2. **コード選択**: コードを選択してからContinueに質問すると、選択したコードをコンテキストとして使用します
+3. **ファイル全体**: ファイルを開いた状態で質問すると、ファイル全体がコンテキストとして使用されます
 
-#### 2.2 基本的なプロンプトの作成
+詳細は [Continueセットアップガイド](../setup/CONTINUE_SETUP.md) を参照してください。
+
+### 3. Prompt Engineering実践（30分）
+
+#### 3.1 基本的なプロンプトの作成
+
 **タスク**: EC2インスタンスを作成するTerraformコードを生成する
+
+Continue AIを起動（`Ctrl+L` / `Cmd+L`）して、以下のプロンプトを試してみましょう。
 
 **悪い例**:
 ```
@@ -129,10 +129,82 @@ EC2を作成して
 - コメントを適切に追加
 ```
 
-**実践**: 対話型エージェントで上記のプロンプトを試してみましょう。
+<details>
+<summary>📝 回答例（クリックで展開）</summary>
 
-#### 2.3 プロンプトテンプレートの作成
-`templates/prompts/terraform_ec2_template.txt`を作成:
+```hcl
+# variables.tf
+variable "instance_type" {
+  description = "EC2インスタンスタイプ"
+  type        = string
+  default     = "t3.micro"
+}
+
+variable "ami_id" {
+  description = "AMI ID"
+  type        = string
+  default     = "ami-0c3fd0f5d33134a76" # Amazon Linux 2023
+}
+
+variable "tags" {
+  description = "リソースタグ"
+  type        = map(string)
+  default = {
+    Name        = "training-ec2"
+    Environment = "training"
+  }
+}
+
+# main.tf
+provider "aws" {
+  region = "ap-northeast-1"
+}
+
+# セキュリティグループ
+resource "aws_security_group" "training_sg" {
+  name        = "training-sg"
+  description = "Training security group for EC2"
+
+  ingress {
+    description = "SSH"
+    from_port   = 22
+    to_port     = 22
+    protocol    = "tcp"
+    cidr_blocks = ["0.0.0.0/0"]
+  }
+
+  egress {
+    from_port   = 0
+    to_port     = 0
+    protocol    = "-1"
+    cidr_blocks = ["0.0.0.0/0"]
+  }
+
+  tags = var.tags
+}
+
+# EC2インスタンス
+resource "aws_instance" "training_ec2" {
+  ami           = var.ami_id
+  instance_type = var.instance_type
+
+  vpc_security_group_ids = [aws_security_group.training_sg.id]
+
+  tags = var.tags
+}
+```
+
+</details>
+
+#### 3.2 プロンプトテンプレートの作成
+
+再利用可能なプロンプトテンプレートを作成しましょう。
+
+1. `workspace/prompts/` ディレクトリを作成
+2. `terraform_ec2_template.txt` を作成
+
+<details>
+<summary>📝 プロンプトテンプレート例（クリックで展開）</summary>
 
 ```
 以下の要件で{resource_type}を作成するTerraformコードを生成してください。
@@ -148,19 +220,30 @@ EC2を作成して
 - ベストプラクティスに従う
 ```
 
-#### 2.4 段階的なプロンプト最適化
+</details>
+
+#### 3.3 段階的なプロンプト最適化
+
 1. **第1段階**: 基本的な要件を記述
 2. **第2段階**: エラーフィードバックを反映
 3. **第3段階**: ベストプラクティスを追加
 4. **第4段階**: 再利用可能なテンプレート化
 
-**実践**: 対話型エージェントで段階的にプロンプトを改善し、生成コードの品質向上を確認しましょう。
+**実践**: Continue AIで段階的にプロンプトを改善し、生成コードの品質向上を確認しましょう。
 
-### 3. Context Engineering実践（20分）
+### 4. Context Engineering実践（20分）
 
-#### 3.1 AWSリソース情報のコンテキスト化
+#### 4.1 AWSリソース情報のコンテキスト化
+
+Continue AIに、AWSリソース情報をコンテキストとして提供する方法を実践します。
+
+1. 以下のPythonスクリプトを作成して実行
+2. 取得した情報をContinue AIに提供
+
 ```python
+# get_aws_context.py
 import boto3
+import json
 
 def get_aws_context():
     """AWSリソース情報を取得してコンテキスト化"""
@@ -185,131 +268,148 @@ def get_aws_context():
     }
     
     return context
+
+if __name__ == "__main__":
+    context = get_aws_context()
+    print(json.dumps(context, indent=2, ensure_ascii=False))
 ```
 
-#### 3.2 既存コードのコンテキスト活用
-```python
-def load_existing_terraform_code(directory):
-    """既存のTerraformコードを読み込んでコンテキスト化"""
-    import os
-    
-    context = {
-        'existing_resources': [],
-        'variables': [],
-        'outputs': []
+<details>
+<summary>📝 実行結果例（クリックで展開）</summary>
+
+```json
+{
+  "available_amis": [
+    {
+      "ImageId": "ami-0c3fd0f5d33134a76",
+      "Name": "amzn2-ami-hvm-2.0.20231218.0-x86_64-gp2",
+      "Description": "Amazon Linux 2 AMI 2.0.20231218.0 x86_64 HVM gp2"
     }
-    
-    for root, dirs, files in os.walk(directory):
-        for file in files:
-            if file.endswith('.tf'):
-                filepath = os.path.join(root, file)
-                with open(filepath, 'r') as f:
-                    content = f.read()
-                    # リソース名の抽出など
-                    # ...
-    
-    return context
+  ],
+  "regions": [
+    "ap-northeast-1",
+    "ap-northeast-3",
+    "us-east-1"
+  ],
+  "current_region": "ap-northeast-1"
+}
 ```
 
-### 4. AI Agent実践（25分）
+</details>
 
-#### 4.1 シンプルなAIエージェントの実装
-`templates/ai_agents/simple_agent_template.py`を参照して実装。
+#### 4.2 既存コードのコンテキスト活用
 
-基本的な流れ:
-1. プロンプトの作成
-2. LLM APIの呼び出し
-3. コード生成
-4. コードの検証
-5. 実行（オプション）
+既存のTerraformコードを開いて、Continue AIに質問することで、コード全体をコンテキストとして活用できます。
 
-#### 4.2 エージェントの動作確認
-```python
-# エージェントのテスト
-import os
-from simple_agent import SimpleTerraformAgent
+1. 既存のTerraformファイルを開く
+2. Continue AIを起動
+3. コードに関する質問をする
 
-# Groq APIキーを環境変数から取得
-agent = SimpleTerraformAgent(api_key=os.getenv('GROQ_API_KEY'))
-
-result = agent.generate_code(
-    prompt="EC2インスタンスを作成するTerraformコードを生成してください。"
-)
-
-print(result['code'])
-print(result['validation'])
+例：
+```
+「このTerraformコードを改善して、より再利用可能な形にしてください」
 ```
 
-**注意**: `simple_agent_template.py`はGroq APIを使用するように実装されています。詳細は`templates/ai_agents/simple_agent_template.py`を参照してください。
-
-### 5. AI x IaCを使ったEC2の設計・構築・検証（20分）
+### 5. AI x IaCを使ったEC2の設計・構築・検証（25分）
 
 #### 5.1 自然言語指示による設計
-指示例:
+
+Continue AIを起動して、以下の指示を入力します：
+
 ```
 ap-northeast-1リージョンに、t3.microインスタンスタイプのEC2インスタンスを作成してください。
 セキュリティグループはSSH（ポート22）のみ許可し、Nameタグに"training-ec2"を設定してください。
 ```
 
-#### 5.2 AIを活用したTerraformコード生成
-エージェントを使用してコード生成:
-```python
-code = agent.generate_code(
-    prompt=instruction,
-    context=get_aws_context()
-)
-```
+#### 5.2 生成コードの保存
+
+Continue AIが生成したコードを、`workspace/terraform/ec2_instance.tf` に保存します。
 
 #### 5.3 生成コードの検証と修正
+
 ```bash
+# Terraformディレクトリに移動
+cd workspace/terraform
+
 # Terraformフォーマット
 terraform fmt
 
 # Terraform検証
+terraform init
 terraform validate
 
 # 実行計画の確認
 terraform plan
 ```
 
+<details>
+<summary>📝 検証結果例（クリックで展開）</summary>
+
+```
+Terraform will perform the following actions:
+
+  # aws_instance.training_ec2 will be created
+  + resource "aws_instance" "training_ec2" {
+      + ami                          = "ami-0c3fd0f5d33134a76"
+      + instance_type                = "t3.micro"
+      ...
+    }
+
+Plan: 1 to add, 0 to change, 0 to destroy.
+```
+
+</details>
+
 #### 5.4 EC2インスタンスの構築と動作確認
+
 ```bash
-# リソースの作成
-terraform apply
+# リソースの作成（実際に作成する場合は実行）
+# terraform apply
 
 # AWSコンソールでの確認
 aws ec2 describe-instances --filters "Name=tag:Name,Values=training-ec2"
-
-# SSH接続テスト（可能な場合）
-ssh -i your-key.pem ec2-user@<public-ip>
 ```
 
-## チェックリスト
+**注意**: 実際にリソースを作成する場合は、`terraform apply`を実行してください。ワークショップ終了後は、`terraform destroy`でリソースを削除してください。
+
+## ✅ チェックリスト
 
 - [ ] 環境セットアップが完了した
+- [ ] Continue AIが正常に動作することを確認した
 - [ ] AWS認証情報が正しく設定されている
-- [ ] 生成AI APIキーが設定されている
 - [ ] 基本的なプロンプトを作成した
 - [ ] プロンプトテンプレートを作成した
 - [ ] Context Engineeringの実践を行った
-- [ ] シンプルなAIエージェントを実装した
-- [ ] EC2インスタンスをAIを活用して構築した
-- [ ] 構築結果を検証した
+- [ ] EC2インスタンスのTerraformコードを生成した
+- [ ] 生成コードの検証を行った
 
-## トラブルシューティング
+## 🆘 トラブルシューティング
+
+### Continue AIが起動しない
+
+- 拡張機能が正しくインストールされているか確認
+- VS Code/Cursorを再起動
+- Continueの設定ファイル（`.continue/config.json`）が正しいか確認
+
+詳細は [Continueセットアップガイド](../setup/CONTINUE_SETUP.md) を参照してください。
 
 ### AWS認証エラー
+
 - 認証情報が正しく設定されているか確認
 - IAM権限が適切か確認
 
-### APIキーエラー
-- 環境変数が正しく設定されているか確認
-- APIキーが有効か確認
-
 ### Terraformエラー
+
 - プロバイダーのバージョンを確認
 - リソース名の重複を確認
 
-## 参考資料
-- `templates/ai_agents/simple_agent_template.py`
-- `sample_code/terraform/basic_ec2/`
+## 📚 参考資料
+
+- [Continue公式ドキュメント](https://continue.dev/docs)
+- [Terraform公式ドキュメント](https://developer.hashicorp.com/terraform/docs)
+- [AWS公式ドキュメント](https://docs.aws.amazon.com/)
+- [サンプルコード](../../sample_code/terraform/basic_ec2/)
+
+## ➡️ 次のステップ
+
+セッション0が完了したら、[セッション1：VPC/Subnet/EC2構築](session1_guide.md) に進んでください。

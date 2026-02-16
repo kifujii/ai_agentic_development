@@ -152,22 +152,8 @@ else
     log_info "基本的なPythonパッケージのインストール完了"
 fi
 
-# groqモジュールのインストール確認（python3コマンドで確認）
-log_info "groqモジュールのインストール確認中..."
-if python3 -c "import groq" 2>/dev/null; then
-    log_info "✓ groqモジュールは正常にインストールされています"
-    # インストールされたgroqのバージョン確認
-    GROQ_VERSION=$(python3 -c "import groq; print(groq.__version__)" 2>/dev/null || echo "unknown")
-    log_info "  groqバージョン: ${GROQ_VERSION}"
-else
-    log_warn "groqモジュールのインポートに失敗しました。再インストールを試みます..."
-    python3 -m pip install --user groq -q || {
-        log_error "groqモジュールのインストールに失敗しました"
-        log_error "手動でインストールしてください: python3 -m pip install --user groq"
-        exit 1
-    }
-    log_info "groqモジュールの再インストール完了"
-fi
+# 注意: Continue AIはエディタ拡張機能なので、Pythonパッケージのインストールは不要です
+# Continueの設定は .continue/config.json を参照してください
 
 # 7. Gitの確認（通常は既にインストールされている）
 log_info "Gitの確認中..."
@@ -244,8 +230,8 @@ AWS_ACCESS_KEY_ID=your-access-key-here
 AWS_SECRET_ACCESS_KEY=your-secret-key-here
 AWS_DEFAULT_REGION=ap-northeast-1
 
-# 生成AI APIキー（Groq）
-GROQ_API_KEY=your-groq-api-key-here
+# 注意: Continue AIはエディタ拡張機能なので、APIキーは不要です
+# Continueの設定は .continue/config.json を参照してください
 EOF
     log_info ".env.templateファイルを作成しました。"
     log_info "次のステップ: .env.templateをコピーして.envファイルを作成し、APIキーを設定してください。"
@@ -296,13 +282,6 @@ fi
 
 if command -v python3 &> /dev/null; then
     log_info "✓ Python: $(python3 --version)"
-    # groqモジュールの確認
-    if python3 -c "import groq" 2>/dev/null; then
-        log_info "✓ groqモジュール: インストール済み"
-    else
-        log_error "✗ groqモジュール: インストールされていません"
-        log_info "  インストールコマンド: python3 -m pip install --user groq"
-    fi
 else
     log_error "✗ Python: インストールされていません"
 fi

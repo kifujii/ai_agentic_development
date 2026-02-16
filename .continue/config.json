@@ -1,0 +1,13 @@
+{
+  "models": [
+    {
+      "title": "OpenShiftAI",
+      "provider": "openai",
+      "model": "gpt-4",
+      "apiBase": "https://YOUR_OPENSHIFTAI_ENDPOINT/v1",
+      "apiKey": "YOUR_OPENSHIFTAI_API_KEY"
+    }
+  ],
+  "defaultModel": "OpenShiftAI",
+  "allowAnonymousTelemetry": false
+}

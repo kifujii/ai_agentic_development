@@ -1,19 +1,54 @@
-# セッション3：システム運用基礎とAnsible Playbook作成 詳細ガイド
+# セッション3：Ansible運用基礎 詳細ガイド
 
-## 目標
-Ansibleを使った基本的な運用タスクの自動化を実践する。
+## 📋 目的
 
-## 事前準備
-- Ansibleのインストール確認
-- EC2インスタンスへのSSH接続設定
-- 作業ディレクトリの作成
+このセッションでは、Ansibleを使った基本的な運用タスクの自動化を実践します。
 
-## 手順
+### 学習目標
+
+- Ansibleの基本概念を理解する
+- インベントリファイルの設定方法を習得する
+- Playbookの作成と実行方法を習得する
+- 基本的な運用タスクの自動化を実践する
+
+## 🎯 目指すべき構成
+
+このセッション終了時点で、以下の構成が完成していることを目指します：
+
+```
+workspace/
+└── ansible/
+    ├── inventory.ini          # インベントリファイル
+    ├── playbooks/
+    │   ├── restart_server.yml # サーバー再起動Playbook
+    │   └── install_packages.yml # パッケージインストールPlaybook
+    └── group_vars/
+        └── webservers.yml     # グループ変数
+```
+
+**自動化されるタスク**:
+- サーバー再起動
+- パッケージのインストール
+- ファイルのコピー
+- サービスの管理
+
+## 📚 事前準備
+
+- [セッション1](session1_guide.md) で構築したEC2インスタンスが起動していること
+- Ansibleがインストールされていること
+- EC2インスタンスへのSSH接続が可能なこと
+
+## 🚀 手順
 
 ### 1. Ansibleインベントリの設定（15分）
 
 #### 1.1 インベントリファイルの作成
-`inventory.ini`を作成:
+
+`workspace/ansible/inventory.ini`を作成します。
+
+<details>
+<summary>📝 インベントリファイル例（クリックで展開）</summary>
+
 ```ini
 [webservers]
 web1 ansible_host=<ec2-public-ip> ansible_user=ec2-user ansible_ssh_private_key_file=training-key.pem
@@ -22,7 +57,16 @@ web1 ansible_host=<ec2-public-ip> ansible_user=ec2-user ansible_ssh_private_key_
 ansible_ssh_common_args='-o StrictHostKeyChecking=no'
 ```
 
+**設定項目の説明**:
+- `ansible_host`: EC2インスタンスのパブリックIP
+- `ansible_user`: SSH接続ユーザー（Amazon Linux 2023の場合は`ec2-user`）
+- `ansible_ssh_private_key_file`: キーペアファイルのパス
+- `ansible_ssh_common_args`: SSH接続オプション
+
+</details>
+
 #### 1.2 SSH鍵の設定
+
 ```bash
 # キーペアファイルの権限確認
 chmod 400 training-key.pem
@@ -32,18 +76,51 @@ ssh -i training-key.pem ec2-user@<ec2-public-ip>
 ```
 
 #### 1.3 接続テスト
+
 ```bash
 # Ansible接続テスト
-ansible all -i inventory.ini -m ping
+ansible all -i workspace/ansible/inventory.ini -m ping
 
 # システム情報の取得
-ansible all -i inventory.ini -m setup
+ansible all -i workspace/ansible/inventory.ini -m setup
 ```
+
+<details>
+<summary>📝 実行結果例（クリックで展開）</summary>
+
+```
+web1 | SUCCESS => {
+    "changed": false,
+    "ping": "pong"
+}
+```
+
+</details>
 
 ### 2. サーバー再起動の自動化（30分）
 
-#### 2.1 Playbookの作成
-`restart_server.yml`を作成:
+#### 2.1 Continue AIを活用したPlaybook作成
+
+Continue AIを起動（`Ctrl+L` / `Cmd+L`）して、以下のプロンプトを入力します：
+
+```
+Ansible Playbookを作成してください。
+
+要件:
+- サーバーを再起動する
+- 再起動前後の稼働時間を表示する
+- 再起動後にSSHサービスとcronサービスを再起動する
+- エラーハンドリングを含める
+
+出力形式:
+- YAML形式のAnsible Playbook
+- 適切なコメントを含める
+- ベストプラクティスに従う
+```
+
+<details>
+<summary>📝 生成Playbook例（クリックで展開）</summary>
+
 ```yaml
 ---
 - name: サーバー再起動の自動化
@@ -74,6 +151,13 @@ ansible all -i inventory.ini -m setup
         reboot_timeout: 300
         pre_reboot_delay: 10
         post_reboot_delay: 30
+      register: reboot_result
+      ignore_errors: yes
+    
+    - name: 再起動結果の確認
+      debug:
+        msg: "再起動結果: {{ reboot_result }}"
+      when: reboot_result.failed
     
     - name: 再起動後の状態確認
       shell: uptime
@@ -88,37 +172,74 @@ ansible all -i inventory.ini -m setup
       notify: restart services
 ```
 
-#### 2.2 Playbookの実行
+</details>
+
+#### 2.2 Playbookの保存
+
+生成されたPlaybookを`workspace/ansible/playbooks/restart_server.yml`に保存します。
+
+#### 2.3 Playbookの実行
+
 ```bash
+# ディレクトリに移動
+cd workspace/ansible
+
 # ドライラン（実際には実行しない）
-ansible-playbook -i inventory.ini restart_server.yml --check
+ansible-playbook -i inventory.ini playbooks/restart_server.yml --check
 
 # 実行
-ansible-playbook -i inventory.ini restart_server.yml
+ansible-playbook -i inventory.ini playbooks/restart_server.yml
 
 # 詳細な出力
-ansible-playbook -i inventory.ini restart_server.yml -v
+ansible-playbook -i inventory.ini playbooks/restart_server.yml -v
 ```
 
-#### 2.3 エラーハンドリング
-```yaml
-tasks:
-  - name: サーバーを再起動
-    reboot:
-      reboot_timeout: 300
-    register: reboot_result
-    ignore_errors: yes
-  
-  - name: 再起動結果の確認
-    debug:
-      msg: "再起動結果: {{ reboot_result }}"
-    when: reboot_result.failed
+<details>
+<summary>📝 実行結果例（クリックで展開）</summary>
+
 ```
+PLAY [サーバー再起動の自動化] **********************************************
+
+TASK [再起動前の状態確認] **********************************************
+ok: [web1]
+
+TASK [再起動前の状態を表示] **********************************************
+ok: [web1] => {
+    "msg": "再起動前の稼働時間:  10:30:00 up 2 days,  3:15,  1 user,  load average: 0.00, 0.01, 0.05"
+}
+
+TASK [サーバーを再起動] **********************************************
+changed: [web1]
+
+TASK [再起動後の状態確認] **********************************************
+ok: [web1]
+
+TASK [再起動後の状態を表示] **********************************************
+ok: [web1] => {
+    "msg": "再起動後の稼働時間:  10:35:00 up 0 min,  1 user,  load average: 0.00, 0.00, 0.00"
+}
+
+RUNNING HANDLER [restart services] **********************************************
+ok: [web1] => (item=sshd)
+ok: [web1] => (item=crond)
+
+PLAY RECAP **********************************************
+web1                      : ok=6    changed=1    unreachable=0    failed=0
+```
+
+</details>
 
 ### 3. その他の基本タスク（15分）
 
 #### 3.1 パッケージのインストール
+
+Continue AIを活用して、パッケージインストール用のPlaybookを作成します。
+
+<details>
+<summary>📝 Playbook例（クリックで展開）</summary>
+
 ```yaml
+---
 - name: パッケージのインストール
   hosts: webservers
   become: yes
@@ -133,8 +254,15 @@ tasks:
         state: present
 ```
 
+</details>
+
 #### 3.2 ファイルのコピー
+
+<details>
+<summary>📝 Playbook例（クリックで展開）</summary>
+
 ```yaml
+---
 - name: ファイルのコピー
   hosts: webservers
   
@@ -148,8 +276,15 @@ tasks:
         mode: '0644'
 ```
 
+</details>
+
 #### 3.3 サービスの管理
+
+<details>
+<summary>📝 Playbook例（クリックで展開）</summary>
+
 ```yaml
+---
 - name: サービスの管理
   hosts: webservers
   become: yes
@@ -162,7 +297,13 @@ tasks:
         enabled: yes
 ```
 
-## チェックリスト
+</details>
+
+### 4. サンプルコードの参照
+
+[サンプルコード](../../sample_code/ansible/basic_playbook/) を参照して、より詳細な例を確認してください。
+
+## ✅ チェックリスト
 
 - [ ] Ansibleインベントリファイルを作成した
 - [ ] SSH接続テストが成功した
@@ -173,20 +314,29 @@ tasks:
 - [ ] エラーハンドリングを実装した
 - [ ] その他の基本タスクを実装した
 
-## トラブルシューティング
+## 🆘 トラブルシューティング
 
 ### SSH接続エラー
+
 - セキュリティグループでSSH（ポート22）が許可されているか確認
 - キーペアファイルの権限を確認（chmod 400）
 - ホストキーの確認を無効化（StrictHostKeyChecking=no）
 
 ### 権限エラー
+
 - `become: yes`を使用してsudo権限を取得
 - 適切なユーザーで実行しているか確認
 
 ### タイムアウトエラー
+
 - `reboot_timeout`を増やす
 - ネットワーク接続を確認
 
-## 参考資料
-- `sample_code/ansible/basic_playbook/`
+## 📚 参考資料
+
+- [Ansible公式ドキュメント](https://docs.ansible.com/)
+- [サンプルコード](../../sample_code/ansible/basic_playbook/)
+
+## ➡️ 次のステップ
+
+セッション3が完了したら、[セッション4：Ansible自動化エージェント](session4_guide.md) に進んでください。
