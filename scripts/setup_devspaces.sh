@@ -79,12 +79,29 @@ else
     log_warn "Terraformは既にインストールされています: $(terraform version | head -n 1)"
 fi
 
-# 3. Ansibleのインストール（python3 -m pipでユーザー権限）
+# 3. pipのインストール確認とインストール（Ansibleのインストール前に必要）
+log_info "pipの確認中..."
+log_info "使用するPythonバージョン: $(python3 --version)"
+if python3 -m pip --version &>/dev/null; then
+    log_info "✓ pipは既にインストールされています"
+    python3 -m pip install --user --upgrade pip -q || log_warn "pipのアップグレードに失敗しましたが、続行します"
+else
+    log_warn "pipがインストールされていません。インストールします..."
+    python3 -m ensurepip --user --upgrade || {
+        log_error "pipのインストールに失敗しました"
+        log_error "手動でインストールしてください: python3 -m ensurepip --user"
+        exit 1
+    }
+    log_info "pipのインストール完了"
+fi
+
+# 4. Ansibleのインストール（python3 -m pipでユーザー権限）
 log_info "Ansibleのインストール中..."
 if ! command -v ansible &> /dev/null; then
     # python3 -m pipでインストール（ユーザー権限、python3と同じバージョンに確実にインストール）
     python3 -m pip install --user ansible -q || {
         log_error "Ansibleのインストールに失敗しました"
+        log_error "pipが正しくインストールされているか確認してください: python3 -m pip --version"
         exit 1
     }
     log_info "Ansibleインストール完了: $(ansible --version | head -n 1)"
@@ -92,7 +109,7 @@ else
     log_warn "Ansibleは既にインストールされています: $(ansible --version | head -n 1)"
 fi
 
-# 4. AWS CLIのインストール（ユーザー権限）
+# 5. AWS CLIのインストール（ユーザー権限）
 log_info "AWS CLIのインストール中..."
 if ! command -v aws &> /dev/null; then
     log_info "AWS CLI v2をダウンロード中..."
@@ -114,25 +131,10 @@ else
     log_warn "AWS CLIは既にインストールされています: $(aws --version)"
 fi
 
-# 5. Pythonパッケージのインストール
+# 6. Pythonパッケージのインストール
 # 重要: python3 -m pipを使用することで、python3コマンドと同じPythonバージョンに確実にインストールされます
+# 注意: pipは既にセクション3でインストール済みです
 log_info "Pythonパッケージのインストール中..."
-log_info "使用するPythonバージョン: $(python3 --version)"
-
-# pipのインストール確認とインストール
-log_info "pipの確認中..."
-if python3 -m pip --version &>/dev/null; then
-    log_info "✓ pipは既にインストールされています"
-    python3 -m pip install --user --upgrade pip -q
-else
-    log_warn "pipがインストールされていません。インストールします..."
-    python3 -m ensurepip --user --upgrade || {
-        log_error "pipのインストールに失敗しました"
-        log_error "手動でインストールしてください: python3 -m ensurepip --user"
-        exit 1
-    }
-    log_info "pipのインストール完了"
-fi
 
 if [ -f "requirements.txt" ]; then
     python3 -m pip install --user -r requirements.txt -q || {
@@ -167,7 +169,7 @@ else
     log_info "groqモジュールの再インストール完了"
 fi
 
-# 6. Gitの確認（通常は既にインストールされている）
+# 7. Gitの確認（通常は既にインストールされている）
 log_info "Gitの確認中..."
 if ! command -v git &> /dev/null; then
     if check_sudo; then
@@ -190,7 +192,7 @@ else
     log_info "✓ Gitは既にインストールされています: $(git --version)"
 fi
 
-# 7. jqのインストール（ユーザー権限）
+# 8. jqのインストール（ユーザー権限）
 log_info "jqのインストール中..."
 if ! command -v jq &> /dev/null; then
     if check_sudo; then
@@ -226,14 +228,14 @@ else
     log_info "✓ jqは既にインストールされています: $(jq --version)"
 fi
 
-# 8. 作業ディレクトリの作成
+# 9. 作業ディレクトリの作成
 log_info "作業ディレクトリの作成中..."
 mkdir -p ~/workspace/terraform
 mkdir -p ~/workspace/ansible
 mkdir -p ~/workspace/agents
 log_info "作業ディレクトリの作成完了"
 
-# 9. .envファイルのテンプレート作成
+# 10. .envファイルのテンプレート作成
 log_info ".envファイルのテンプレート作成中..."
 if [ ! -f ".env" ]; then
     cat > .env.template << EOF
@@ -251,7 +253,7 @@ else
     log_warn ".envファイルは既に存在します"
 fi
 
-# 9-1. .envファイルの自動読み込み設定を~/.bashrcに追加
+# 10-1. .envファイルの自動読み込み設定を~/.bashrcに追加
 log_info ".envファイルの自動読み込み設定を追加中..."
 ENV_AUTO_LOAD="# .envファイルを自動的に読み込む（プロジェクトディレクトリにいる場合）
 if [ -f .env ]; then
@@ -268,7 +270,7 @@ else
     log_warn ".envファイルの自動読み込み設定は既に存在します"
 fi
 
-# 10. 動作確認
+# 11. 動作確認
 echo ""
 log_info "=========================================="
 log_info "インストールされたツールの確認"
