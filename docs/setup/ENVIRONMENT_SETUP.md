@@ -20,6 +20,13 @@
 3. 新しいワークスペースを作成
    - **スタック**: Python 3.11 または Node.js 18
    - **メモリ**: 4GB以上推奨
+   - **重要**: このプロジェクトには`.devcontainer/devcontainer.json`が含まれており、ワークスペース作成時に以下の拡張機能が自動的にインストールされます：
+     - Continue
+     - HashiCorp Terraform
+     - Ansible
+     - AWS Toolkit
+     - Python
+     - YAML
 
 #### 1.2 Gitリポジトリのクローン
 
@@ -112,11 +119,16 @@ aws sts get-caller-identity
 
 Continue AIはVS Code/Cursorの拡張機能です。OpenShiftAIをモデルプロバイダーとして使用します。
 
-#### 4.1 Continue拡張機能のインストール
+#### 4.1 Continue拡張機能の確認
 
-1. VS CodeまたはCursorを開く
-2. 拡張機能パネルを開く（`Ctrl+Shift+X` / `Cmd+Shift+X`）
-3. "Continue"を検索してインストール
+**重要**: DevSpacesワークスペース作成時に、Continue拡張機能は自動的にインストールされています。
+
+拡張機能がインストールされているか確認するには：
+1. VS Codeの拡張機能パネルを開く（`Ctrl+Shift+X` / `Cmd+Shift+X`）
+2. "Continue"を検索して、インストール済みであることを確認
+
+**手動インストールが必要な場合**（ローカル環境など）:
+詳細は [`docs/setup/CONTINUE_SETUP.md`](../setup/CONTINUE_SETUP.md) の「手動インストール」セクションを参照してください。
 
 #### 4.2 OpenShiftAIの設定
 

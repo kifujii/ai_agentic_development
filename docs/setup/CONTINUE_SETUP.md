@@ -15,13 +15,27 @@ Continueは、VS CodeやCursorエディタで動作するAIコーディングア
 
 ### 1. Continue拡張機能のインストール
 
-#### VS Codeを使用する場合
+**重要**: このプロジェクトには`.devcontainer/devcontainer.json`が含まれており、DevSpacesワークスペース作成時にContinue拡張機能が自動的にインストールされます。
+
+#### DevSpacesワークスペースを使用する場合（推奨）
+
+DevSpacesワークスペースを作成すると、以下の拡張機能が自動的にインストールされます：
+- Continue
+- HashiCorp Terraform
+- Ansible
+- AWS Toolkit
+- Python
+- YAML
+
+**手動インストールが必要な場合**（ローカル環境など）:
+
+##### VS Codeを使用する場合
 1. VS Codeを開く
 2. 拡張機能パネルを開く（`Ctrl+Shift+X` / `Cmd+Shift+X`）
 3. "Continue"を検索
 4. "Continue"をインストール
 
-#### Cursorを使用する場合
+##### Cursorを使用する場合
 1. Cursorを開く
 2. 拡張機能パネルを開く（`Ctrl+Shift+X` / `Cmd+Shift+X`）
 3. "Continue"を検索

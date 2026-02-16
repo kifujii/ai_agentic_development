@@ -44,11 +44,19 @@
 
 環境セットアップの詳細手順は、[環境セットアップガイド](docs/setup/ENVIRONMENT_SETUP.md) を参照してください。
 
+**重要**: このプロジェクトには`.devcontainer/devcontainer.json`と`.devfile.yaml`が含まれており、DevSpacesワークスペース作成時に以下の拡張機能が自動的にインストールされます：
+- Continue
+- HashiCorp Terraform
+- Ansible
+- AWS Toolkit
+- Python
+- YAML
+
 **主な手順**:
-1. DevSpaces環境への資材の持ち込み
-2. 環境セットアップスクリプトの実行
+1. DevSpaces環境への資材の持ち込み（ワークスペース作成時に拡張機能が自動インストール）
+2. 環境セットアップスクリプトの実行（ワークスペース作成時に自動実行）
 3. AWS認証情報の設定
-4. Continue AIのセットアップ
+4. Continue AIの設定（OpenShiftAIエンドポイントとAPIキーの設定のみ）
 
 ### 2. ワークショップの開始
 

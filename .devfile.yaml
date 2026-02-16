@@ -1,0 +1,41 @@
+schemaVersion: 2.2.0
+metadata:
+  name: ai-agentic-development
+  displayName: AI Agentic Development
+  description: AI駆動Infrastructure as Code開発環境
+
+components:
+  - name: python
+    container:
+      image: quay.io/devfile/python:3.11
+      memoryLimit: 4Gi
+      mountSources: true
+      volumeMounts:
+        - name: pip-cache
+          path: /home/user/.cache/pip
+      env:
+        - name: PYTHONUNBUFFERED
+          value: "1"
+  
+  - name: pip-cache
+    volume:
+      size: 2Gi
+
+commands:
+  - id: setup
+    exec:
+      component: python
+      commandLine: bash scripts/setup_devspaces.sh
+      workingDir: ${PROJECT_SOURCE}
+
+  - id: install-extensions
+    exec:
+      component: python
+      commandLine: |
+        # VS Code拡張機能のインストール（DevSpacesがサポートしている場合）
+        # 注意: OpenShift DevSpacesでは、.devcontainer/devcontainer.jsonの拡張機能設定が優先されます
+        echo "拡張機能はワークスペース作成時に自動インストールされます"
+
+events:
+  postStart:
+    - setup
