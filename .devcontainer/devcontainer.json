@@ -28,7 +28,7 @@
     }
   },
 
-  "postCreateCommand": "bash scripts/setup_devspaces.sh",
+  "postCreateCommand": "bash scripts/setup_devspaces.sh || true",
 
   "remoteUser": "root"
 }
