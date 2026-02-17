@@ -1,13 +1,13 @@
 {
   "models": [
     {
-      "title": "OpenShiftAI",
-      "provider": "openai",
-      "model": "gpt-4",
-      "apiBase": "https://YOUR_OPENSHIFTAI_ENDPOINT/v1",
-      "apiKey": "YOUR_OPENSHIFTAI_API_KEY"
+      "title": "AWS Bedrock",
+      "provider": "bedrock",
+      "region": "ap-northeast-1",
+      "model": "anthropic.claude-3-sonnet-20240229-v1:0",
+      "credentialsProvider": "default"
     }
   ],
-  "defaultModel": "OpenShiftAI",
+  "defaultModel": "AWS Bedrock",
   "allowAnonymousTelemetry": false
 }

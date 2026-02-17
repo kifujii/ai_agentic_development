@@ -140,12 +140,12 @@ if [ -f "requirements.txt" ]; then
     python3 -m pip install --user -r requirements.txt -q || {
         log_error "requirements.txtからのインストールに失敗しました"
         log_info "基本的なパッケージを個別にインストールします..."
-        python3 -m pip install --user groq python-dotenv boto3 pyyaml jinja2 requests colorama -q
+        python3 -m pip install --user python-dotenv boto3 pyyaml jinja2 requests colorama -q
     }
     log_info "Pythonパッケージのインストール完了"
 else
     log_warn "requirements.txtが見つかりません。基本的なパッケージをインストールします..."
-    python3 -m pip install --user groq python-dotenv boto3 pyyaml jinja2 requests colorama -q || {
+    python3 -m pip install --user python-dotenv boto3 pyyaml jinja2 requests colorama -q || {
         log_error "Pythonパッケージのインストールに失敗しました"
         exit 1
     }
@@ -154,6 +154,48 @@ fi
 
 # 注意: Continue AIはエディタ拡張機能なので、Pythonパッケージのインストールは不要です
 # Continueの設定は .continue/config.json を参照してください
+
+# 6-1. VS Code拡張機能のインストール（フォールバック）
+# 注意: .devfile.yamlや.devcontainer/devcontainer.jsonで拡張機能が自動インストールされない場合のフォールバック
+log_info "VS Code拡張機能の確認中..."
+if command -v code &> /dev/null; then
+    log_info "VS Code CLIが利用可能です。拡張機能のインストールを試みます..."
+    
+    # 必要な拡張機能のリスト
+    EXTENSIONS=(
+        "continue.continue"
+        "hashicorp.terraform"
+        "redhat.ansible"
+        "amazonwebservices.aws-toolkit-vscode"
+        "ms-python.python"
+        "redhat.vscode-yaml"
+    )
+    
+    INSTALLED_COUNT=0
+    for EXT in "${EXTENSIONS[@]}"; do
+        if code --list-extensions 2>/dev/null | grep -q "^${EXT}$"; then
+            log_info "✓ 拡張機能 ${EXT} は既にインストールされています"
+            ((INSTALLED_COUNT++))
+        else
+            log_info "拡張機能 ${EXT} をインストール中..."
+            if code --install-extension "${EXT}" --force 2>/dev/null; then
+                log_info "✓ 拡張機能 ${EXT} のインストールに成功しました"
+                ((INSTALLED_COUNT++))
+            else
+                log_warn "拡張機能 ${EXT} のインストールに失敗しました（手動インストールが必要な場合があります）"
+            fi
+        fi
+    done
+    
+    if [ $INSTALLED_COUNT -eq ${#EXTENSIONS[@]} ]; then
+        log_info "すべての拡張機能がインストールされています"
+    else
+        log_warn "一部の拡張機能のインストールに失敗しました。手動でインストールしてください。"
+    fi
+else
+    log_warn "VS Code CLI (code) が利用できません。拡張機能は手動でインストールしてください。"
+    log_info "拡張機能は通常、.devfile.yamlや.devcontainer/devcontainer.jsonで自動インストールされます。"
+fi
 
 # 7. Gitの確認（通常は既にインストールされている）
 log_info "Gitの確認中..."
@@ -230,8 +272,9 @@ AWS_ACCESS_KEY_ID=your-access-key-here
 AWS_SECRET_ACCESS_KEY=your-secret-key-here
 AWS_DEFAULT_REGION=ap-northeast-1
 
-# 注意: Continue AIはエディタ拡張機能なので、APIキーは不要です
+# 注意: Continue AIはエディタ拡張機能です
 # Continueの設定は .continue/config.json を参照してください
+# AWS Bedrockを使用する場合、AWS認証情報が環境変数に設定されている必要があります
 EOF
     log_info ".env.templateファイルを作成しました。"
     log_info "次のステップ: .env.templateをコピーして.envファイルを作成し、APIキーを設定してください。"

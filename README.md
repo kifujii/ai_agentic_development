@@ -13,7 +13,7 @@
 | **AWS CLI** | AWSリソースの操作・管理 |
 | **Terraform** | インフラストラクチャのプロビジョニング |
 | **Ansible** | 構成管理・アプリケーションデプロイ |
-| **Continue** | AIによるコード生成・レビュー支援（OpenShiftAI使用） |
+| **Continue** | AIによるコード生成・レビュー支援（AWS Bedrock使用） |
 
 ## ワークショップ内容
 
@@ -34,7 +34,7 @@
 - **期間**: 2日間（合計8時間、1日4時間）
 - **形式**: ハンズオン形式のライブコーディング
 - **環境**: OpenShift DevSpaces + AWS
-- **技術スタック**: Terraform, Ansible, Continue AI（OpenShiftAI）
+- **技術スタック**: Terraform, Ansible, Continue AI（AWS Bedrock）
 
 詳細は [`docs/TRAINING_MENU.md`](docs/TRAINING_MENU.md) を参照してください。
 
@@ -56,7 +56,7 @@
 1. DevSpaces環境への資材の持ち込み（ワークスペース作成時に拡張機能が自動インストール）
 2. 環境セットアップスクリプトの実行（ワークスペース作成時に自動実行）
 3. AWS認証情報の設定
-4. Continue AIの設定（OpenShiftAIエンドポイントとAPIキーの設定のみ）
+4. Continue AIの設定（AWS Bedrockの設定のみ）
 
 ### 2. ワークショップの開始
 

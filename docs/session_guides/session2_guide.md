@@ -494,7 +494,7 @@ executor = TerraformExecutor()
 
 - Continueの設定を確認（`.continue/config.json`）
 - ネットワーク接続を確認
-- OpenShiftAIのサービス状態を確認
+- AWS Bedrockのサービス状態を確認（AWSコンソールで確認）
 
 ### Terraform実行エラー
 
