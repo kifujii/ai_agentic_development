@@ -19,9 +19,6 @@
 2. ログイン
 3. 新しいワークスペースを作成
    - **Import from Git**: このリポジトリのURLを指定
-   - **スタック**: **Python 3.11** を選択（重要）
-   - **メモリ**: 4GB以上推奨
-   - **注意**: デフォルトのワークスペースを作成してください。拡張機能はセットアップスクリプトで自動インストールされます
 
 **注意**: ワークスペース作成時にリポジトリを指定しているため、ファイル一式が既にワークスペース内に含まれています。追加のgit cloneは不要です。
 
@@ -29,14 +26,19 @@
 
 **重要**: セットアップスクリプトは **OpenShift DevSpaces環境内** で実行する必要があります。
 
-```bash
-# セットアップスクリプトの実行
-chmod +x scripts/setup_devspaces.sh
-./scripts/setup_devspaces.sh
+1. **ターミナルを開く**
+   - VS Codeのメニューから「ターミナル」→「新しいターミナル」を選択
+   - または、ショートカットキー（`Ctrl+Shift+` ` / `Cmd+Shift+` `）を使用
 
-# スクリプト実行後、PATHを更新（新しいターミナルを開くか、以下を実行）
-source ~/.bashrc
-```
+2. **セットアップスクリプトの実行**
+   ```bash
+   ./scripts/setup_devspaces.sh
+   ```
+
+3. **スクリプト実行後、PATHを更新**
+   ```bash
+   source ~/.bashrc
+   ```
 
 **インストールされるツールと拡張機能**:
 - **ツール**:
@@ -57,15 +59,17 @@ source ~/.bashrc
 
 セットアップスクリプトが`.env.template`ファイルを作成します。このテンプレートから`.env`ファイルを作成し、AWS認証情報を設定してください：
 
-```bash
-# .env.templateをコピーして.envファイルを作成
-cp .env.template .env
+1. **`.env.template`ファイルをコピーして`.env`ファイルを作成**
+   - VS Codeのエクスプローラーで`.env.template`ファイルを右クリック
+   - 「コピー」を選択
+   - 同じディレクトリで右クリックして「貼り付け」を選択
+   - ファイル名を`.env`に変更
 
-# .envファイルを編集して認証情報を設定
-nano .env
-# または
-vi .env
-```
+2. **`.env`ファイルを編集**
+   - VS Codeで`.env`ファイルを開く
+   - 以下の値を実際のAWS認証情報に置き換える：
+     - `your-access-key-here` → 実際のAWSアクセスキーID
+     - `your-secret-key-here` → 実際のAWSシークレットアクセスキー
 
 #### 3.2 .envファイルの内容
 
@@ -95,26 +99,15 @@ export $(cat .env | grep -v '^#' | xargs)
 aws sts get-caller-identity
 ```
 
-**永続的な設定**: セットアップスクリプトが自動的に`~/.bashrc`に`.env`ファイルの自動読み込み設定を追加します。新しいターミナルを開くか、`source ~/.bashrc`を実行すると、プロジェクトディレクトリにいる場合に自動的に`.env`ファイルが読み込まれます。
-
 **注意**: `aws configure`は不要です。`.env`ファイルを環境変数としてエクスポートすれば、AWS CLIとTerraformの両方が環境変数から認証情報を読み取ります。
 
 ### ステップ4: Continue AIのセットアップ
 
 Continue AIはVS Code/Cursorの拡張機能です。AWS Bedrockをモデルプロバイダーとして使用します。
 
-#### 4.1 Continue拡張機能の確認
+**重要**: セットアップスクリプト（`./scripts/setup_devspaces.sh`）を実行すると、Continue拡張機能が自動的にインストールされます。
 
-**重要**: DevSpacesワークスペース作成時に、Continue拡張機能は自動的にインストールされています。
-
-拡張機能がインストールされているか確認するには：
-1. VS Codeの拡張機能パネルを開く（`Ctrl+Shift+X` / `Cmd+Shift+X`）
-2. "Continue"を検索して、インストール済みであることを確認
-
-**手動インストールが必要な場合**（ローカル環境など）:
-詳細は [`docs/setup/CONTINUE_SETUP.md`](../setup/CONTINUE_SETUP.md) の「手動インストール」セクションを参照してください。
-
-#### 4.2 AWS Bedrockの設定
+#### 4.1 AWS Bedrockの設定
 
 1. AWS認証情報が`.env`ファイルに設定されていることを確認：
    ```bash
@@ -189,19 +182,17 @@ aws sts get-caller-identity
 1. Continueを起動（`Ctrl+L` / `Cmd+L`）
 2. チャットに以下を入力：
    ```
-   Hello! Can you generate a simple Terraform code to create an S3 bucket?
+   S3バケットを作成するシンプルなTerraformコードを生成してください
    ```
 3. AIからの応答が表示されれば、設定は成功です
 
 ## ✅ セットアップ完了チェックリスト
 
 - [ ] DevSpacesワークスペースを作成した
-- [ ] Gitリポジトリをクローンした
 - [ ] セットアップスクリプトを実行した
 - [ ] `.env`ファイルを作成し、AWS認証情報を設定した
 - [ ] 環境変数を読み込んだ（`export $(cat .env | grep -v '^#' | xargs)`）
 - [ ] AWS認証情報が正しく設定されていることを確認した（`aws sts get-caller-identity`）
-- [ ] Continue拡張機能をインストールした
 - [ ] AWS Bedrockへのアクセス権限をIAMユーザーに付与した
 - [ ] AWS Bedrockの設定を完了した（`.continue/config.json`を編集）
 - [ ] Continue AIが正常に動作することを確認した

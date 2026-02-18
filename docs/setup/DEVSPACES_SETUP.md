@@ -18,9 +18,7 @@
 3. 新しいワークスペースを作成または既存のワークスペースを開く
 
 #### 1.2 ワークスペース設定
-- **名前**: `ai-agentic-training`
-- **スタック**: Python 3.11 または Node.js 18
-- **メモリ**: 4GB以上推奨
+- **Import from Git**: このリポジトリのURLを指定
 
 ### 2. トレーニング資材の確認
 
@@ -47,15 +45,19 @@ ls -la
 
 **注意**: DevSpaces環境ではsudo権限が制限されているため、スクリプトはユーザー権限でインストールを行います。
 
-```bash
-# プロジェクトディレクトリにいることを確認
-pwd
-# 出力例: /projects/ai_agentic_development/ai_agentic
+1. **ターミナルを開く**
+   - VS Codeのメニューから「ターミナル」→「新しいターミナル」を選択
+   - または、ショートカットキー（`Ctrl+Shift+` ` / `Cmd+Shift+` `）を使用
 
-# セットアップスクリプトを実行
-chmod +x scripts/setup_devspaces.sh
-./scripts/setup_devspaces.sh
-```
+2. **セットアップスクリプトの実行**
+   ```bash
+   # プロジェクトディレクトリにいることを確認
+   pwd
+   # 出力例: /projects/ai_agentic_development/ai_agentic
+   
+   # セットアップスクリプトを実行
+   ./scripts/setup_devspaces.sh
+   ```
 
 このスクリプトは以下のツールを自動的にインストールします（ユーザー権限）：
 - Terraform（~/.local/binにインストール）
