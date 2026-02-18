@@ -404,23 +404,19 @@ mkdir -p ~/workspace/ansible
 mkdir -p ~/workspace/agents
 log_info "作業ディレクトリの作成完了"
 
-# 10. .envファイルのテンプレート作成
-log_info ".envファイルのテンプレート作成中..."
+# 10. .envファイルの確認
+log_info ".envファイルの確認中..."
 if [ ! -f ".env" ]; then
-    cat > .env.template << EOF
-# AWS認証情報
-AWS_ACCESS_KEY_ID=your-access-key-here
-AWS_SECRET_ACCESS_KEY=your-secret-key-here
-AWS_DEFAULT_REGION=ap-northeast-1
-
-# 注意: Continue AIはエディタ拡張機能です
-# Continueの設定は .continue/config.json を参照してください
-# AWS Bedrockを使用する場合、AWS認証情報が環境変数に設定されている必要があります
-EOF
-    log_info ".env.templateファイルを作成しました。"
-    log_info "次のステップ: .env.templateをコピーして.envファイルを作成し、APIキーを設定してください。"
+    if [ -f ".env.template" ]; then
+        log_info ".env.templateファイルが見つかりました。"
+        log_info "次のステップ: .env.templateをコピーして.envファイルを作成し、AWS認証情報を設定してください。"
+        log_info "  コマンド: cp .env.template .env"
+    else
+        log_warn ".env.templateファイルが見つかりません。"
+        log_info ".envファイルを手動で作成し、AWS認証情報を設定してください。"
+    fi
 else
-    log_warn ".envファイルは既に存在します"
+    log_info ".envファイルは既に存在します"
 fi
 
 # 10-1. .envファイルの自動読み込み設定を~/.bashrcに追加
@@ -540,4 +536,3 @@ echo ""
 log_info "=========================================="
 log_info "セットアップ完了！"
 log_info "=========================================="
-log_info "次のステップは README.md を参照してください。"

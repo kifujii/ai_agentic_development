@@ -39,8 +39,7 @@
   - Ansible（pipでユーザー権限インストール）
   - AWS CLI（~/.local/binにインストール）
   - Pythonパッケージ（scripts/requirements.txtから、--userオプションでインストール）
-  - Git（既にインストールされている場合が多い）
-- **VS Code拡張機能**（CLI経由で自動インストール）:
+- **VS Code拡張機能**:
   - Continue
 
 詳細は [`docs/setup/DEVSPACES_SETUP.md`](../setup/DEVSPACES_SETUP.md) を参照してください。
@@ -106,6 +105,7 @@ aws sts get-caller-identity
      ```
      testフォルダに「hello.txt」というファイルを作成して、その中に「Hello, Continue!」と書き込んでください
      ```
+   - 画面下部にあるチャット画面のすぐ上に「Create New File」という表示が出るので、「Accept」をクリックしてください
    - AIが`test`フォルダを作成し、`hello.txt`ファイルを作成して内容を書き込めば、設定は成功です
 
 ## ✅ セットアップ完了チェックリスト
