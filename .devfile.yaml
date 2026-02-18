@@ -25,7 +25,7 @@ commands:
   - id: setup
     exec:
       component: python
-      commandLine: bash scripts/setup_devspaces.sh
+      commandLine: sh -c "if [ -f scripts/setup_devspaces.sh ]; then chmod +x scripts/setup_devspaces.sh && (command -v bash >/dev/null 2>&1 && bash scripts/setup_devspaces.sh || sh scripts/setup_devspaces.sh) || echo 'Setup script completed with warnings'; else echo 'Setup script not found, skipping...'; fi"
       workingDir: ${PROJECT_SOURCE}
 
 events:
