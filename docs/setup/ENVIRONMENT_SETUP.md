@@ -18,9 +18,11 @@
 1. OpenShift DevSpacesのURLにアクセス
 2. ログイン
 3. 新しいワークスペースを作成
-   - **スタック**: Python 3.11 または Node.js 18
+   - **Import from Git**: このリポジトリのURLを指定
+   - **スタック**: **Python 3.11** を選択（重要）
    - **メモリ**: 4GB以上推奨
-   - **重要**: このプロジェクトには`.devcontainer/devcontainer.json`が含まれており、ワークスペース作成時に以下の拡張機能が自動的にインストールされます：
+   - **注意**: `.devfile.yaml`は含まれていないため、DevSpacesのUIでスタックを選択してください
+   - **拡張機能**: ワークスペース起動後、以下の拡張機能を手動でインストールするか、`.devcontainer/devcontainer.json`を使用してVS Code Dev Containersで開いてください：
      - Continue
      - HashiCorp Terraform
      - Ansible

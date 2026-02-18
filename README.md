@@ -44,7 +44,7 @@
 
 環境セットアップの詳細手順は、[環境セットアップガイド](docs/setup/ENVIRONMENT_SETUP.md) を参照してください。
 
-**重要**: このプロジェクトには`.devcontainer/devcontainer.json`と`.devfile.yaml`が含まれており、DevSpacesワークスペース作成時に以下の拡張機能が自動的にインストールされます：
+**重要**: このプロジェクトには`.devcontainer/devcontainer.json`が含まれており、VS Code Dev Containersで使用できます。DevSpacesでは、ワークスペース作成時に**Python 3.11**スタックを選択してください。以下の拡張機能が自動的にインストールされます：
 - Continue
 - HashiCorp Terraform
 - Ansible
