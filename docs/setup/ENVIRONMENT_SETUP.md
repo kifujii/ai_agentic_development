@@ -182,10 +182,11 @@ name: aws-bedrock-config
 version: "1.0"
 models:
   - title: "AWS Bedrock"
-    provider: bedrock
-    region: ap-northeast-1
-    model: cohere.command-light-text-v14
-    credentialsProvider: default
+    provider: 
+      type: bedrock
+      region: ap-northeast-1
+      model: cohere.command-light-text-v14
+      credentialsProvider: default
 
 defaultModel: "AWS Bedrock"
 allowAnonymousTelemetry: false
