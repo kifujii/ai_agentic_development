@@ -21,14 +21,7 @@
    - **Import from Git**: このリポジトリのURLを指定
    - **スタック**: **Python 3.11** を選択（重要）
    - **メモリ**: 4GB以上推奨
-   - **注意**: `.devfile.yaml`は含まれていないため、DevSpacesのUIでスタックを選択してください
-   - **拡張機能**: ワークスペース起動後、以下の拡張機能を手動でインストールするか、`.devcontainer/devcontainer.json`を使用してVS Code Dev Containersで開いてください：
-     - Continue
-     - HashiCorp Terraform
-     - Ansible
-     - AWS Toolkit
-     - Python
-     - YAML
+   - **注意**: デフォルトのワークスペースを作成してください。拡張機能はセットアップスクリプトで自動インストールされます
 
 #### 1.2 Gitリポジトリのクローン
 
@@ -59,13 +52,21 @@ chmod +x scripts/setup_devspaces.sh
 source ~/.bashrc
 ```
 
-**インストールされるツール**:
-- Terraform（~/.local/binにインストール）
-- Ansible（pipでユーザー権限インストール）
-- AWS CLI（~/.local/binにインストール）
-- Pythonパッケージ（requirements.txtから、--userオプションでインストール）
-- Git（既にインストールされている場合が多い）
-- jq（sudoが使える場合のみ）
+**インストールされるツールと拡張機能**:
+- **ツール**:
+  - Terraform（~/.local/binにインストール）
+  - Ansible（pipでユーザー権限インストール）
+  - AWS CLI（~/.local/binにインストール）
+  - Pythonパッケージ（requirements.txtから、--userオプションでインストール）
+  - Git（既にインストールされている場合が多い）
+  - jq（sudoが使える場合のみ）
+- **VS Code拡張機能**（CLI経由で自動インストール）:
+  - Continue
+  - HashiCorp Terraform
+  - Ansible
+  - AWS Toolkit
+  - Python
+  - YAML
 
 詳細は [`docs/setup/DEVSPACES_SETUP.md`](../setup/DEVSPACES_SETUP.md) を参照してください。
 

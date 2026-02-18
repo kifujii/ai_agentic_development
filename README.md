@@ -44,7 +44,7 @@
 
 環境セットアップの詳細手順は、[環境セットアップガイド](docs/setup/ENVIRONMENT_SETUP.md) を参照してください。
 
-**重要**: このプロジェクトには`.devcontainer/devcontainer.json`が含まれており、VS Code Dev Containersで使用できます。DevSpacesでは、ワークスペース作成時に**Python 3.11**スタックを選択してください。以下の拡張機能が自動的にインストールされます：
+**重要**: DevSpacesでは、ワークスペース作成時に**Python 3.11**スタックを選択してください。セットアップスクリプト（`./scripts/setup_devspaces.sh`）を実行すると、以下の拡張機能がCLI経由で自動インストールされます：
 - Continue
 - HashiCorp Terraform
 - Ansible
@@ -53,8 +53,9 @@
 - YAML
 
 **主な手順**:
-1. DevSpaces環境への資材の持ち込み（ワークスペース作成時に拡張機能が自動インストール）
-2. 環境セットアップスクリプトの実行（ワークスペース起動後に手動で実行: `./scripts/setup_devspaces.sh`）
+1. DevSpaces環境への資材の持ち込み（デフォルトのワークスペースを作成）
+2. 環境セットアップスクリプトの実行（ワークスペース起動後に実行: `./scripts/setup_devspaces.sh`）
+   - このスクリプトで必要なツールと拡張機能が自動インストールされます
 3. AWS認証情報の設定
 4. Continue AIの設定（AWS Bedrockの設定のみ）
 

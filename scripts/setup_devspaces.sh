@@ -156,11 +156,20 @@ fi
 # 注意: Continue AIはエディタ拡張機能なので、Pythonパッケージのインストールは不要です
 # Continueの設定は .continue/config.json を参照してください
 
-# 6-1. VS Code拡張機能のインストール（フォールバック）
-# 注意: .devfile.yamlや.devcontainer/devcontainer.jsonで拡張機能が自動インストールされない場合のフォールバック
-log_info "VS Code拡張機能の確認中..."
-if command -v code &> /dev/null; then
-    log_info "VS Code CLIが利用可能です。拡張機能のインストールを試みます..."
+# 6-1. VS Code拡張機能のインストール（CLI経由）
+log_info "VS Code拡張機能のインストール中..."
+
+# codeコマンドのパスを探す（複数のパスを試す）
+CODE_CMD=""
+for CODE_PATH in "/usr/bin/code" "/usr/local/bin/code" "$HOME/.local/bin/code" "code"; do
+    if command -v "$CODE_PATH" &> /dev/null; then
+        CODE_CMD="$CODE_PATH"
+        break
+    fi
+done
+
+if [ -n "$CODE_CMD" ]; then
+    log_info "VS Code CLIが見つかりました: $CODE_CMD"
     
     # 必要な拡張機能のリスト
     EXTENSIONS=(
@@ -173,29 +182,64 @@ if command -v code &> /dev/null; then
     )
     
     INSTALLED_COUNT=0
+    FAILED_EXTENSIONS=()
+    
     for EXT in "${EXTENSIONS[@]}"; do
-        if code --list-extensions 2>/dev/null | grep -q "^${EXT}$"; then
+        # 既にインストールされているか確認
+        if "$CODE_CMD" --list-extensions 2>/dev/null | grep -q "^${EXT}$"; then
             log_info "✓ 拡張機能 ${EXT} は既にインストールされています"
             ((INSTALLED_COUNT++))
         else
             log_info "拡張機能 ${EXT} をインストール中..."
-            if code --install-extension "${EXT}" --force 2>/dev/null; then
-                log_info "✓ 拡張機能 ${EXT} のインストールに成功しました"
-                ((INSTALLED_COUNT++))
-            else
-                log_warn "拡張機能 ${EXT} のインストールに失敗しました（手動インストールが必要な場合があります）"
+            # リトライ処理（最大3回）
+            RETRY_COUNT=0
+            MAX_RETRIES=3
+            INSTALL_SUCCESS=false
+            
+            while [ $RETRY_COUNT -lt $MAX_RETRIES ]; do
+                if "$CODE_CMD" --install-extension "${EXT}" --force 2>/dev/null; then
+                    log_info "✓ 拡張機能 ${EXT} のインストールに成功しました"
+                    ((INSTALLED_COUNT++))
+                    INSTALL_SUCCESS=true
+                    break
+                else
+                    ((RETRY_COUNT++))
+                    if [ $RETRY_COUNT -lt $MAX_RETRIES ]; then
+                        log_warn "拡張機能 ${EXT} のインストールに失敗しました（リトライ ${RETRY_COUNT}/${MAX_RETRIES}）"
+                        sleep 2
+                    fi
+                fi
+            done
+            
+            if [ "$INSTALL_SUCCESS" = false ]; then
+                log_warn "拡張機能 ${EXT} のインストールに失敗しました（最大リトライ回数に達しました）"
+                FAILED_EXTENSIONS+=("${EXT}")
             fi
         fi
     done
     
+    # 結果のサマリー
     if [ $INSTALLED_COUNT -eq ${#EXTENSIONS[@]} ]; then
-        log_info "すべての拡張機能がインストールされています"
+        log_info "✓ すべての拡張機能がインストールされています"
     else
-        log_warn "一部の拡張機能のインストールに失敗しました。手動でインストールしてください。"
+        log_warn "一部の拡張機能のインストールに失敗しました（${INSTALLED_COUNT}/${#EXTENSIONS[@]} 成功）"
+        if [ ${#FAILED_EXTENSIONS[@]} -gt 0 ]; then
+            log_info "失敗した拡張機能: ${FAILED_EXTENSIONS[*]}"
+            log_info "手動でインストールする場合:"
+            for EXT in "${FAILED_EXTENSIONS[@]}"; do
+                log_info "  $CODE_CMD --install-extension ${EXT} --force"
+            done
+        fi
     fi
 else
-    log_warn "VS Code CLI (code) が利用できません。拡張機能は手動でインストールしてください。"
-    log_info "拡張機能は通常、.devfile.yamlや.devcontainer/devcontainer.jsonで自動インストールされます。"
+    log_warn "VS Code CLI (code) が見つかりません。拡張機能は手動でインストールしてください。"
+    log_info "以下のコマンドで拡張機能をインストールできます:"
+    log_info "  code --install-extension continue.continue --force"
+    log_info "  code --install-extension hashicorp.terraform --force"
+    log_info "  code --install-extension redhat.ansible --force"
+    log_info "  code --install-extension amazonwebservices.aws-toolkit-vscode --force"
+    log_info "  code --install-extension ms-python.python --force"
+    log_info "  code --install-extension redhat.vscode-yaml --force"
 fi
 
 # 7. Gitの確認（通常は既にインストールされている）
