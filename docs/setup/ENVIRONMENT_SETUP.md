@@ -48,11 +48,6 @@ source ~/.bashrc
   - jq（sudoが使える場合のみ）
 - **VS Code拡張機能**（CLI経由で自動インストール）:
   - Continue
-  - HashiCorp Terraform
-  - Ansible
-  - AWS Toolkit
-  - Python
-  - YAML
 
 詳細は [`docs/setup/DEVSPACES_SETUP.md`](../setup/DEVSPACES_SETUP.md) を参照してください。
 
