@@ -82,7 +82,7 @@ echo $AWS_DEFAULT_REGION
       "title": "AWS Bedrock",
       "provider": "bedrock",
       "region": "ap-northeast-1",
-      "model": "ai21.j2-mid-v1",
+      "model": "cohere.command-text-v14",
       "credentialsProvider": "default"
     }
   ],
@@ -98,12 +98,17 @@ echo $AWS_DEFAULT_REGION
 - `credentialsProvider`: AWS認証情報の取得方法（`default`は環境変数やAWS CLI設定から自動取得）
 
 **利用可能なモデル（on-demand対応）**:
-- `ai21.j2-mid-v1` (AI21 Labs Jurassic-2 Mid) - 推奨・デフォルト
-- `ai21.j2-ultra-v1` (AI21 Labs Jurassic-2 Ultra)
-- `cohere.command-text-v14` (Cohere Command)
+- `cohere.command-text-v14` (Cohere Command) - 推奨・デフォルト
 - `cohere.command-light-text-v14` (Cohere Command Light)
+- `ai21.j2-mid-v1` (AI21 Labs Jurassic-2 Mid) - リージョンによっては利用不可の場合あり
+- `ai21.j2-ultra-v1` (AI21 Labs Jurassic-2 Ultra) - リージョンによっては利用不可の場合あり
 - `meta.llama3-8b-instruct-v1:0` (Meta Llama 3 8B Instruct) - リージョンによっては利用不可の場合あり
 - `meta.llama3-70b-instruct-v1:0` (Meta Llama 3 70B Instruct) - リージョンによっては利用不可の場合あり
+
+**注意**: 
+- モデルIDはリージョンやアカウント設定によって利用可能なものが異なります
+- エラーが発生する場合は、AWSコンソールのBedrockセクションで利用可能なモデルを確認してください
+- コマンドラインから確認する場合: `aws bedrock list-foundation-models --region ap-northeast-1 --query 'modelSummaries[?inferenceTypesSupported==\`ON_DEMAND\`].modelId'`
 
 **注意**: Amazon Titanモデル（`amazon.titan-text-express-v1`、`amazon.titan-text-lite-v1`）はライフサイクルが終了しています。
 

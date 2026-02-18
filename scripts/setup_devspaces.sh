@@ -257,7 +257,7 @@ if [ ! -f "$CONTINUE_CONFIG_FILE" ] || ! grep -q '"provider": "bedrock"' "$CONTI
       "title": "AWS Bedrock",
       "provider": "bedrock",
       "region": "ap-northeast-1",
-      "model": "ai21.j2-mid-v1",
+      "model": "cohere.command-text-v14",
       "credentialsProvider": "default"
     }
   ],
