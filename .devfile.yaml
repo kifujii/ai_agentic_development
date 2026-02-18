@@ -1,0 +1,36 @@
+schemaVersion: 2.2.0
+metadata:
+  name: ai-agentic-development
+  displayName: AI Agentic Development
+  description: AI駆動Infrastructure as Code開発環境
+  attributes:
+    # VS Code拡張機能の自動インストール
+    controller.devfile.io/vscode-extensions: |
+      continue.continue
+      hashicorp.terraform
+      redhat.ansible
+      amazonwebservices.aws-toolkit-vscode
+      ms-python.python
+      redhat.vscode-yaml
+
+components:
+  - name: python
+    container:
+      # DevSpacesのデフォルトPythonスタックを使用（イメージは指定しない）
+      # ワークスペース作成時に「Python 3.11」スタックを選択してください
+      memoryLimit: 4Gi
+      mountSources: true
+      volumeMounts:
+        - name: pip-cache
+          path: /home/user/.cache/pip
+      env:
+        - name: PYTHONUNBUFFERED
+          value: "1"
+  
+  - name: pip-cache
+    volume:
+      size: 2Gi
+
+# postStartフックは削除（ワークスペース起動を確実にするため）
+# セットアップスクリプトはワークスペース起動後に手動で実行してください:
+# ./scripts/setup_devspaces.sh
