@@ -73,46 +73,60 @@ echo $AWS_DEFAULT_REGION
 
 #### 2.2 Continue設定ファイルの編集
 
-**重要**: Continueは`config.json`から`config.yaml`への移行を推奨しています。セットアップスクリプトは自動的に`.continue/config.yaml`を作成します。
+**重要**: セットアップスクリプトは自動的に`.continue/config.json`を作成します。
 
-プロジェクトルートの `.continue/config.yaml` を編集します：
+プロジェクトルートの `.continue/config.json` を編集します：
 
-```yaml
-name: aws-bedrock-config
-version: "1.0"
-models:
-  - title: "AWS Bedrock"
-    provider: 
-      type: bedrock
-      region: ap-northeast-1
-      model: cohere.command-light-text-v14
-      credentialsProvider: default
-
-defaultModel: "AWS Bedrock"
-allowAnonymousTelemetry: false
+```json
+{
+  "models": [
+    {
+      "title": "Llama 3.1 70B (Bedrock - Agent用)",
+      "provider": "bedrock",
+      "model": "meta.llama3-1-70b-instruct-v1:0",
+      "region": "us-east-1"
+    },
+    {
+      "title": "Claude 3.5 Sonnet v2 (Bedrock - 要申請)",
+      "provider": "bedrock",
+      "model": "us.anthropic.claude-3-5-sonnet-20241022-v2:0",
+      "region": "us-east-1"
+    }
+  ],
+  "tabAutocompleteModel": {
+    "title": "Llama 3.2 1B (Autocomplete)",
+    "provider": "bedrock",
+    "model": "meta.llama3-2-1b-instruct-v1:0",
+    "region": "us-east-1"
+  },
+  "allowAnonymousTelemetry": false,
+  "disableIndexing": true,
+  "disableFormatting": true
+}
 ```
 
 **設定項目の説明**:
+- `models`: チャットで使用するモデルのリスト（複数指定可能）
+- `tabAutocompleteModel`: タブ補完で使用するモデル（軽量モデルを推奨）
 - `provider`: `bedrock`を指定
-- `region`: AWSリージョン（例: `ap-northeast-1`）
+- `region`: AWSリージョン（例: `us-east-1`）
 - `model`: 使用するモデルID（AWS Bedrockで利用可能なモデルIDを指定）
-- `credentialsProvider`: AWS認証情報の取得方法（`default`は環境変数やAWS CLI設定から自動取得）
+- `allowAnonymousTelemetry`: 匿名テレメトリの送信を無効化
+- `disableIndexing`: インデックス作成を無効化（パフォーマンス向上）
+- `disableFormatting`: 自動フォーマットを無効化
 
 **利用可能なモデル（on-demand対応）**:
-- `cohere.command-light-text-v14` (Cohere Command Light) - 推奨・デフォルト
-- `cohere.command-text-v14` (Cohere Command) - リージョンによっては利用不可の場合あり
-- `ai21.j2-mid-v1` (AI21 Labs Jurassic-2 Mid) - リージョンによっては利用不可の場合あり
-- `ai21.j2-ultra-v1` (AI21 Labs Jurassic-2 Ultra) - リージョンによっては利用不可の場合あり
-- `meta.llama3-8b-instruct-v1:0` (Meta Llama 3 8B Instruct) - リージョンによっては利用不可の場合あり
-- `meta.llama3-70b-instruct-v1:0` (Meta Llama 3 70B Instruct) - リージョンによっては利用不可の場合あり
+- `meta.llama3-1-70b-instruct-v1:0` (Meta Llama 3.1 70B Instruct) - 推奨
+- `meta.llama3-2-1b-instruct-v1:0` (Meta Llama 3.2 1B Instruct) - タブ補完用
+- `us.anthropic.claude-3-5-sonnet-20241022-v2:0` (Claude 3.5 Sonnet v2) - 要申請
 
 **注意**: 
 - モデルIDはリージョンやアカウント設定によって利用可能なものが異なります
 - **モデルIDが無効なエラーが発生する場合**: 以下のコマンドで実際に利用可能なモデルIDを確認してください：
   ```bash
-  aws bedrock list-foundation-models --region ap-northeast-1 --query 'modelSummaries[?inferenceTypesSupported==`ON_DEMAND`].modelId' --output table
+  aws bedrock list-foundation-models --region us-east-1 --query 'modelSummaries[?inferenceTypesSupported==`ON_DEMAND`].modelId' --output table
   ```
-- 表示されたモデルIDを使用して、`.continue/config.yaml`の`model`フィールドを更新してください
+- 表示されたモデルIDを使用して、`.continue/config.json`の`model`フィールドを更新してください
 
 **注意**: Amazon Titanモデル（`amazon.titan-text-express-v1`、`amazon.titan-text-lite-v1`）はライフサイクルが終了しています。
 

@@ -169,44 +169,62 @@ aws sts get-caller-identity
 
 3. Continue設定ファイルの確認：
 
-セットアップスクリプトが自動的に `.continue/config.yaml` を作成します。内容を確認します：
+セットアップスクリプトが自動的に `.continue/config.json` を作成します。内容を確認します：
 
 ```bash
-cat .continue/config.yaml
+cat .continue/config.json
 ```
 
 設定ファイルの内容は以下の通りです：
 
-```yaml
-name: aws-bedrock-config
-version: "1.0"
-models:
-  - title: "AWS Bedrock"
-    provider: 
-      type: bedrock
-      region: ap-northeast-1
-      model: cohere.command-light-text-v14
-      credentialsProvider: default
-
-defaultModel: "AWS Bedrock"
-allowAnonymousTelemetry: false
+```json
+{
+  "models": [
+    {
+      "title": "Llama 3.1 70B (Bedrock - Agent用)",
+      "provider": "bedrock",
+      "model": "meta.llama3-1-70b-instruct-v1:0",
+      "region": "us-east-1"
+    },
+    {
+      "title": "Claude 3.5 Sonnet v2 (Bedrock - 要申請)",
+      "provider": "bedrock",
+      "model": "us.anthropic.claude-3-5-sonnet-20241022-v2:0",
+      "region": "us-east-1"
+    }
+  ],
+  "tabAutocompleteModel": {
+    "title": "Llama 3.2 1B (Autocomplete)",
+    "provider": "bedrock",
+    "model": "meta.llama3-2-1b-instruct-v1:0",
+    "region": "us-east-1"
+  },
+  "allowAnonymousTelemetry": false,
+  "disableIndexing": true,
+  "disableFormatting": true
+}
 ```
-
-**注意**: Continueは`config.json`から`config.yaml`への移行を推奨しています。セットアップスクリプトは自動的に`config.yaml`を作成します。
 
 **設定項目の説明**:
 - `provider`: `bedrock`を指定
 - `region`: AWSリージョン（`.env`ファイルの`AWS_DEFAULT_REGION`と一致）
-- `model`: 使用するモデルID（例: `cohere.command-light-text-v14`）
+- `model`: 使用するモデルID（例: `meta.llama3-1-70b-instruct-v1:0`）
+- `region`: AWSリージョン（例: `us-east-1`）
+
+**設定項目の説明**:
+- `models`: チャットで使用するモデルのリスト（複数指定可能）
+- `tabAutocompleteModel`: タブ補完で使用するモデル（軽量モデルを推奨）
+- `disableIndexing`: インデックス作成を無効化（パフォーマンス向上）
+- `disableFormatting`: 自動フォーマットを無効化
 
 **モデルIDが無効なエラーが発生する場合**:
 実際に利用可能なモデルIDを確認してください：
 
 ```bash
-aws bedrock list-foundation-models --region ap-northeast-1 --query 'modelSummaries[?inferenceTypesSupported==`ON_DEMAND`].modelId' --output table
+aws bedrock list-foundation-models --region us-east-1 --query 'modelSummaries[?inferenceTypesSupported==`ON_DEMAND`].modelId' --output table
 ```
 
-表示されたモデルIDを使用して、`.continue/config.yaml`の`model`フィールドを更新してください。
+表示されたモデルIDを使用して、`.continue/config.json`の`model`フィールドを更新してください。
 - `credentialsProvider`: `default`を指定すると、環境変数やAWS CLI設定ファイル（`~/.aws/credentials`）から自動的に認証情報を取得します
 
 **注意**: セットアップスクリプトが自動的に設定ファイルを作成するため、手動での編集は通常不要です。
