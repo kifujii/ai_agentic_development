@@ -178,6 +178,8 @@ cat .continue/config.yaml
 設定ファイルの内容は以下の通りです：
 
 ```yaml
+name: aws-bedrock-config
+version: 1.0
 models:
   - title: "AWS Bedrock"
     provider: bedrock

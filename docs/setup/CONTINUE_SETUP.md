@@ -78,6 +78,8 @@ echo $AWS_DEFAULT_REGION
 プロジェクトルートの `.continue/config.yaml` を編集します：
 
 ```yaml
+name: aws-bedrock-config
+version: 1.0
 models:
   - title: "AWS Bedrock"
     provider: bedrock

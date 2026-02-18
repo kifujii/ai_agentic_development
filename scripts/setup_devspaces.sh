@@ -252,6 +252,8 @@ fi
 if [ ! -f "$CONTINUE_CONFIG_YAML" ] || ! grep -q 'provider: bedrock' "$CONTINUE_CONFIG_YAML" 2>/dev/null; then
     log_info "Continue設定ファイル（config.yaml）を作成/更新中..."
     cat > "$CONTINUE_CONFIG_YAML" << 'EOF'
+name: aws-bedrock-config
+version: 1.0
 models:
   - title: "AWS Bedrock"
     provider: bedrock

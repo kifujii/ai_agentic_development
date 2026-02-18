@@ -1,3 +1,5 @@
+name: aws-bedrock-config
+version: 1.0
 models:
   - title: "AWS Bedrock"
     provider: bedrock
