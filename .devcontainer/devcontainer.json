@@ -1,6 +1,6 @@
 {
   "name": "AI Agentic Development",
-  "image": "quay.io/devfile/python:3.11",
+  "image": "python:3.11",
   
   "features": {
     "ghcr.io/devcontainers/features/git:1": {},

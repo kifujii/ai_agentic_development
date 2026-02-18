@@ -7,7 +7,7 @@ metadata:
 components:
   - name: python
     container:
-      image: quay.io/devfile/python:3.11
+      image: python:3.11
       memoryLimit: 4Gi
       mountSources: true
       volumeMounts:
