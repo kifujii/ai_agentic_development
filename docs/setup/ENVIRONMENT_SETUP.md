@@ -184,7 +184,7 @@ cat .continue/config.json
       "title": "AWS Bedrock",
       "provider": "bedrock",
       "region": "ap-northeast-1",
-      "model": "anthropic.claude-3-sonnet-20240229-v1:0",
+      "model": "amazon.titan-text-express-v1",
       "credentialsProvider": "default"
     }
   ],
@@ -196,7 +196,7 @@ cat .continue/config.json
 **設定項目の説明**:
 - `provider`: `bedrock`を指定
 - `region`: AWSリージョン（`.env`ファイルの`AWS_DEFAULT_REGION`と一致）
-- `model`: 使用するモデルID（例: `anthropic.claude-3-sonnet-20240229-v1:0`）
+- `model`: 使用するモデルID（例: `amazon.titan-text-express-v1`）
 - `credentialsProvider`: `default`を指定すると、環境変数やAWS CLI設定ファイル（`~/.aws/credentials`）から自動的に認証情報を取得します
 
 **注意**: セットアップスクリプトが自動的に設定ファイルを作成するため、手動での編集は通常不要です。

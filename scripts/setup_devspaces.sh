@@ -257,7 +257,7 @@ if [ ! -f "$CONTINUE_CONFIG_FILE" ] || ! grep -q '"provider": "bedrock"' "$CONTI
       "title": "AWS Bedrock",
       "provider": "bedrock",
       "region": "ap-northeast-1",
-      "model": "anthropic.claude-3-sonnet-20240229-v1:0",
+      "model": "amazon.titan-text-express-v1",
       "credentialsProvider": "default"
     }
   ],

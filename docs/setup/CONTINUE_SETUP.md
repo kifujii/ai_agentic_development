@@ -82,7 +82,7 @@ echo $AWS_DEFAULT_REGION
       "title": "AWS Bedrock",
       "provider": "bedrock",
       "region": "ap-northeast-1",
-      "model": "anthropic.claude-3-sonnet-20240229-v1:0",
+      "model": "amazon.titan-text-express-v1",
       "credentialsProvider": "default"
     }
   ],
@@ -97,14 +97,20 @@ echo $AWS_DEFAULT_REGION
 - `model`: 使用するモデルID（AWS Bedrockで利用可能なモデルIDを指定）
 - `credentialsProvider`: AWS認証情報の取得方法（`default`は環境変数やAWS CLI設定から自動取得）
 
-**利用可能なモデル**:
-- `anthropic.claude-3-sonnet-20240229-v1:0` (Claude 3 Sonnet)
-- `anthropic.claude-3-haiku-20240307-v1:0` (Claude 3 Haiku)
-- `anthropic.claude-3-opus-20240229-v1:0` (Claude 3 Opus)
-- `amazon.titan-text-lite-v1` (Amazon Titan Lite)
-- `amazon.titan-text-express-v1` (Amazon Titan Express)
+**利用可能なモデル（on-demand対応）**:
+- `amazon.titan-text-express-v1` (Amazon Titan Text Express) - 推奨・デフォルト
+- `amazon.titan-text-lite-v1` (Amazon Titan Text Lite)
+- `meta.llama3-8b-instruct-v1:0` (Meta Llama 3 8B Instruct)
+- `meta.llama3-70b-instruct-v1:0` (Meta Llama 3 70B Instruct)
+- `ai21.j2-ultra-v1` (AI21 Labs Jurassic-2 Ultra)
+- `ai21.j2-mid-v1` (AI21 Labs Jurassic-2 Mid)
+- `cohere.command-text-v14` (Cohere Command)
+- `cohere.command-light-text-v14` (Cohere Command Light)
 
-**注意**: 使用するモデルは、選択したリージョンで利用可能である必要があります。モデルの利用可能性は、AWSコンソールのBedrockセクションで確認できます。
+**注意**: 
+- 使用するモデルは、選択したリージョンでon-demand throughputが利用可能である必要があります
+- モデルの利用可能性は、AWSコンソールのBedrockセクションで確認できます
+- 一部のモデル（Anthropic Claudeなど）は、追加の設定やinference profileが必要な場合があります
 
 ### 3. Continueの起動
 
