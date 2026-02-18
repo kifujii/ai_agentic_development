@@ -424,6 +424,94 @@ else
     log_warn ".envファイルの自動読み込み設定は既に存在します"
 fi
 
+# 10-2. .envファイルから環境変数を~/.profileに追加（VS Codeプロセス用）
+log_info ".envファイルから環境変数を~/.profileに追加中..."
+if [ -f ".env" ]; then
+    # .envファイルからAWS認証情報を抽出（コメント行を除外）
+    ENV_VARS=$(grep -v '^#' .env | grep -v '^$' | grep -E '^(AWS_ACCESS_KEY_ID|AWS_SECRET_ACCESS_KEY|AWS_DEFAULT_REGION)=' || true)
+    
+    if [ -n "$ENV_VARS" ]; then
+        # ~/.profileに環境変数エクスポートを追加（既に存在しない場合のみ）
+        PROFILE_ENV_MARKER="# AWS認証情報（.envファイルから自動設定）"
+        if ! grep -q "$PROFILE_ENV_MARKER" ~/.profile 2>/dev/null; then
+            echo "" >> ~/.profile
+            echo "$PROFILE_ENV_MARKER" >> ~/.profile
+            while IFS='=' read -r key value; do
+                # 値から引用符を除去
+                value=$(echo "$value" | sed "s/^['\"]//;s/['\"]$//")
+                echo "export ${key}=\"${value}\"" >> ~/.profile
+            done <<< "$ENV_VARS"
+            log_info "✓ ~/.profileに環境変数を追加しました"
+            log_info "  注意: VS Codeを再起動すると、Continue拡張機能が環境変数にアクセスできるようになります"
+        else
+            log_warn "~/.profileに既に環境変数の設定が存在します"
+        fi
+    else
+        log_warn ".envファイルにAWS認証情報が設定されていません"
+    fi
+else
+    log_warn ".envファイルが存在しないため、環境変数の追加をスキップします"
+fi
+
+# 10-3. AWS CLI設定ファイルを作成（Continue拡張機能とAWS CLI用）
+log_info "AWS CLI設定ファイルを作成中（.envファイルから自動設定）..."
+if [ -f ".env" ]; then
+    # .envファイルからAWS認証情報を抽出
+    AWS_ACCESS_KEY=$(grep "^AWS_ACCESS_KEY_ID=" .env | grep -v '^#' | cut -d'=' -f2 | sed "s/^['\"]//;s/['\"]$//" | head -1)
+    AWS_SECRET_KEY=$(grep "^AWS_SECRET_ACCESS_KEY=" .env | grep -v '^#' | cut -d'=' -f2 | sed "s/^['\"]//;s/['\"]$//" | head -1)
+    AWS_REGION=$(grep "^AWS_DEFAULT_REGION=" .env | grep -v '^#' | cut -d'=' -f2 | sed "s/^['\"]//;s/['\"]$//" | head -1)
+    
+    if [ -n "$AWS_ACCESS_KEY" ] && [ -n "$AWS_SECRET_KEY" ] && [ "$AWS_ACCESS_KEY" != "your-access-key-here" ] && [ "$AWS_SECRET_KEY" != "your-secret-key-here" ]; then
+        # ~/.awsディレクトリを作成
+        mkdir -p ~/.aws
+        
+        # credentialsファイルを作成または更新
+        if [ ! -f ~/.aws/credentials ] || ! grep -q "\[default\]" ~/.aws/credentials 2>/dev/null; then
+            cat > ~/.aws/credentials << EOF
+[default]
+aws_access_key_id = ${AWS_ACCESS_KEY}
+aws_secret_access_key = ${AWS_SECRET_KEY}
+EOF
+            log_info "✓ AWS認証情報ファイルを作成しました: ~/.aws/credentials"
+        else
+            # 既存の[default]セクションを更新
+            if grep -q "\[default\]" ~/.aws/credentials; then
+                # 一時ファイルに書き込んでから置き換え
+                awk -v access_key="$AWS_ACCESS_KEY" -v secret_key="$AWS_SECRET_KEY" '
+                    /\[default\]/ { in_default=1; print; next }
+                    in_default && /^\[/ { in_default=0 }
+                    in_default && /^aws_access_key_id/ { print "aws_access_key_id = " access_key; next }
+                    in_default && /^aws_secret_access_key/ { print "aws_secret_access_key = " secret_key; next }
+                    { print }
+                ' ~/.aws/credentials > ~/.aws/credentials.tmp && mv ~/.aws/credentials.tmp ~/.aws/credentials
+                log_info "✓ AWS認証情報ファイルを更新しました: ~/.aws/credentials"
+            fi
+        fi
+        
+        # configファイルを作成または更新
+        if [ -n "$AWS_REGION" ]; then
+            if [ ! -f ~/.aws/config ]; then
+                cat > ~/.aws/config << EOF
+[default]
+region = ${AWS_REGION}
+EOF
+                log_info "✓ AWS設定ファイルを作成しました: ~/.aws/config"
+            else
+                if ! grep -q "\[default\]" ~/.aws/config; then
+                    echo "" >> ~/.aws/config
+                    echo "[default]" >> ~/.aws/config
+                    echo "region = ${AWS_REGION}" >> ~/.aws/config
+                    log_info "✓ AWS設定ファイルにリージョンを追加しました: ~/.aws/config"
+                fi
+            fi
+        fi
+    else
+        log_warn ".envファイルに有効なAWS認証情報が設定されていません（テンプレートのままの可能性があります）"
+    fi
+else
+    log_warn ".envファイルが存在しないため、AWS CLI設定ファイルの作成をスキップします"
+fi
+
 # 11. 動作確認
 echo ""
 log_info "=========================================="
