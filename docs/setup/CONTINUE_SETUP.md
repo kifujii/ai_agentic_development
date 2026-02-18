@@ -73,22 +73,20 @@ echo $AWS_DEFAULT_REGION
 
 #### 2.2 Continue設定ファイルの編集
 
-プロジェクトルートの `.continue/config.json` を編集します：
+**重要**: Continueは`config.json`から`config.yaml`への移行を推奨しています。セットアップスクリプトは自動的に`.continue/config.yaml`を作成します。
 
-```json
-{
-  "models": [
-    {
-      "title": "AWS Bedrock",
-      "provider": "bedrock",
-      "region": "ap-northeast-1",
-      "model": "cohere.command-text-v14",
-      "credentialsProvider": "default"
-    }
-  ],
-  "defaultModel": "AWS Bedrock",
-  "allowAnonymousTelemetry": false
-}
+プロジェクトルートの `.continue/config.yaml` を編集します：
+
+```yaml
+models:
+  - title: "AWS Bedrock"
+    provider: bedrock
+    region: ap-northeast-1
+    model: cohere.command-light-text-v14
+    credentialsProvider: default
+
+defaultModel: "AWS Bedrock"
+allowAnonymousTelemetry: false
 ```
 
 **設定項目の説明**:
@@ -98,8 +96,8 @@ echo $AWS_DEFAULT_REGION
 - `credentialsProvider`: AWS認証情報の取得方法（`default`は環境変数やAWS CLI設定から自動取得）
 
 **利用可能なモデル（on-demand対応）**:
-- `cohere.command-text-v14` (Cohere Command) - 推奨・デフォルト
-- `cohere.command-light-text-v14` (Cohere Command Light)
+- `cohere.command-light-text-v14` (Cohere Command Light) - 推奨・デフォルト
+- `cohere.command-text-v14` (Cohere Command) - リージョンによっては利用不可の場合あり
 - `ai21.j2-mid-v1` (AI21 Labs Jurassic-2 Mid) - リージョンによっては利用不可の場合あり
 - `ai21.j2-ultra-v1` (AI21 Labs Jurassic-2 Ultra) - リージョンによっては利用不可の場合あり
 - `meta.llama3-8b-instruct-v1:0` (Meta Llama 3 8B Instruct) - リージョンによっては利用不可の場合あり
@@ -107,8 +105,11 @@ echo $AWS_DEFAULT_REGION
 
 **注意**: 
 - モデルIDはリージョンやアカウント設定によって利用可能なものが異なります
-- エラーが発生する場合は、AWSコンソールのBedrockセクションで利用可能なモデルを確認してください
-- コマンドラインから確認する場合: `aws bedrock list-foundation-models --region ap-northeast-1 --query 'modelSummaries[?inferenceTypesSupported==\`ON_DEMAND\`].modelId'`
+- **モデルIDが無効なエラーが発生する場合**: 以下のコマンドで実際に利用可能なモデルIDを確認してください：
+  ```bash
+  aws bedrock list-foundation-models --region ap-northeast-1 --query 'modelSummaries[?inferenceTypesSupported==`ON_DEMAND`].modelId' --output table
+  ```
+- 表示されたモデルIDを使用して、`.continue/config.yaml`の`model`フィールドを更新してください
 
 **注意**: Amazon Titanモデル（`amazon.titan-text-express-v1`、`amazon.titan-text-lite-v1`）はライフサイクルが終了しています。
 

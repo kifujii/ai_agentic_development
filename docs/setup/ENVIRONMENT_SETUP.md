@@ -169,34 +169,41 @@ aws sts get-caller-identity
 
 3. Continue設定ファイルの確認：
 
-セットアップスクリプトが自動的に `.continue/config.json` を作成します。内容を確認します：
+セットアップスクリプトが自動的に `.continue/config.yaml` を作成します。内容を確認します：
 
 ```bash
-cat .continue/config.json
+cat .continue/config.yaml
 ```
 
 設定ファイルの内容は以下の通りです：
 
-```json
-{
-  "models": [
-    {
-      "title": "AWS Bedrock",
-      "provider": "bedrock",
-      "region": "ap-northeast-1",
-      "model": "cohere.command-text-v14",
-      "credentialsProvider": "default"
-    }
-  ],
-  "defaultModel": "AWS Bedrock",
-  "allowAnonymousTelemetry": false
-}
+```yaml
+models:
+  - title: "AWS Bedrock"
+    provider: bedrock
+    region: ap-northeast-1
+    model: cohere.command-light-text-v14
+    credentialsProvider: default
+
+defaultModel: "AWS Bedrock"
+allowAnonymousTelemetry: false
 ```
+
+**注意**: Continueは`config.json`から`config.yaml`への移行を推奨しています。セットアップスクリプトは自動的に`config.yaml`を作成します。
 
 **設定項目の説明**:
 - `provider`: `bedrock`を指定
 - `region`: AWSリージョン（`.env`ファイルの`AWS_DEFAULT_REGION`と一致）
-- `model`: 使用するモデルID（例: `cohere.command-text-v14`）
+- `model`: 使用するモデルID（例: `cohere.command-light-text-v14`）
+
+**モデルIDが無効なエラーが発生する場合**:
+実際に利用可能なモデルIDを確認してください：
+
+```bash
+aws bedrock list-foundation-models --region ap-northeast-1 --query 'modelSummaries[?inferenceTypesSupported==`ON_DEMAND`].modelId' --output table
+```
+
+表示されたモデルIDを使用して、`.continue/config.yaml`の`model`フィールドを更新してください。
 - `credentialsProvider`: `default`を指定すると、環境変数やAWS CLI設定ファイル（`~/.aws/credentials`）から自動的に認証情報を取得します
 
 **注意**: セットアップスクリプトが自動的に設定ファイルを作成するため、手動での編集は通常不要です。

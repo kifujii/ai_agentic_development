@@ -235,11 +235,12 @@ fi
 # 6-2. Continue設定ファイルの確認と作成
 log_info "Continue設定ファイルの確認中..."
 CONTINUE_CONFIG_DIR=".continue"
-CONTINUE_CONFIG_FILE="${CONTINUE_CONFIG_DIR}/config.json"
+CONTINUE_CONFIG_YAML="${CONTINUE_CONFIG_DIR}/config.yaml"
+CONTINUE_CONFIG_JSON="${CONTINUE_CONFIG_DIR}/config.json"
 
 # プロジェクトルートのパスを取得（スクリプトがどこから実行されても正しく動作）
 PROJECT_ROOT="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
-PROJECT_CONTINUE_CONFIG="${PROJECT_ROOT}/${CONTINUE_CONFIG_FILE}"
+PROJECT_CONTINUE_CONFIG="${PROJECT_ROOT}/${CONTINUE_CONFIG_YAML}"
 
 # .continueディレクトリが存在しない場合は作成
 if [ ! -d "$CONTINUE_CONFIG_DIR" ]; then
@@ -247,25 +248,27 @@ if [ ! -d "$CONTINUE_CONFIG_DIR" ]; then
     log_info "✓ .continueディレクトリを作成しました"
 fi
 
-# config.jsonが存在しない、または内容が正しくない場合は作成/更新
-if [ ! -f "$CONTINUE_CONFIG_FILE" ] || ! grep -q '"provider": "bedrock"' "$CONTINUE_CONFIG_FILE" 2>/dev/null; then
-    log_info "Continue設定ファイルを作成/更新中..."
-    cat > "$CONTINUE_CONFIG_FILE" << 'EOF'
-{
-  "models": [
-    {
-      "title": "AWS Bedrock",
-      "provider": "bedrock",
-      "region": "ap-northeast-1",
-      "model": "cohere.command-text-v14",
-      "credentialsProvider": "default"
-    }
-  ],
-  "defaultModel": "AWS Bedrock",
-  "allowAnonymousTelemetry": false
-}
+# config.yamlが存在しない、または内容が正しくない場合は作成/更新
+if [ ! -f "$CONTINUE_CONFIG_YAML" ] || ! grep -q 'provider: bedrock' "$CONTINUE_CONFIG_YAML" 2>/dev/null; then
+    log_info "Continue設定ファイル（config.yaml）を作成/更新中..."
+    cat > "$CONTINUE_CONFIG_YAML" << 'EOF'
+models:
+  - title: "AWS Bedrock"
+    provider: bedrock
+    region: ap-northeast-1
+    model: cohere.command-light-text-v14
+    credentialsProvider: default
+
+defaultModel: "AWS Bedrock"
+allowAnonymousTelemetry: false
 EOF
-    log_info "✓ Continue設定ファイルを作成/更新しました: ${CONTINUE_CONFIG_FILE}"
+    log_info "✓ Continue設定ファイルを作成/更新しました: ${CONTINUE_CONFIG_YAML}"
+    
+    # 古いconfig.jsonが存在する場合は削除を推奨
+    if [ -f "$CONTINUE_CONFIG_JSON" ]; then
+        log_warn "古いconfig.jsonが存在します。Continueはconfig.yamlを推奨しています。"
+        log_info "config.jsonを削除する場合: rm ${CONTINUE_CONFIG_JSON}"
+    fi
 else
     log_info "✓ Continue設定ファイルは既に存在し、正しく設定されています"
 fi
@@ -273,9 +276,9 @@ fi
 # 6-3. Continue設定ファイルを/home/user/.continueにシンボリックリンクで反映
 log_info "Continue設定ファイルを/home/user/.continueにリンク中..."
 USER_CONTINUE_DIR="/home/user/.continue"
-USER_CONTINUE_CONFIG="${USER_CONTINUE_DIR}/config.json"
+USER_CONTINUE_CONFIG="${USER_CONTINUE_DIR}/config.yaml"
 
-# プロジェクトルートのconfig.jsonが存在することを確認
+# プロジェクトルートのconfig.yamlが存在することを確認
 if [ ! -f "$PROJECT_CONTINUE_CONFIG" ]; then
     log_warn "プロジェクトルートの設定ファイルが見つかりません: ${PROJECT_CONTINUE_CONFIG}"
     log_warn "シンボリックリンクの作成をスキップします"

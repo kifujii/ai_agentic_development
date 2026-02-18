@@ -1,0 +1,9 @@
+models:
+  - title: "AWS Bedrock"
+    provider: bedrock
+    region: ap-northeast-1
+    model: cohere.command-light-text-v14
+    credentialsProvider: default
+
+defaultModel: "AWS Bedrock"
+allowAnonymousTelemetry: false
