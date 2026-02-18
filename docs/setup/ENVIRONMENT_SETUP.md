@@ -179,7 +179,7 @@ cat .continue/config.yaml
 
 ```yaml
 name: aws-bedrock-config
-version: 1.0
+version: "1.0"
 models:
   - title: "AWS Bedrock"
     provider: bedrock
