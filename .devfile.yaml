@@ -30,9 +30,6 @@ components:
     volume:
       size: 2Gi
 
-# postStartフックは明示的に無効化（ワークスペース起動を確実にするため）
+# postStartフックは削除（ワークスペース起動を確実にするため）
 # セットアップスクリプトはワークスペース起動後に手動で実行してください:
 # ./scripts/setup_devspaces.sh
-events:
-  # postStartフックを空にして無効化
-  postStart: []
