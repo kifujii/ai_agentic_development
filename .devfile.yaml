@@ -7,7 +7,7 @@ metadata:
 components:
   - name: python
     container:
-      image: python:3.11
+      # イメージは明示的に指定せず、DevSpacesのデフォルトスタックを使用
       memoryLimit: 4Gi
       mountSources: true
       volumeMounts:
