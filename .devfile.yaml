@@ -16,8 +16,7 @@ metadata:
 components:
   - name: python
     container:
-      # DevSpacesのデフォルトPythonスタックを使用（イメージは指定しない）
-      # ワークスペース作成時に「Python 3.11」スタックを選択してください
+      image: registry.redhat.io/devspaces/code-rhel9
       memoryLimit: 4Gi
       mountSources: true
       volumeMounts:
