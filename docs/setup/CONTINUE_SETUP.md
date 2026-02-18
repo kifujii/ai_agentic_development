@@ -15,7 +15,7 @@ Continueは、VS CodeやCursorエディタで動作するAIコーディングア
 
 ### 1. Continue拡張機能のインストール
 
-**重要**: DevSpacesワークスペースでは、セットアップスクリプト（`./scripts/setup_devspaces.sh`）を実行すると、Continueを含む必要な拡張機能がCLI経由で自動インストールされます。
+**重要**: DevSpacesワークスペースでは、セットアップスクリプト（`./scripts/setup_devspaces.sh`）を実行すると、Continue拡張機能がCLI経由で自動インストールされます。
 
 #### DevSpacesワークスペースを使用する場合（推奨）
 
@@ -24,13 +24,7 @@ Continueは、VS CodeやCursorエディタで動作するAIコーディングア
    ./scripts/setup_devspaces.sh
    ```
    
-2. このスクリプトで以下の拡張機能が自動インストールされます：
-   - Continue
-   - HashiCorp Terraform
-   - Ansible
-   - AWS Toolkit
-   - Python
-   - YAML
+2. このスクリプトでContinue拡張機能が自動インストールされます。
 
 **手動インストールが必要な場合**（セットアップスクリプトでインストールに失敗した場合など）:
 
