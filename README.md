@@ -44,13 +44,7 @@
 
 環境セットアップの詳細手順は、[環境セットアップガイド](docs/setup/ENVIRONMENT_SETUP.md) を参照してください。
 
-**重要**: DevSpacesでは、ワークスペース作成時に**Python 3.11**スタックを選択してください。セットアップスクリプト（`./scripts/setup_devspaces.sh`）を実行すると、以下の拡張機能がCLI経由で自動インストールされます：
-- Continue
-- HashiCorp Terraform
-- Ansible
-- AWS Toolkit
-- Python
-- YAML
+**重要**: DevSpacesでは、ワークスペース作成時に**Python 3.11**スタックを選択してください。セットアップスクリプト（`./scripts/setup_devspaces.sh`）を実行すると、Continue拡張機能がCLI経由で自動インストールされます。
 
 **主な手順**:
 1. DevSpaces環境への資材の持ち込み（デフォルトのワークスペースを作成）
