@@ -232,6 +232,41 @@ else
     log_info "  code-oss --install-extension continue.continue --force"
 fi
 
+# 6-2. Continue設定ファイルの確認と作成
+log_info "Continue設定ファイルの確認中..."
+CONTINUE_CONFIG_DIR=".continue"
+CONTINUE_CONFIG_FILE="${CONTINUE_CONFIG_DIR}/config.json"
+
+# .continueディレクトリが存在しない場合は作成
+if [ ! -d "$CONTINUE_CONFIG_DIR" ]; then
+    mkdir -p "$CONTINUE_CONFIG_DIR"
+    log_info "✓ .continueディレクトリを作成しました"
+fi
+
+# config.jsonが存在しない、または内容が正しくない場合は作成/更新
+if [ ! -f "$CONTINUE_CONFIG_FILE" ] || ! grep -q '"provider": "bedrock"' "$CONTINUE_CONFIG_FILE" 2>/dev/null; then
+    log_info "Continue設定ファイルを作成/更新中..."
+    cat > "$CONTINUE_CONFIG_FILE" << 'EOF'
+{
+  "models": [
+    {
+      "title": "AWS Bedrock",
+      "provider": "bedrock",
+      "region": "ap-northeast-1",
+      "model": "anthropic.claude-3-sonnet-20240229-v1:0",
+      "credentialsProvider": "default"
+    }
+  ],
+  "defaultModel": "AWS Bedrock",
+  "allowAnonymousTelemetry": false
+}
+EOF
+    log_info "✓ Continue設定ファイルを作成/更新しました: ${CONTINUE_CONFIG_FILE}"
+    log_info "  注意: VS Codeを再起動するか、Continue拡張機能をリロードすると設定が反映されます"
+else
+    log_info "✓ Continue設定ファイルは既に存在し、正しく設定されています"
+fi
+
 # 7. Gitの確認（通常は既にインストールされている）
 log_info "Gitの確認中..."
 if ! command -v git &> /dev/null; then
