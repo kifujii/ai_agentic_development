@@ -17,31 +17,19 @@
 
 ## Q: DevSpacesで実行する想定であれば、どのようにして資材をDevSpacesの環境下に持ち込みますか？
 
-**A: Gitリポジトリからクローンして持ち込みます。**
+**A: ワークスペース作成時にリポジトリを指定することで、ファイル一式が自動的に含まれます。**
 
 以下の手順で資材をDevSpaces環境に持ち込んでください：
 
 ### 手順1: DevSpacesワークスペースの作成
 1. OpenShift DevSpacesのURLにアクセス
 2. ログイン
-3. 新しいワークスペースを作成（スタック: Python 3.11 または Node.js 18）
+3. 新しいワークスペースを作成
+   - **Import from Git**: このリポジトリのURLを指定
+   - **スタック**: Python 3.11 を選択
+   - **注意**: ワークスペース作成時にリポジトリを指定しているため、ファイル一式が既にワークスペース内に含まれています
 
-### 手順2: Gitリポジトリのクローン
-DevSpaces環境内のターミナルで以下のコマンドを実行：
-
-```bash
-# リポジトリをクローン
-git clone https://github.com/kifujii/ai_agentic_development.git
-cd ai_agentic_development
-
-# trainingブランチに切り替え
-git checkout training
-
-# プロジェクトディレクトリに移動
-cd ai_agentic
-```
-
-### 手順3: セットアップスクリプトの実行
+### 手順2: セットアップスクリプトの実行
 ```bash
 # セットアップスクリプトを実行
 chmod +x scripts/setup_devspaces.sh

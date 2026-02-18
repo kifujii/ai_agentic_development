@@ -23,21 +23,7 @@
    - **メモリ**: 4GB以上推奨
    - **注意**: デフォルトのワークスペースを作成してください。拡張機能はセットアップスクリプトで自動インストールされます
 
-#### 1.2 Gitリポジトリのクローン
-
-DevSpaces環境内のターミナルで以下のコマンドを実行：
-
-```bash
-# リポジトリをクローン
-git clone https://github.com/kifujii/ai_agentic_development.git
-cd ai_agentic_development
-
-# trainingブランチに切り替え
-git checkout training
-
-# プロジェクトディレクトリに移動
-cd ai_agentic
-```
+**注意**: ワークスペース作成時にリポジトリを指定しているため、ファイル一式が既にワークスペース内に含まれています。追加のgit cloneは不要です。
 
 ### ステップ2: 環境セットアップスクリプトの実行
 
