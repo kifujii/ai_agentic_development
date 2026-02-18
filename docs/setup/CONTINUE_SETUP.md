@@ -82,7 +82,7 @@ echo $AWS_DEFAULT_REGION
       "title": "AWS Bedrock",
       "provider": "bedrock",
       "region": "ap-northeast-1",
-      "model": "amazon.titan-text-express-v1",
+      "model": "meta.llama3-8b-instruct-v1:0",
       "credentialsProvider": "default"
     }
   ],
@@ -98,14 +98,14 @@ echo $AWS_DEFAULT_REGION
 - `credentialsProvider`: AWS認証情報の取得方法（`default`は環境変数やAWS CLI設定から自動取得）
 
 **利用可能なモデル（on-demand対応）**:
-- `amazon.titan-text-express-v1` (Amazon Titan Text Express) - 推奨・デフォルト
-- `amazon.titan-text-lite-v1` (Amazon Titan Text Lite)
-- `meta.llama3-8b-instruct-v1:0` (Meta Llama 3 8B Instruct)
+- `meta.llama3-8b-instruct-v1:0` (Meta Llama 3 8B Instruct) - 推奨・デフォルト
 - `meta.llama3-70b-instruct-v1:0` (Meta Llama 3 70B Instruct)
 - `ai21.j2-ultra-v1` (AI21 Labs Jurassic-2 Ultra)
 - `ai21.j2-mid-v1` (AI21 Labs Jurassic-2 Mid)
 - `cohere.command-text-v14` (Cohere Command)
 - `cohere.command-light-text-v14` (Cohere Command Light)
+
+**注意**: Amazon Titanモデル（`amazon.titan-text-express-v1`、`amazon.titan-text-lite-v1`）はライフサイクルが終了しています。
 
 **注意**: 
 - 使用するモデルは、選択したリージョンでon-demand throughputが利用可能である必要があります
