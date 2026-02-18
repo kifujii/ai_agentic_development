@@ -256,7 +256,7 @@ if [ ! -f "$CONTINUE_CONFIG_FILE" ] || ! grep -q '"provider": "bedrock"' "$CONTI
     {
       "title": "Llama 3.1 70B (Bedrock - Agent用)",
       "provider": "bedrock",
-      "model": "meta.llama3-1-70b-instruct-v1:0",
+      "model": "us.meta.llama3-1-70b-instruct-v1:0",
       "region": "us-east-1"
     },
     {
@@ -269,7 +269,7 @@ if [ ! -f "$CONTINUE_CONFIG_FILE" ] || ! grep -q '"provider": "bedrock"' "$CONTI
   "tabAutocompleteModel": {
     "title": "Llama 3.2 1B (Autocomplete)",
     "provider": "bedrock",
-    "model": "meta.llama3-2-1b-instruct-v1:0",
+    "model": "us.meta.llama3-2-1b-instruct-v1:0",
     "region": "us-east-1"
   },
   "allowAnonymousTelemetry": false,
@@ -436,34 +436,6 @@ else
     log_warn ".envファイルの自動読み込み設定は既に存在します"
 fi
 
-# 10-2. .envファイルから環境変数を~/.profileに追加（VS Codeプロセス用）
-log_info ".envファイルから環境変数を~/.profileに追加中..."
-if [ -f ".env" ]; then
-    # .envファイルからAWS認証情報を抽出（コメント行を除外）
-    ENV_VARS=$(grep -v '^#' .env | grep -v '^$' | grep -E '^(AWS_ACCESS_KEY_ID|AWS_SECRET_ACCESS_KEY|AWS_DEFAULT_REGION)=' || true)
-    
-    if [ -n "$ENV_VARS" ]; then
-        # ~/.profileに環境変数エクスポートを追加（既に存在しない場合のみ）
-        PROFILE_ENV_MARKER="# AWS認証情報（.envファイルから自動設定）"
-        if ! grep -q "$PROFILE_ENV_MARKER" ~/.profile 2>/dev/null; then
-            echo "" >> ~/.profile
-            echo "$PROFILE_ENV_MARKER" >> ~/.profile
-            while IFS='=' read -r key value; do
-                # 値から引用符を除去
-                value=$(echo "$value" | sed "s/^['\"]//;s/['\"]$//")
-                echo "export ${key}=\"${value}\"" >> ~/.profile
-            done <<< "$ENV_VARS"
-            log_info "✓ ~/.profileに環境変数を追加しました"
-            log_info "  注意: VS Codeを再起動すると、Continue拡張機能が環境変数にアクセスできるようになります"
-        else
-            log_warn "~/.profileに既に環境変数の設定が存在します"
-        fi
-    else
-        log_warn ".envファイルにAWS認証情報が設定されていません"
-    fi
-else
-    log_warn ".envファイルが存在しないため、環境変数の追加をスキップします"
-fi
 
 # 10-3. AWS CLI設定ファイルを作成（Continue拡張機能とAWS CLI用）
 log_info "AWS CLI設定ファイルを作成中（.envファイルから自動設定）..."
