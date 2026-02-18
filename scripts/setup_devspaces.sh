@@ -171,14 +171,9 @@ done
 if [ -n "$CODE_CMD" ]; then
     log_info "VS Code CLIが見つかりました: $CODE_CMD"
     
-    # 必要な拡張機能のリスト
+    # 必要な拡張機能のリスト（Continueのみ）
     EXTENSIONS=(
         "continue.continue"
-        "hashicorp.terraform"
-        "redhat.ansible"
-        "amazonwebservices.aws-toolkit-vscode"
-        "ms-python.python"
-        "redhat.vscode-yaml"
     )
     
     INSTALLED_COUNT=0
@@ -233,13 +228,8 @@ if [ -n "$CODE_CMD" ]; then
     fi
 else
     log_warn "VS Code CLI (code-oss/code) が見つかりません。拡張機能は手動でインストールしてください。"
-    log_info "以下のコマンドで拡張機能をインストールできます:"
+    log_info "以下のコマンドでContinue拡張機能をインストールできます:"
     log_info "  code-oss --install-extension continue.continue --force"
-    log_info "  code-oss --install-extension hashicorp.terraform --force"
-    log_info "  code-oss --install-extension redhat.ansible --force"
-    log_info "  code-oss --install-extension amazonwebservices.aws-toolkit-vscode --force"
-    log_info "  code-oss --install-extension ms-python.python --force"
-    log_info "  code-oss --install-extension redhat.vscode-yaml --force"
 fi
 
 # 7. Gitの確認（通常は既にインストールされている）
