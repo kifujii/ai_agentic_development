@@ -237,6 +237,10 @@ log_info "Continue設定ファイルの確認中..."
 CONTINUE_CONFIG_DIR=".continue"
 CONTINUE_CONFIG_FILE="${CONTINUE_CONFIG_DIR}/config.json"
 
+# プロジェクトルートのパスを取得（スクリプトがどこから実行されても正しく動作）
+PROJECT_ROOT="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
+PROJECT_CONTINUE_CONFIG="${PROJECT_ROOT}/${CONTINUE_CONFIG_FILE}"
+
 # .continueディレクトリが存在しない場合は作成
 if [ ! -d "$CONTINUE_CONFIG_DIR" ]; then
     mkdir -p "$CONTINUE_CONFIG_DIR"
@@ -262,9 +266,60 @@ if [ ! -f "$CONTINUE_CONFIG_FILE" ] || ! grep -q '"provider": "bedrock"' "$CONTI
 }
 EOF
     log_info "✓ Continue設定ファイルを作成/更新しました: ${CONTINUE_CONFIG_FILE}"
-    log_info "  注意: VS Codeを再起動するか、Continue拡張機能をリロードすると設定が反映されます"
 else
     log_info "✓ Continue設定ファイルは既に存在し、正しく設定されています"
+fi
+
+# 6-3. Continue設定ファイルを/home/user/.continueにシンボリックリンクで反映
+log_info "Continue設定ファイルを/home/user/.continueにリンク中..."
+USER_CONTINUE_DIR="/home/user/.continue"
+USER_CONTINUE_CONFIG="${USER_CONTINUE_DIR}/config.json"
+
+# プロジェクトルートのconfig.jsonが存在することを確認
+if [ ! -f "$PROJECT_CONTINUE_CONFIG" ]; then
+    log_warn "プロジェクトルートの設定ファイルが見つかりません: ${PROJECT_CONTINUE_CONFIG}"
+    log_warn "シンボリックリンクの作成をスキップします"
+else
+    # /home/user/.continueディレクトリを作成（既に存在する場合は何もしない）
+    if [ ! -d "$USER_CONTINUE_DIR" ]; then
+        mkdir -p "$USER_CONTINUE_DIR"
+        log_info "✓ /home/user/.continueディレクトリを作成しました"
+    else
+        log_info "✓ /home/user/.continueディレクトリは既に存在しています"
+    fi
+
+    # シンボリックリンクを作成または更新
+    if [ -L "$USER_CONTINUE_CONFIG" ]; then
+        # 既存のシンボリックリンクを確認
+        LINK_TARGET="$(readlink -f "$USER_CONTINUE_CONFIG" 2>/dev/null || readlink "$USER_CONTINUE_CONFIG")"
+        if [ "$LINK_TARGET" != "$PROJECT_CONTINUE_CONFIG" ]; then
+            log_info "既存のシンボリックリンクを更新中..."
+            rm "$USER_CONTINUE_CONFIG"
+            if ln -s "$PROJECT_CONTINUE_CONFIG" "$USER_CONTINUE_CONFIG" 2>/dev/null; then
+                log_info "✓ シンボリックリンクを更新しました: ${USER_CONTINUE_CONFIG} -> ${PROJECT_CONTINUE_CONFIG}"
+            else
+                log_warn "シンボリックリンクの作成に失敗しました"
+            fi
+        else
+            log_info "✓ シンボリックリンクは既に正しく設定されています"
+        fi
+    elif [ -f "$USER_CONTINUE_CONFIG" ]; then
+        # 通常のファイルが存在する場合はバックアップしてからシンボリックリンクに置き換え
+        log_info "既存の設定ファイルをバックアップ中..."
+        mv "$USER_CONTINUE_CONFIG" "${USER_CONTINUE_CONFIG}.backup.$(date +%Y%m%d_%H%M%S)"
+        if ln -s "$PROJECT_CONTINUE_CONFIG" "$USER_CONTINUE_CONFIG" 2>/dev/null; then
+            log_info "✓ 既存の設定ファイルをバックアップし、シンボリックリンクを作成しました"
+        else
+            log_warn "シンボリックリンクの作成に失敗しました"
+        fi
+    else
+        # シンボリックリンクが存在しない場合は作成
+        if ln -s "$PROJECT_CONTINUE_CONFIG" "$USER_CONTINUE_CONFIG" 2>/dev/null; then
+            log_info "✓ シンボリックリンクを作成しました: ${USER_CONTINUE_CONFIG} -> ${PROJECT_CONTINUE_CONFIG}"
+        else
+            log_warn "シンボリックリンクの作成に失敗しました"
+        fi
+    fi
 fi
 
 # 7. Gitの確認（通常は既にインストールされている）
