@@ -21,32 +21,12 @@ components:
     volume:
       size: 2Gi
 
-  - name: vscode-extensions
-    plugin:
-      id: redhat/vscode-extensions
-      components:
-        - continue.continue
-        - hashicorp.terraform
-        - redhat.ansible
-        - amazonwebservices.aws-toolkit-vscode
-        - ms-python.python
-        - redhat.vscode-yaml
-
 commands:
   - id: setup
     exec:
       component: python
       commandLine: bash scripts/setup_devspaces.sh
       workingDir: ${PROJECT_SOURCE}
-
-  - id: install-extensions
-    exec:
-      component: python
-      commandLine: |
-        # VS Code拡張機能のインストール（フォールバック）
-        # 注意: vscode-extensionsプラグインが動作しない場合のフォールバック処理
-        # setup_devspaces.shで拡張機能のインストールを試みます
-        echo "拡張機能はワークスペース作成時に自動インストールされます"
 
 events:
   postStart:
