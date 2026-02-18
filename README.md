@@ -44,14 +44,14 @@
 
 環境セットアップの詳細手順は、[環境セットアップガイド](docs/setup/ENVIRONMENT_SETUP.md) を参照してください。
 
-**重要**: DevSpacesでは、ワークスペース作成時に**Python 3.11**スタックを選択してください。セットアップスクリプト（`./scripts/setup_devspaces.sh`）を実行すると、Continue拡張機能がCLI経由で自動インストールされます。
+**重要**: セットアップスクリプト（`./scripts/setup_devspaces.sh`）を実行すると、Continue拡張機能がCLI経由で自動インストールされます。
 
 **主な手順**:
 1. DevSpaces環境への資材の持ち込み（デフォルトのワークスペースを作成）
 2. 環境セットアップスクリプトの実行（ワークスペース起動後に実行: `./scripts/setup_devspaces.sh`）
    - このスクリプトで必要なツールと拡張機能が自動インストールされます
 3. AWS認証情報の設定
-4. Continue AIの設定（AWS Bedrockの設定のみ）
+4. Continue AI の動作確認
 
 ### 2. ワークショップの開始
 
@@ -97,10 +97,10 @@ ai_agentic/
 │   ├── session1_checklist.md
 │   └── ...
 ├── scripts/                       # スクリプト
-│   └── setup_devspaces.sh        # DevSpacesセットアップスクリプト
+│   ├── setup_devspaces.sh        # DevSpacesセットアップスクリプト
+│   └── requirements.txt          # Python依存関係
 ├── .continue/                     # Continue設定
 │   └── config.json                # Continue設定ファイル
-├── requirements.txt               # Python依存関係
 └── README.md                      # このファイル
 ```
 

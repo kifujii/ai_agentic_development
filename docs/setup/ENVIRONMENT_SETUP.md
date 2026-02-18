@@ -5,7 +5,7 @@
 ## 📋 前提条件
 
 - **GitHub アカウント**: リポジトリへのアクセス用
-- **AWS アカウント**: トレーニング用（Admin権限のアクセスキー/シークレットキー）
+- **AWS アカウント**: トレーニング用（アクセスキー/シークレットキー）
 - **OpenShift DevSpaces へのアクセス**: 開発環境
 - **VS Code または Cursor エディタ**: Continue拡張機能を使用
 
@@ -19,8 +19,6 @@
 2. ログイン
 3. 新しいワークスペースを作成
    - **Import from Git**: このリポジトリのURLを指定
-
-**注意**: ワークスペース作成時にリポジトリを指定しているため、ファイル一式が既にワークスペース内に含まれています。追加のgit cloneは不要です。
 
 ### ステップ2: 環境セットアップスクリプトの実行
 
@@ -40,9 +38,8 @@
   - Terraform（~/.local/binにインストール）
   - Ansible（pipでユーザー権限インストール）
   - AWS CLI（~/.local/binにインストール）
-  - Pythonパッケージ（requirements.txtから、--userオプションでインストール）
+  - Pythonパッケージ（scripts/requirements.txtから、--userオプションでインストール）
   - Git（既にインストールされている場合が多い）
-  - jq（sudoが使える場合のみ）
 - **VS Code拡張機能**（CLI経由で自動インストール）:
   - Continue
 
@@ -68,13 +65,8 @@ AWS_DEFAULT_REGION=ap-northeast-1
 ```
 
 **編集内容**:
-- `your-access-key-here` → 実際のAWSアクセスキーID
-- `your-secret-key-here` → 実際のAWSシークレットアクセスキー
-
-**重要**: 
-- AWS認証情報はIAMユーザーのアクセスキーとシークレットキーを使用してください
-- Admin権限を持つアクセスキーが必要です
-- `.env`ファイルはGitにコミットしないでください（`.gitignore`に含まれています）
+- `your-access-key-here` → AWSアクセスキーID
+- `your-secret-key-here` → AWSシークレットアクセスキー
 
 #### 3.2 セットアップスクリプトの再実行（AWS CLI設定ファイルの自動作成）
 
@@ -100,42 +92,9 @@ AWS認証情報が正しく設定されているか確認します：
 aws sts get-caller-identity
 ```
 
-AWS CLI設定ファイルが正しく作成されているか確認します：
+### ステップ4: 動作確認
 
-```bash
-cat ~/.aws/credentials
-```
-
-```bash
-cat ~/.aws/config
-```
-
-**注意**: 
-- `aws configure`コマンドは不要です。セットアップスクリプトが自動的に設定ファイルを作成します。
-
-### ステップ4: Continue AIのセットアップ
-
-Continue AIはVS Code/Cursorの拡張機能です。AWS Bedrockをモデルプロバイダーとして使用します。
-
-**重要**: セットアップスクリプト（`./scripts/setup_devspaces.sh`）を実行すると、Continue拡張機能が自動的にインストールされます。
-
-#### 4.1 AWS Bedrockの設定
-
-**重要**: セットアップスクリプト（`./scripts/setup_devspaces.sh`）を実行すると、以下の設定が自動的に行われます：
-- AWS CLI設定ファイル（`~/.aws/credentials`と`~/.aws/config`）の作成
-- Continue設定ファイル（`.continue/config.json`）の作成
-
-AWS認証情報が正しく設定されているか確認します：
-
-```bash
-aws sts get-caller-identity
-```
-
-詳細は [`docs/setup/CONTINUE_SETUP.md`](../setup/CONTINUE_SETUP.md) を参照してください。
-
-### ステップ5: 動作確認
-
-#### 5.1 Continue AIの確認
+#### 4.1 Continue AIの確認
 
 1. **Continueを起動**
    - 方法1: 左側のサイドバーからContinueアイコンをクリック

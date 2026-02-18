@@ -22,7 +22,6 @@
 
 ### 2. トレーニング資材の確認
 
-**重要**: ワークスペース作成時にリポジトリを指定しているため、ファイル一式が既にワークスペース内に含まれています。追加のgit cloneは不要です。
 
 #### 2.1 プロジェクト構造の確認
 ```bash
@@ -63,7 +62,7 @@ ls -la
 - Terraform（~/.local/binにインストール）
 - Ansible（pipでユーザー権限インストール）
 - AWS CLI（~/.local/binにインストール）
-- Pythonパッケージ（requirements.txtから、--userオプションでインストール）
+- Pythonパッケージ（scripts/requirements.txtから、--userオプションでインストール）
 - Git（既にインストールされている場合が多い）
 - jq（sudoが使える場合のみ）
 
@@ -212,9 +211,9 @@ source venv/bin/activate
 
 #### 5.2 必要なパッケージのインストール
 ```bash
-# requirements.txtからインストール
+# scripts/requirements.txtからインストール
 # 重要: python3 -m pipを使用することで、python3コマンドと同じPythonバージョンに確実にインストールされます
-python3 -m pip install --user -r requirements.txt
+python3 -m pip install --user -r scripts/requirements.txt
 
 # または個別にインストール
 python3 -m pip install --user groq python-dotenv boto3 pyyaml jinja2

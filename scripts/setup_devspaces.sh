@@ -137,8 +137,12 @@ fi
 # 注意: pipは既にセクション3でインストール済みです
 log_info "Pythonパッケージのインストール中..."
 
-if [ -f "requirements.txt" ]; then
-    python3 -m pip install --user -r requirements.txt -q || {
+# スクリプトのディレクトリを取得
+SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
+REQUIREMENTS_FILE="${SCRIPT_DIR}/requirements.txt"
+
+if [ -f "$REQUIREMENTS_FILE" ]; then
+    python3 -m pip install --user -r "$REQUIREMENTS_FILE" -q || {
         log_error "requirements.txtからのインストールに失敗しました"
         log_info "基本的なパッケージを個別にインストールします..."
         python3 -m pip install --user python-dotenv boto3 pyyaml jinja2 requests colorama -q
