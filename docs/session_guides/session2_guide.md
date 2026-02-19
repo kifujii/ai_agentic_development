@@ -2,11 +2,15 @@
 
 ## 📋 目的
 
-このセッションでは、Continue AIを活用して、Terraformコード生成・実行を自動化するエージェントの実装方法を学びます。
+このセッションでは、Continueを活用して、Terraformコード生成・実行を自動化するエージェントの実装方法を学びます。
 
 ### 学習目標
 
-- Continue AIを活用したTerraformコード生成の実装方法を理解する
+- プロンプトテンプレートの作成方法を理解する
+- Context Engineeringの高度化（既存インフラ情報の動的取得、依存関係の自動解決、リソース間の整合性チェック）を実装する
+- フィードバックループの実装（承認ワークフロー、エラー修正、反復的改善）を理解する
+- Agent形式での開発の深化を実践する
+- Continueを活用したTerraformコード生成の実装方法を理解する
 - コード検証とフォーマット機能の実装方法を理解する
 - Terraform実行自動化の実装方法を理解する
 - エラーハンドリングとリトライ機能の実装方法を理解する
@@ -26,7 +30,7 @@ workspace/
 ```
 
 **エージェントの機能**:
-- Continue AIを活用したTerraformコード生成
+- Continueを活用したTerraformコード生成
 - コード検証とフォーマット
 - Terraform実行の自動化
 - エラーハンドリングとリトライ
@@ -35,15 +39,77 @@ workspace/
 
 - [セッション0](session0_guide.md) が完了していること
 - [セッション1](session1_guide.md) で構築したインフラの理解
-- Continue AIが正しく設定されていること
+- Continueが正しく設定されていること
 
 ## 🚀 手順
 
-### 1. エージェントアーキテクチャの設計（20分）
+### 1. プロンプトテンプレートの作成（20分）
+
+#### 1.1 再利用可能なプロンプトテンプレートの設計
+
+セッション0とセッション1で学んだ良いプロンプトをテンプレート化します。
+
+```bash
+mkdir -p templates/prompts
+```
+
+**良いプロンプトテンプレート例** (`templates/prompts/terraform_resource_template.txt`):
+
+```
+下記条件を満たす{resource_type}を構築するTerraformコードを生成してください。
+
+要件:
+- リージョン: {region}
+- {specific_requirements}
+
+注意事項:
+- 足りていないパラメータなどがある場合は、そのまま構築するのではなく一度聞き返してください
+- 既存の{resource_type}と衝突しないように確認してください
+- 変数定義を含めてください
+- コメントを適切に追加してください
+- ベストプラクティスに従ってください
+
+出力形式:
+- HCL形式のTerraformコード
+- 変数定義を含める
+- コメントを適切に追加
+```
+
+**悪いプロンプト例集** (`templates/prompts/bad_examples.txt`):
+
+```
+# 悪いプロンプト例
+
+例1: EC2を作成して
+例2: VPCとEC2を作成してください
+例3: S3バケットを作成
+```
+
+**プロンプト改善ガイド** (`templates/prompts/improvement_guide.md`):
+
+プロンプト改善のステップ:
+1. 不足パラメータを特定
+2. 明確な要件定義を追加
+3. 「足りていないパラメータがある場合は聞き返してください」を追加
+4. 既存リソースとの衝突回避指示を追加
+
+#### 1.2 プロンプトテンプレートの活用
+
+エージェントでプロンプトテンプレートを読み込んで使用します。
+
+```python
+def load_prompt_template(template_path, **kwargs):
+    """プロンプトテンプレートを読み込んで変数を置換"""
+    with open(template_path, 'r') as f:
+        template = f.read()
+    return template.format(**kwargs)
+```
+
+### 2. エージェントアーキテクチャの設計とContext Engineeringの高度化（30分）
 
 #### 1.1 エージェントの基本構造
 
-Continue AIを活用したエージェントの基本構造を理解します。
+Continueを活用したエージェントの基本構造を理解します。
 
 <details>
 <summary>📝 エージェントアーキテクチャ例（クリックで展開）</summary>
@@ -54,7 +120,7 @@ class TerraformAgent:
     """
     Terraformコード生成・実行自動化エージェント
     
-    このエージェントは、Continue AIを活用してTerraformコードを生成し、
+    このエージェントは、Continueを活用してTerraformコードを生成し、
     検証・実行まで自動化します。
     """
     
@@ -75,15 +141,15 @@ class TerraformAgent:
             処理結果（コード、検証結果、実行結果など）
         """
         try:
-            # 1. Continue AIでコード生成（手動）
-            # Continue AIを起動して、instructionを入力
+            # 1. Continueでコード生成（手動）
+            # Continueを起動して、instructionを入力
             # 生成されたコードを取得
             
             # 2. 検証
             validation_result = self.validator.validate(code)
             if not validation_result['valid']:
                 # エラーがあれば修正を試みる
-                # Continue AIに修正を依頼
+                # Continueに修正を依頼
                 code = self.fix_code(code, validation_result['errors'])
             
             # 3. 実行（オプション）
@@ -99,20 +165,78 @@ class TerraformAgent:
 
 </details>
 
-#### 1.2 モジュール化の設計
+#### 2.1 エージェントの基本構造
+
+Continueを活用したエージェントの基本構造を理解します。
 
 エージェントを以下のモジュールに分割します：
 
-- **CodeGenerator**: コード生成（Continue AIを使用）
+- **CodeGenerator**: コード生成（Continueを使用）
 - **Validator**: コード検証
 - **Executor**: Terraform実行
 - **Logger**: ログ機能
+- **ContextManager**: コンテキスト管理（高度化）
 
-### 2. Continue AIを活用したコード生成（30分）
+#### 2.2 Context Engineeringの高度化
 
-#### 2.1 Continue AIでのコード生成
+**既存インフラ情報の動的取得**:
 
-Continue AIを起動（`Ctrl+L` / `Cmd+L`）して、以下のプロンプトを入力します：
+```python
+class ContextManager:
+    def get_aws_context(self):
+        """既存のAWSリソース情報を動的に取得"""
+        ec2 = boto3.client('ec2', region_name='ap-northeast-1')
+        
+        # 既存のVPC情報
+        vpcs = ec2.describe_vpcs()
+        
+        # 既存のサブネット情報
+        subnets = ec2.describe_subnets()
+        
+        # 既存のセキュリティグループ情報
+        security_groups = ec2.describe_security_groups()
+        
+        return {
+            'existing_vpcs': [vpc['VpcId'] for vpc in vpcs['Vpcs']],
+            'existing_subnets': [subnet['SubnetId'] for subnet in subnets['Subnets']],
+            'existing_security_groups': [sg['GroupId'] for sg in security_groups['SecurityGroups']],
+            'available_azs': self.get_available_availability_zones()
+        }
+    
+    def check_resource_conflicts(self, new_resource, existing_resources):
+        """リソース間の整合性チェック"""
+        # リソース名の重複チェック
+        # CIDRブロックの衝突チェック
+        # 依存関係のチェック
+        pass
+```
+
+**依存関係の自動解決**:
+
+```python
+def resolve_dependencies(resources):
+    """リソースの依存関係を自動解決"""
+    # 依存関係グラフの構築
+    # 実行順序の決定
+    pass
+```
+
+**リソース間の整合性チェック**:
+
+```python
+def check_consistency(code, context):
+    """リソース間の整合性をチェック"""
+    # VPCとサブネットの整合性
+    # セキュリティグループとVPCの整合性
+    # CIDRブロックの衝突チェック
+    pass
+```
+
+### 3. Terraformコード生成機能の強化とフィードバックループの実装（30分）
+
+#### 3.1 Continueを活用したコード生成
+
+Continueを起動（`Ctrl+L` / `Cmd+L`）して、以下のプロンプトを入力します：
 
 ```
 以下の要件でTerraformコードを生成してください。
@@ -173,13 +297,59 @@ resource "aws_s3_bucket_server_side_encryption_configuration" "training_bucket_e
 
 #### 2.2 コード生成の自動化（参考）
 
-Continue AIはエディタ拡張機能なので、完全な自動化は難しいですが、以下のようなワークフローを実装できます：
+Continueはエディタ拡張機能なので、完全な自動化は難しいですが、以下のようなワークフローを実装できます：
 
-1. Continue AIでコード生成
+1. Continueでコード生成
 2. 生成されたコードをファイルに保存
 3. 検証とフォーマットを自動実行
 
-### 3. コード検証とフォーマット機能（20分）
+#### 3.2 フィードバックループの実装
+
+**承認ワークフロー**:
+
+```python
+def create_plan(self, instruction):
+    """実行計画を作成して人間の承認を求める"""
+    plan = self.generate_plan(instruction)
+    print("実行計画:")
+    print(plan)
+    approval = input("実行しますか？ (y/n): ")
+    if approval.lower() == 'y':
+        return plan
+    else:
+        return None
+```
+
+**エラーハンドリングで自動修正提案機能**:
+
+```python
+def handle_error(self, error, code):
+    """エラーを検出して修正提案を行う"""
+    error_analysis = self.analyze_error(error)
+    fix_proposal = self.propose_fix(error_analysis, code)
+    print(f"エラー: {error}")
+    print(f"修正提案: {fix_proposal}")
+    approval = input("修正を適用しますか？ (y/n): ")
+    if approval.lower() == 'y':
+        return self.apply_fix(fix_proposal, code)
+    return None
+```
+
+**生成コードの品質改善で反復的改善プロセス**:
+
+```python
+def improve_code(self, code, feedback):
+    """人間のフィードバックに基づいてコードを改善"""
+    improved_code = self.generate_improvement(code, feedback)
+    validation_result = self.validator.validate(improved_code)
+    if validation_result['valid']:
+        return improved_code
+    else:
+        # 再改善を試みる
+        return self.improve_code(improved_code, feedback)
+```
+
+### 4. コード検証とフォーマット機能（20分）
 
 #### 3.1 Terraform検証の実装
 
@@ -303,7 +473,7 @@ if result['errors']:
 
 </details>
 
-### 4. Terraform実行自動化（20分）
+### 5. Terraform実行自動化（20分）
 
 #### 4.1 自動実行パイプライン
 
@@ -443,11 +613,26 @@ def execute_with_retry(self, code, max_retries=3):
             time.sleep(2 ** attempt)  # 指数バックオフ
 ```
 
-### 5. エージェントの動作確認とテスト（10分）
+### 6. Agent形式での開発の深化と動作確認（10分）
+
+#### 6.1 より高度なAgent機能の実装と理解
+
+**実装した機能**:
+- プロンプトテンプレートの活用
+- Context Engineeringの高度化（既存インフラ情報の動的取得、依存関係の自動解決、リソース間の整合性チェック）
+- フィードバックループの実装（承認ワークフロー、エラー修正、反復的改善）
+
+**Agent形式での開発の深化**:
+- コード生成から実行までの完全自動化
+- コンテキストの自動管理と更新
+- エラー検出と修正提案の自動化
+- human in the loopの実践
+
+#### 6.2 エージェントの動作確認とテスト
 
 #### 5.1 基本的な動作確認
 
-1. Continue AIでコード生成
+1. Continueでコード生成
 2. 生成されたコードを検証
 3. 必要に応じて実行
 
@@ -480,7 +665,7 @@ executor = TerraformExecutor()
 ## ✅ チェックリスト
 
 - [ ] エージェントアーキテクチャを設計した
-- [ ] Continue AIを活用したコード生成を実践した
+- [ ] Continueを活用したコード生成を実践した
 - [ ] コード検証機能を実装した
 - [ ] Terraform実行自動化を実装した
 - [ ] エラーハンドリングを実装した
@@ -490,7 +675,7 @@ executor = TerraformExecutor()
 
 ## 🆘 トラブルシューティング
 
-### Continue AIが応答しない
+### Continueが応答しない
 
 - Continueの設定を確認（`.continue/config.json`）
 - ネットワーク接続を確認

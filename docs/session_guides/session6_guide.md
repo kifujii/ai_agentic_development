@@ -2,12 +2,12 @@
 
 ## 📋 目的
 
-このセッションでは、Continue AIを活用して、実践的なWebアプリケーションインフラの構築を実践します。
+このセッションでは、Continueを活用して、実践的なWebアプリケーションインフラの構築を実践します。
 
 ### 学習目標
 
 - ALB、ECS、RDSを含む複雑なインフラ構成を理解する
-- Continue AIを活用した複雑なインフラ構築を実践する
+- Continueを活用した複雑なインフラ構築を実践する
 - 統合エージェントを使った自動構築を実践する
 
 ## 🎯 目指すべき構成
@@ -44,7 +44,7 @@ workspace/
 
 #### 1.1 ALBの設計
 
-Continue AIを起動（`Ctrl+L` / `Cmd+L`）して、以下のプロンプトを入力します：
+Continueを起動（`Ctrl+L` / `Cmd+L`）して、以下のプロンプトを入力します：
 
 ```
 Application Load Balancerを作成するTerraformコードを生成してください。
@@ -137,7 +137,7 @@ resource "aws_lb_listener" "web_listener" {
 
 #### 2.1 ECRリポジトリの作成
 
-Continue AIを起動して、以下のプロンプトを入力します：
+Continueを起動して、以下のプロンプトを入力します：
 
 ```
 ECRリポジトリを作成するTerraformコードを生成してください。
@@ -173,7 +173,7 @@ resource "aws_ecr_repository" "web_app" {
 
 #### 2.2 ECSクラスターとサービスの作成
 
-Continue AIを起動して、以下のプロンプトを入力します：
+Continueを起動して、以下のプロンプトを入力します：
 
 ```
 ECSクラスターとサービスを作成するTerraformコードを生成してください。
@@ -249,7 +249,7 @@ resource "aws_ecs_service" "web_service" {
 
 #### 3.1 RDSインスタンスの作成
 
-Continue AIを起動して、以下のプロンプトを入力します：
+Continueを起動して、以下のプロンプトを入力します：
 
 ```
 RDSインスタンスを作成するTerraformコードを生成してください。
@@ -332,7 +332,7 @@ resource "aws_db_instance" "web_db" {
 
 [セッション5](session5_guide.md) で実装した統合エージェントを使用して、Webシステム全体を自動構築します。
 
-Continue AIを起動して、以下のプロンプトを入力します：
+Continueを起動して、以下のプロンプトを入力します：
 
 ```
 以下のWebアプリケーションインフラを構築するTerraformコードを生成してください:

@@ -2,10 +2,14 @@
 
 ## 📋 目的
 
-このセッションでは、Continue AIを活用して、TerraformとAnsibleを統合的に管理するエージェントの実装方法を学びます。
+このセッションでは、Continueを活用して、TerraformとAnsibleを統合的に管理するエージェントの実装方法を学びます。
 
 ### 学習目標
 
+- 複雑なプロンプトエンジニアリングの実践（複数リソースの統合構築用プロンプト）
+- 高度なContext Engineeringの実践（複数のコンテキストソースの統合）
+- 複雑なワークフローでのフィードバックループの実装（複数ステップの承認ワークフロー、エラー発生時のロールバックと再試行、人間の判断が必要な場面での中断と確認）
+- Agent形式での開発の総合理解を実践する
 - タスク分類と優先順位付けの実装方法を理解する
 - TerraformとAnsibleの統合実行方法を理解する
 - タスク分解と依存関係解決の実装方法を理解する
@@ -36,15 +40,78 @@ workspace/
 - [セッション2](session2_guide.md) が完了していること
 - [セッション4](session4_guide.md) が完了していること
 - Terraform/Ansibleエージェントの理解
-- Continue AIが正しく設定されていること
+- Continueが正しく設定されていること
 
 ## 🚀 手順
 
-### 1. タスク分類と優先順位付け（20分）
+### 1. 複雑なプロンプトエンジニアリング（15分）
+
+#### 1.1 複数リソースの統合構築用プロンプト
+
+**タスク**: VPC、EC2、RDS、ALBを含むWebアプリケーションインフラを構築
+
+Continueを起動して、以下のプロンプトを試してみましょう。
+
+**悪いプロンプト例**:
+```
+Webアプリケーションのインフラを構築してください
+```
+
+**良いプロンプト例**:
+```
+下記条件を満たすWebアプリケーションインフラを構築するTerraformコードを生成してください。
+
+要件:
+- VPC: 10.0.0.0/16
+- パブリックサブネット: 10.0.1.0/24, 10.0.2.0/24（2つのAZ）
+- プライベートサブネット: 10.0.10.0/24, 10.0.11.0/24（2つのAZ）
+- EC2インスタンス: t3.micro x 2（パブリックサブネット、Auto Scaling Group）
+- RDS: db.t3.micro, MySQL 8.0（プライベートサブネット）
+- ALB: Application Load Balancer（パブリックサブネット）
+- セキュリティグループ: 適切に設定
+
+注意事項:
+- 足りていないパラメータがある場合は、そのまま構築するのではなく一度聞き返してください
+- 既存のリソースと衝突しないように確認してください
+- 依存関係を適切に設定してください
+- 変数定義を含めてください
+- コメントを適切に追加してください
+- ベストプラクティスに従ってください
+```
+
+**体験ポイント**:
+- 複数リソースの統合構築用プロンプトの設計
+- 依存関係の明確化
+- 複雑な要件の構造化
+
+### 2. 高度なContext Engineering（15分）
+
+#### 2.1 複数のコンテキストソースの統合
+
+既存のAWSリソース情報、サーバー情報、既存コードなどを統合してコンテキストとして活用します。
+
+```python
+class AdvancedContextManager:
+    def get_integrated_context(self):
+        """複数のコンテキストソースを統合"""
+        context = {
+            'aws_resources': self.get_aws_context(),
+            'server_info': self.get_server_context(),
+            'existing_code': self.get_existing_code_context(),
+            'dependencies': self.get_dependency_graph()
+        }
+        return context
+```
+
+#### 2.2 既存インフラ情報の動的取得
+
+コード生成前に最新のAWSリソース情報を取得し、実行前に再度確認します。
+
+### 3. タスク分類と優先順位付け（20分）
 
 #### 1.1 タスク分類の実装
 
-Continue AIを活用して、タスクを自動的に分類する機能を実装します。
+Continueを活用して、タスクを自動的に分類する機能を実装します。
 
 <details>
 <summary>📝 タスク分類クラス例（クリックで展開）</summary>
@@ -129,11 +196,11 @@ class TaskPrioritizer:
 
 </details>
 
-### 2. 統合エージェントの実装（40分）
+### 4. 統合エージェントの実装と複雑なワークフローでのフィードバックループ（40分）
 
-#### 2.1 統合エージェントクラス
+#### 4.1 統合エージェントクラス
 
-Continue AIを活用して、TerraformとAnsibleを統合的に管理するエージェントを実装します。
+Continueを活用して、TerraformとAnsibleを統合的に管理するエージェントを実装します。
 
 <details>
 <summary>📝 統合エージェントクラス例（クリックで展開）</summary>
@@ -185,11 +252,11 @@ class IntegratedInfrastructureAgent:
         results = []
         for task in execution_plan:
             if task['type'] == 'terraform':
-                # Continue AIでTerraformコード生成
+                # ContinueでTerraformコード生成
                 # セッション2の手順を参照
                 result = self.process_terraform_task(task, execute)
             elif task['type'] == 'ansible':
-                # Continue AIでAnsible Playbook生成
+                # ContinueでAnsible Playbook生成
                 # セッション4の手順を参照
                 result = self.process_ansible_task(task, execute)
             else:
@@ -209,8 +276,8 @@ class IntegratedInfrastructureAgent:
     def decompose_task(self, instruction, task_type):
         """複合タスクの分解"""
         if task_type == 'hybrid':
-            # Continue AIを使ってタスクを分解
-            # Continue AIを起動して、以下のプロンプトを入力:
+            # Continueを使ってタスクを分解
+            # Continueを起動して、以下のプロンプトを入力:
             """
             以下のタスクを、TerraformタスクとAnsibleタスクに分解してください。
             
@@ -222,7 +289,7 @@ class IntegratedInfrastructureAgent:
             - 依存関係: [リスト]
             """
             # 生成された分解結果をパース
-            # 実際の実装では、Continue AIの応答をパースする必要がある
+            # 実際の実装では、Continueの応答をパースする必要がある
         
         return [{'type': task_type, 'instruction': instruction}]
     
@@ -239,11 +306,94 @@ class IntegratedInfrastructureAgent:
 
 </details>
 
-### 3. 実践的なシナリオ演習（20分）
+#### 4.2 複雑なワークフローでのフィードバックループ
+
+**複数ステップの承認ワークフロー**:
+
+```python
+def create_multi_step_plan(self, instruction):
+    """複数ステップの実行計画を作成して人間の承認を求める"""
+    execution_plan = self.decompose_and_plan(instruction)
+    
+    print("実行計画（複数ステップ）:")
+    for i, step in enumerate(execution_plan, 1):
+        print(f"\nステップ {i}:")
+        print(f"  タスクタイプ: {step['type']}")
+        print(f"  内容: {step['instruction']}")
+        print(f"  依存関係: {step['dependencies']}")
+    
+    approval = input("\nすべてのステップを実行しますか？ (y/n): ")
+    if approval.lower() == 'y':
+        return execution_plan
+    else:
+        # 個別承認
+        approved_steps = []
+        for step in execution_plan:
+            step_approval = input(f"ステップ '{step['instruction']}' を実行しますか？ (y/n): ")
+            if step_approval.lower() == 'y':
+                approved_steps.append(step)
+        return approved_steps
+```
+
+**エラー発生時のロールバックと再試行**:
+
+```python
+def execute_with_rollback(self, execution_plan):
+    """ロールバック機能付きで実行"""
+    executed_steps = []
+    
+    for step in execution_plan:
+        try:
+            result = self.execute_step(step)
+            executed_steps.append({'step': step, 'result': result})
+        except Exception as e:
+            print(f"エラー発生: {e}")
+            rollback_approval = input("ロールバックしますか？ (y/n): ")
+            if rollback_approval.lower() == 'y':
+                self.rollback(executed_steps)
+            else:
+                retry_approval = input("再試行しますか？ (y/n): ")
+                if retry_approval.lower() == 'y':
+                    result = self.execute_step(step)
+                    executed_steps.append({'step': step, 'result': result})
+            raise
+```
+
+**人間の判断が必要な場面での中断と確認**:
+
+```python
+def execute_with_human_checkpoints(self, execution_plan):
+    """人間の判断が必要な場面で中断"""
+    for step in execution_plan:
+        if self.requires_human_decision(step):
+            print(f"人間の判断が必要なステップ: {step['instruction']}")
+            decision = input("続行しますか？ (y/n): ")
+            if decision.lower() != 'y':
+                print("実行を中断しました")
+                return
+        self.execute_step(step)
+```
+
+### 5. Agent形式での開発の総合理解と実践的なシナリオ演習（20分）
+
+#### 5.1 Agent形式での開発の総合理解
+
+**複雑なワークフローでのAgent形式開発の実践**:
+- 複数リソースの統合構築
+- 複数ステップの承認ワークフロー
+- エラー発生時のロールバックと再試行
+- 人間の判断が必要な場面での中断と確認
+
+**Agent形式での開発の総合理解**:
+- プロンプトエンジニアリング、Context Engineering、フィードバックループの統合活用
+- 複雑なワークフローでのAgent形式開発の実践
+- human in the loopの重要性の理解
+
+#### 5.2 実践的なシナリオ演習
 
 #### 3.1 シナリオ1: 監視エージェントのセットアップ
 
-Continue AIを起動して、以下のプロンプトを入力します：
+Continueを起動して、以下のプロンプトを入力します：
 
 ```
 EC2インスタンスにPrometheus node_exporterをインストールして起動してください。
@@ -332,7 +482,7 @@ systemdサービスとして登録してください。
 
 #### 3.2 シナリオ2: 複数リソースの一括管理
 
-Continue AIを起動して、以下のプロンプトを入力します：
+Continueを起動して、以下のプロンプトを入力します：
 
 ```
 以下のリソースを作成してください:
@@ -345,7 +495,7 @@ Continue AIを起動して、以下のプロンプトを入力します：
 
 このシナリオでは、TerraformタスクとAnsibleタスクが組み合わさった複合タスクになります。
 
-### 4. ワークフロー自動化（10分）
+### 6. ワークフロー自動化（10分）
 
 #### 4.1 ワークフロー定義
 
@@ -431,7 +581,7 @@ class WorkflowAutomator:
 ### タスク分類エラー
 
 - キーワードマッチングの精度を向上
-- Continue AIを使った分類の導入
+- Continueを使った分類の導入
 
 ### 依存関係エラー
 

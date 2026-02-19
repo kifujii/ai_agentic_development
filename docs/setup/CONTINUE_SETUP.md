@@ -1,8 +1,8 @@
-# Continue AI セットアップガイド
+# Continue セットアップガイド
 
 ## 概要
 
-このワークショップでは、Continue AI（VS Code/Cursor拡張機能）を使用してAIアシスタントを活用します。Continueは、AWS Bedrockをモデルプロバイダーとして使用します。
+このワークショップでは、Continue（VS Code/Cursor拡張機能）を使用してAIアシスタントを活用します。Continueは、AWS Bedrockをモデルプロバイダーとして使用します。
 
 ## Continueとは
 

@@ -2,11 +2,15 @@
 
 ## 📋 目的
 
-このセッションでは、Continue AIを活用して、Ansible Playbook生成・実行を自動化するエージェントの実装方法を学びます。
+このセッションでは、Continueを活用して、Ansible Playbook生成・実行を自動化するエージェントの実装方法を学びます。
 
 ### 学習目標
 
-- Continue AIを活用したAnsible Playbook生成の実装方法を理解する
+- プロンプトエンジニアリングの実践（Ansible Playbook生成用）
+- Context Engineeringの実践（サーバー情報の活用）
+- フィードバックループの実装（承認ワークフロー、エラー修正、反復的改善）
+- Agent形式での開発の深化を実践する
+- Continueを活用したAnsible Playbook生成の実装方法を理解する
 - Playbook検証機能の実装方法を理解する
 - Ansible実行自動化の実装方法を理解する
 - エラーハンドリングとリトライ機能の実装方法を理解する
@@ -26,7 +30,7 @@ workspace/
 ```
 
 **エージェントの機能**:
-- Continue AIを活用したAnsible Playbook生成
+- Continueを活用したAnsible Playbook生成
 - Playbook検証
 - Ansible実行の自動化
 - エラーハンドリングとリトライ
@@ -35,18 +39,23 @@ workspace/
 
 - [セッション3](session3_guide.md) が完了していること
 - Ansibleの基本理解
-- Continue AIが正しく設定されていること
+- Continueが正しく設定されていること
 
 ## 🚀 手順
 
-### 1. Continue AIを活用したPlaybook生成（30分）
+### 1. プロンプトエンジニアリングとContext Engineeringの実践（20分）
 
-#### 1.1 Continue AIでのPlaybook生成
+#### 1.1 プロンプトエンジニアリング（Ansible Playbook生成用）
 
-Continue AIを起動（`Ctrl+L` / `Cmd+L`）して、以下のプロンプトを入力します：
-
+**悪いプロンプト例**:
 ```
 Ansible Playbookを生成してください。
+パッケージをインストールしてサービスを開始してください。
+```
+
+**良いプロンプト例**:
+```
+下記条件を満たすAnsible Playbookを生成してください。
 
 要件:
 - パッケージ（htop, git, curl）をインストールする
@@ -55,12 +64,31 @@ Ansible Playbookを生成してください。
 - 冪等性を確保する
 - エラーハンドリングを含める
 
+注意事項:
+- 足りていないパラメータがある場合は、そのまま実行するのではなく一度聞き返してください
+- ハンドラーを使用してください
+- コメントを適切に追加してください
+- ベストプラクティスに従ってください
+
 出力形式:
 - YAML形式のAnsible Playbook
 - 適切なモジュールを使用
-- コメントを追加
-- ベストプラクティスに従う
 ```
+
+#### 1.2 Context Engineering（サーバー情報）
+
+既存のサーバー情報を取得して、コンテキストとして活用します。
+
+```bash
+# セッション3で使用したAnsibleコマンドを実行
+ansible all -i workspace/ansible/inventory.ini -m setup -a "filter=ansible_distribution*"
+```
+
+コンテキスト情報をContinueに提供します。
+
+### 2. Ansible Playbook生成エージェントの実装（40分）
+
+#### 2.1 Continueを活用したPlaybook生成
 
 <details>
 <summary>📝 生成Playbook例（クリックで展開）</summary>
@@ -154,7 +182,9 @@ Ansibleの主要モジュール:
 
 </details>
 
-### 2. Playbook検証機能（20分）
+### 3. Playbook検証機能とフィードバックループの実装（20分）
+
+#### 3.1 Playbook検証機能
 
 #### 2.1 YAML検証の実装
 
@@ -263,9 +293,55 @@ if result['errors']:
 
 </details>
 
-### 3. Ansible実行自動化（20分）
+#### 3.2 フィードバックループの実装
 
-#### 3.1 自動実行パイプライン
+**承認ワークフロー**:
+
+```python
+def create_plan(self, instruction):
+    """実行計画を作成して人間の承認を求める"""
+    plan = self.generate_plan(instruction)
+    print("実行計画:")
+    print(plan)
+    approval = input("実行しますか？ (y/n): ")
+    if approval.lower() == 'y':
+        return plan
+    else:
+        return None
+```
+
+**エラーハンドリングで自動修正提案機能**:
+
+```python
+def handle_error(self, error, playbook):
+    """エラーを検出して修正提案を行う"""
+    error_analysis = self.analyze_error(error)
+    fix_proposal = self.propose_fix(error_analysis, playbook)
+    print(f"エラー: {error}")
+    print(f"修正提案: {fix_proposal}")
+    approval = input("修正を適用しますか？ (y/n): ")
+    if approval.lower() == 'y':
+        return self.apply_fix(fix_proposal, playbook)
+    return None
+```
+
+**生成Playbookの品質改善で反復的改善プロセス**:
+
+```python
+def improve_playbook(self, playbook, feedback):
+    """人間のフィードバックに基づいてPlaybookを改善"""
+    improved_playbook = self.generate_improvement(playbook, feedback)
+    validation_result = self.validator.validate(improved_playbook)
+    if validation_result['valid']:
+        return improved_playbook
+    else:
+        # 再改善を試みる
+        return self.improve_playbook(improved_playbook, feedback)
+```
+
+### 4. Ansible実行自動化（20分）
+
+#### 4.1 自動実行パイプライン
 
 ```python
 # executor.py
@@ -363,9 +439,22 @@ else:
 
 </details>
 
-### 4. エージェントの統合（10分）
+### 5. Agent形式での開発の深化とエージェントの統合（10分）
 
-#### 4.1 エージェントクラスの実装
+#### 5.1 Agent形式での開発の深化
+
+**実装した機能**:
+- プロンプトエンジニアリングの実践（Ansible Playbook生成用）
+- Context Engineeringの実践（サーバー情報の活用）
+- フィードバックループの実装（承認ワークフロー、エラー修正、反復的改善）
+
+**Agent形式での開発の深化**:
+- Playbook生成から実行までの完全自動化
+- サーバー情報の自動取得とコンテキスト化
+- エラー検出と修正提案の自動化
+- human in the loopの実践
+
+#### 5.2 エージェントクラスの実装
 
 ```python
 # agent.py
@@ -390,15 +479,15 @@ class AnsibleAgent:
         Returns:
             処理結果
         """
-        # 1. Continue AIでPlaybook生成（手動）
-        # Continue AIを起動して、instructionを入力
+        # 1. ContinueでPlaybook生成（手動）
+        # Continueを起動して、instructionを入力
         # 生成されたPlaybookを取得
         
         # 2. 検証
         validation_result = self.validator.validate(playbook)
         if not validation_result['valid']:
             # エラーがあれば修正を試みる
-            # Continue AIに修正を依頼
+            # Continueに修正を依頼
             playbook = self.fix_playbook(playbook, validation_result['errors'])
         
         # 3. 実行（オプション）
@@ -411,7 +500,11 @@ class AnsibleAgent:
 
 ## ✅ チェックリスト
 
-- [ ] Continue AIを活用したPlaybook生成を実践した
+- [ ] プロンプトエンジニアリングの実践を行った（Ansible Playbook生成用）
+- [ ] Context Engineeringの実践を行った（サーバー情報の活用）
+- [ ] フィードバックループの実装を行った（承認ワークフロー、エラー修正、反復的改善）
+- [ ] Agent形式での開発の深化を実践した
+- [ ] Continueを活用したPlaybook生成を実践した
 - [ ] Playbook検証機能を実装した
 - [ ] Ansible実行自動化を実装した
 - [ ] エラーハンドリングを実装した
@@ -421,7 +514,7 @@ class AnsibleAgent:
 
 ## 🆘 トラブルシューティング
 
-### Continue AIが応答しない
+### Continueが応答しない
 
 - Continueの設定を確認（`.continue/config.json`）
 - ネットワーク接続を確認

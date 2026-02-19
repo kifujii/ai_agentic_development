@@ -157,7 +157,7 @@ else
     log_info "基本的なPythonパッケージのインストール完了"
 fi
 
-# 注意: Continue AIはエディタ拡張機能なので、Pythonパッケージのインストールは不要です
+# 注意: Continueはエディタ拡張機能なので、Pythonパッケージのインストールは不要です
 # Continueの設定は .continue/config.json を参照してください
 
 # 6-1. VS Code拡張機能のインストール（CLI経由）

@@ -93,7 +93,7 @@ aws sts get-caller-identity
 
 ### ステップ4: 動作確認
 
-#### 4.1 Continue AIの確認
+#### 4.1 Continueの確認
 
 1. **Continueを起動**
    - 方法1: 左側のサイドバーからContinueアイコンをクリック
@@ -115,7 +115,7 @@ aws sts get-caller-identity
 - [ ] `.env`ファイルを作成し、AWS認証情報を設定した
 - [ ] セットアップスクリプトを再実行してAWS CLI設定ファイルを作成した
 - [ ] AWS認証情報が正しく設定されていることを確認した（`aws sts get-caller-identity`）
-- [ ] Continue AIが正常に動作することを確認した（Agentモードでファイル作成テスト）
+- [ ] Continueが正常に動作することを確認した（Agentモードでファイル作成テスト）
 
 ## 🆘 トラブルシューティング
 
