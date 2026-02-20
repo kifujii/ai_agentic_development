@@ -6,7 +6,7 @@
 
 ### 学習目標
 
-- 複雑なプロンプトエンジニアリングの実践（複数リソースの統合構築用プロンプト）
+- 複雑なPrompt Engineeringの実践（複数リソースの統合構築用プロンプト）
 - 高度なContext Engineeringの実践（複数のコンテキストソースの統合）
 - 複雑なワークフローでのフィードバックループの実装（複数ステップの承認ワークフロー、エラー発生時のロールバックと再試行、人間の判断が必要な場面での中断と確認）
 - Agent形式での開発の総合理解を実践する
@@ -44,7 +44,7 @@ workspace/
 
 ## 🚀 手順
 
-### 1. 複雑なプロンプトエンジニアリング（15分）
+### 1. 複雑なPrompt Engineering（15分）
 
 #### 1.1 複数リソースの統合構築用プロンプト
 
@@ -385,7 +385,7 @@ def execute_with_human_checkpoints(self, execution_plan):
 - 人間の判断が必要な場面での中断と確認
 
 **Agent形式での開発の総合理解**:
-- プロンプトエンジニアリング、Context Engineering、フィードバックループの統合活用
+- Prompt Engineering、Context Engineering、フィードバックループの統合活用
 - 複雑なワークフローでのAgent形式開発の実践
 - human in the loopの重要性の理解
 

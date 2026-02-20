@@ -2,7 +2,7 @@
 
 ## 📋 目的
 
-このセッションでは、プロンプトエンジニアリング、Context Engineering、フィードバックループ、開発方式比較を通じて、Agent形式での開発の本質を理解し、AI x IaCの基礎を習得します。
+このセッションでは、Prompt Engineering、Context Engineering、フィードバックループ、開発方式比較を通じて、Agent形式での開発の本質を理解し、AI x IaCの基礎を習得します。
 
 ### 学習目標
 
@@ -42,10 +42,6 @@ pwd
 
 # 環境変数の確認
 env | grep -E "AWS"
-
-# Python/Node.jsのバージョン確認
-python3 --version
-node --version
 ```
 
 #### 1.2 AWS CLI/認証情報の設定
@@ -68,31 +64,13 @@ aws sts get-caller-identity
 #### 1.3 必要なツールのインストール確認
 
 ```bash
-# Terraformのインストール確認
+# Terraformのインストール確認（コード生成時に参照されるため）
 terraform version
-
-# Ansibleのインストール確認
-ansible --version
-
-# Pythonパッケージのインストール確認
-python3 -m pip list | grep -E "boto3|python-dotenv"
 ```
 
-#### 1.4 Continueの起動確認
+**注意**: セッション0では、Terraformコードを生成するだけで実行はしません。環境セットアップガイドでContinueの動作確認まで完了していることを前提とします。
 
-Continueは、VS Code/Cursorの拡張機能です。以下の方法で起動できます：
-
-**方法1: ショートカットキー**
-- **Windows/Linux**: `Ctrl + L`
-- **Mac**: `Cmd + L`
-
-**方法2: サイドバーから**
-1. Continueアイコンをクリック（サイドバー左側）
-2. チャットパネルが開きます
-
-詳細は [Continueセットアップガイド](../setup/CONTINUE_SETUP.md) を参照してください。
-
-### 2. プロンプトエンジニアリング実践（30分）
+### 2. Prompt Engineering実践（30分）
 
 #### 2.1 悪いプロンプトでの体験（10分）
 
@@ -328,8 +306,7 @@ AWS環境情報:
 
 ## ✅ チェックリスト
 
-- [ ] 環境セットアップが完了した
-- [ ] Continueが正常に動作することを確認した
+- [ ] 環境セットアップが完了した（[環境セットアップガイド](../setup/ENVIRONMENT_SETUP.md)を参照）
 - [ ] AWS認証情報が正しく設定されている
 - [ ] 悪いプロンプトと良いプロンプトの比較体験を行った
 - [ ] プロンプト改善の実践を行った

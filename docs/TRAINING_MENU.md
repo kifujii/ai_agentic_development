@@ -10,7 +10,7 @@
 - **前提条件**: 事前勉強会で生成AIとIaC（Terraform/Ansible）の基礎を学習済み
 
 ### 学習目標
-- **プロンプトエンジニアリング**: 良いプロンプトと悪いプロンプトの違いを理解し、効果的なプロンプトを作成できる
+- **Prompt Engineering**: 良いプロンプトと悪いプロンプトの違いを理解し、効果的なプロンプトを作成できる
 - **Context Engineering**: コンテキスト情報を適切に活用して、品質の高いコードを生成できる
 - **フィードバックループ**: human in the loopの重要性を理解し、エラー修正、反復的改善、承認ワークフローを実践できる
 - **Agent形式での開発の理解**: Agent形式での開発の本質を理解し、開発体験の改善を実感できる
@@ -26,7 +26,7 @@
 ### セッション0：AI x IaC基礎実践とAgent開発の理解（必須）（1.5時間）
 
 #### 目標
-プロンプトエンジニアリング、Context Engineering、フィードバックループ、開発方式比較を通じて、Agent形式での開発の本質を理解し、AI x IaCの基礎を習得する。
+Prompt Engineering、Context Engineering、フィードバックループ、開発方式比較を通じて、Agent形式での開発の本質を理解し、AI x IaCの基礎を習得する。
 
 #### 学習内容
 
@@ -36,7 +36,7 @@
 - Continueの設定確認
 - 必要なツールのインストール確認（Terraform, Ansible, Python）
 
-**2. プロンプトエンジニアリング実践（30分）**
+**2. Prompt Engineering実践（30分）**
 - **悪いプロンプトでの体験（10分）**
   - 曖昧なプロンプト（例：「EC2を作成してください」）でのコード生成
   - 不足パラメータ、デフォルト値の不適切さ、エラー発生の体験
@@ -81,7 +81,7 @@
     3. **承認ワークフロー**: AIが計画提示→人間が承認→実行
 
 #### 成果物
-- プロンプトエンジニアリングの実践成果（良いプロンプトと悪いプロンプトの比較）
+- Prompt Engineeringの実践成果（良いプロンプトと悪いプロンプトの比較）
 - Context Engineeringの実践成果（コンテキストあり/なしの比較）
 - チャット形式とAgent形式の比較体験レポート
 - Agent形式での開発の理解と実践成果
@@ -97,11 +97,11 @@
 ### セッション1：Agent形式でのVPC/Subnet/EC2構築（必須）（1.5時間）
 
 #### 目標
-プロンプトエンジニアリング、Context Engineering、フィードバックループを実践しながら、Agent形式でVPC/Subnet/EC2を構築し、Agent形式での開発体験を深める。
+Prompt Engineering、Context Engineering、フィードバックループを実践しながら、Agent形式でVPC/Subnet/EC2を構築し、Agent形式での開発体験を深める。
 
 #### 学習内容
 
-**1. プロンプトエンジニアリングの実践（20分）**
+**1. Prompt Engineeringの実践（20分）**
 - **タスク**: VPC、パブリック/プライベートサブネット、EC2インスタンスを構築
 - **悪いプロンプトから始める**: 「VPCとEC2を作成してください」
 - **問題点の確認**: 不足パラメータ、不明確な要件
@@ -122,14 +122,14 @@
 - Agentが改善→再検証→実行
 
 **4. Agent形式での開発の振り返り（10分）**
-- プロンプトエンジニアリングの効果
+- Prompt Engineeringの効果
 - Context Engineeringの重要性
 - フィードバックループの体験
 - Agent形式での開発体験の改善点
 
 #### 成果物
 - VPC、Subnet、EC2インスタンスが構築された状態
-- プロンプトエンジニアリングの実践成果（良いプロンプトと悪いプロンプトの比較）
+- Prompt Engineeringの実践成果（良いプロンプトと悪いプロンプトの比較）
 - Context Engineeringの実践成果
 - フィードバックループの体験レポート
 - Agent形式での開発の振り返りレポート
@@ -211,11 +211,11 @@
 ### セッション3：システム運用基礎とAnsible Playbook作成（必須）（1時間）
 
 #### 目標
-プロンプトエンジニアリング、Context Engineering、Agent形式での開発を実践しながら、Ansibleを使った基本的な運用タスクの自動化を実践する。
+Prompt Engineering、Context Engineering、Agent形式での開発を実践しながら、Ansibleを使った基本的な運用タスクの自動化を実践する。
 
 #### 学習内容
 
-**1. プロンプトエンジニアリング（Ansible用）（15分）**
+**1. Prompt Engineering（Ansible用）（15分）**
 - Ansible Playbook生成用の良いプロンプトと悪いプロンプトの比較
 - 明確な要件定義の重要性
 - Ansible特有の構文の理解
@@ -236,7 +236,7 @@
 - フィードバックループの実践
 
 #### 成果物
-- プロンプトエンジニアリングの実践成果（Ansible用）
+- Prompt Engineeringの実践成果（Ansible用）
 - Context Engineeringの実践成果（サーバー情報）
 - Agent形式でのPlaybook生成の体験レポート
 - サーバー再起動を自動化するAnsible Playbook
@@ -256,8 +256,8 @@
 
 #### 学習内容
 
-**1. プロンプトエンジニアリングとContext Engineeringの実践（20分）**
-- プロンプトエンジニアリング（Ansible Playbook生成用）
+**1. Prompt EngineeringとContext Engineeringの実践（20分）**
+- Prompt Engineering（Ansible Playbook生成用）
   - Ansible特有の構文の理解
   - タスク構造の最適化
 - Context Engineering
@@ -311,7 +311,7 @@
 
 #### 学習内容
 
-**1. 複雑なプロンプトエンジニアリング（15分）**
+**1. 複雑なPrompt Engineering（15分）**
 - 複数リソースの統合構築用プロンプト
 - 複雑な要件の構造化
 - プロンプトテンプレートの活用
@@ -406,7 +406,7 @@
 
 ### Agent開発体験の5つの要素
 
-1. **プロンプトエンジニアリング**（全セッション）
+1. **Prompt Engineering**（全セッション）
    - 良いプロンプトと悪いプロンプトの比較体験
    - 不足パラメータの聞き返し機能の体験
    - 段階的なプロンプト改善の実践
@@ -433,7 +433,7 @@
 ### 生成AIエージェント開発の3要素
 
 1. **Terraformコード生成・実行の自動化**（セッション2）
-   - セッション0で学んだプロンプトエンジニアリング、Context Engineering、フィードバックループの基礎を活用
+   - セッション0で学んだPrompt Engineering、Context Engineering、フィードバックループの基礎を活用
    - 自然言語からTerraformコードへの変換
    - コード生成、検証、自動実行の一連の流れ
 
@@ -467,7 +467,7 @@
 
 - **生成AIの基礎**
   - LLMの基本概念とAPIの使い方
-  - プロンプトエンジニアリングの基礎
+  - Prompt Engineeringの基礎
   - 生成AIエージェントのアーキテクチャ
 
 - **IaC（Infrastructure as Code）の基礎**

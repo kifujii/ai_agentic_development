@@ -6,7 +6,7 @@
 
 ### 学習目標
 
-- プロンプトエンジニアリング（Ansible用）の実践（良いプロンプトと悪いプロンプトの比較）
+- Prompt Engineering（Ansible用）の実践（良いプロンプトと悪いプロンプトの比較）
 - Context Engineering（サーバー情報）の実践
 - Agent形式でのPlaybook生成の体験
 - Agent形式での開発の理解（Ansible）
@@ -44,7 +44,7 @@ workspace/
 
 ## 🚀 手順
 
-### 1. プロンプトエンジニアリング（Ansible用）（15分）
+### 1. Prompt Engineering（Ansible用）（15分）
 
 #### 1.1 悪いプロンプトと良いプロンプトの比較
 

@@ -6,7 +6,7 @@
 
 ### 学習目標
 
-- プロンプトエンジニアリングの実践（Ansible Playbook生成用）
+- Prompt Engineeringの実践（Ansible Playbook生成用）
 - Context Engineeringの実践（サーバー情報の活用）
 - フィードバックループの実装（承認ワークフロー、エラー修正、反復的改善）
 - Agent形式での開発の深化を実践する
@@ -43,9 +43,9 @@ workspace/
 
 ## 🚀 手順
 
-### 1. プロンプトエンジニアリングとContext Engineeringの実践（20分）
+### 1. Prompt EngineeringとContext Engineeringの実践（20分）
 
-#### 1.1 プロンプトエンジニアリング（Ansible Playbook生成用）
+#### 1.1 Prompt Engineering（Ansible Playbook生成用）
 
 **悪いプロンプト例**:
 ```
@@ -444,7 +444,7 @@ else:
 #### 5.1 Agent形式での開発の深化
 
 **実装した機能**:
-- プロンプトエンジニアリングの実践（Ansible Playbook生成用）
+- Prompt Engineeringの実践（Ansible Playbook生成用）
 - Context Engineeringの実践（サーバー情報の活用）
 - フィードバックループの実装（承認ワークフロー、エラー修正、反復的改善）
 
@@ -500,7 +500,7 @@ class AnsibleAgent:
 
 ## ✅ チェックリスト
 
-- [ ] プロンプトエンジニアリングの実践を行った（Ansible Playbook生成用）
+- [ ] Prompt Engineeringの実践を行った（Ansible Playbook生成用）
 - [ ] Context Engineeringの実践を行った（サーバー情報の活用）
 - [ ] フィードバックループの実装を行った（承認ワークフロー、エラー修正、反復的改善）
 - [ ] Agent形式での開発の深化を実践した
