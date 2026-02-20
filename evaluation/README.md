@@ -5,7 +5,7 @@
 ## チェックリスト一覧
 
 - [セッション1チェックリスト](session1_checklist.md) - AI x IaC基礎実践とAgent開発の理解
-- [セッション2チェックリスト](session2_checklist.md) - VPC/Subnet/EC2の設計・構築・検証
+- [セッション2チェックリスト](session2_checklist.md) - VPC/EC2の設計・構築・検証
 - [セッション3チェックリスト](session3_checklist.md) - Webシステム構築（任意・発展）
 - [セッション4チェックリスト](session4_checklist.md) - サーバー再起動の自動化
 - [セッション5チェックリスト](session5_checklist.md) - エージェントインストール・セットアップ

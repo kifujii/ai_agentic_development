@@ -22,7 +22,7 @@
 | セッション | 内容 | 時間 | 必須/任意 | ガイド |
 |-----------|------|------|-----------|--------|
 | **セッション1** | AI x IaC基礎実践とAgent開発の理解 | 1.5時間 | 必須 | [詳細ガイド](docs/session_guides/session1_guide.md) |
-| **セッション2** | VPC/Subnet/EC2の設計・構築・検証 | 1.5時間 | 必須 | [詳細ガイド](docs/session_guides/session2_guide.md) |
+| **セッション2** | VPC/EC2の設計・構築・検証 | 1.5時間 | 必須 | [詳細ガイド](docs/session_guides/session2_guide.md) |
 | **セッション3** | Webシステム構築 (ALB/ECS/ECR/RDS) | 1時間 | 任意 | [詳細ガイド](docs/session_guides/session3_guide.md) |
 | **セッション4** | サーバー再起動の自動化 | 1.5時間 | 必須 | [詳細ガイド](docs/session_guides/session4_guide.md) |
 | **セッション5** | エージェントインストール・セットアップ | 1.5時間 | 必須 | [詳細ガイド](docs/session_guides/session5_guide.md) |
@@ -38,7 +38,7 @@
 ```
 Day 1 (4h): インフラ構築 (Terraform)
 ├── Session 1: AI x IaC基礎実践とAgent開発の理解 [必須]
-├── Session 2: VPC/Subnet/EC2の設計・構築・検証  [必須]
+├── Session 2: VPC/EC2の設計・構築・検証  [必須]
 └── Session 3: Webシステム構築                    [任意]
 
 Day 2 (4h): システム運用 (Ansible)
@@ -82,7 +82,7 @@ ai_agentic/
 │   ├── TRAINING_MENU.md          # トレーニングメニュー詳細
 │   ├── session_guides/           # セッションガイド
 │   │   ├── session1_guide.md     # AI x IaC基礎実践
-│   │   ├── session2_guide.md     # VPC/Subnet/EC2構築
+│   │   ├── session2_guide.md     # VPC/EC2構築
 │   │   ├── session3_guide.md     # Webシステム構築（任意）
 │   │   ├── session4_guide.md     # サーバー再起動の自動化
 │   │   ├── session5_guide.md     # エージェントインストール
