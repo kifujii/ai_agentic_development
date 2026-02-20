@@ -1,383 +1,543 @@
-# セッション3：Terraform自動化エージェント開発 詳細ガイド
+# セッション3：Webシステム構築 詳細ガイド（任意・発展）
 
 ## 📋 目的
 
-このセッションでは、ContinueのAgent機能を活用して、Terraformコード生成を効率化するためのプロンプトテンプレートを作成し、再利用可能なプロンプトパターンを確立します。セッション1とセッション2で学んだPrompt EngineeringとContext Engineeringを発展させ、より効率的な開発体験を実現します。
+このセッションでは、ContinueのAgent機能を活用して、ALB、ECS/ECR、RDSを含む実践的なWebアプリケーションインフラを構築します。セッション2で構築したVPC/Subnetを活用し、より複雑なインフラ構成をAgent開発で実現します。
 
 ### 学習目標
 
-- プロンプトテンプレートの作成方法を理解する
-- Context Engineeringの高度化（既存インフラ情報の動的取得、依存関係の考慮）
-- フィードバックループの実践（承認ワークフロー、エラー修正、反復的改善）
-- Agent形式での開発の深化を実践する
-- ContinueのAgent機能を活用した効率的なTerraformコード生成
+- 複雑なインフラ構成（ALB、ECS、RDS）をAgent開発で構築する
+- セッション2で構築したリソースを活用した拡張構築を体験する
+- 依存関係を考慮した段階的な構築アプローチを実践する
+- 統合的なワークフローでのAgent開発を実践する
 
 ## 🎯 最終的な目標構成
 
 このセッション終了時点で、以下の構成が完成していることを目指します：
 
-### プロンプトテンプレート構成
+### Webアプリケーションインフラ構成図
 
 ```mermaid
 graph TB
-    subgraph Templates["プロンプトテンプレート"]
-        BaseTemplate["基本テンプレート<br/>terraform_resource_template.txt"]
-        BadExamples["悪い例集<br/>bad_examples.txt"]
-        ImprovementGuide["改善ガイド<br/>improvement_guide.md"]
+    subgraph Internet["Internet"]
+        Users["ユーザー"]
     end
     
-    subgraph Usage["使用フロー"]
-        LoadTemplate["テンプレート読み込み"]
-        FillVariables["変数埋め込み"]
-        GeneratePrompt["プロンプト生成"]
-        AgentUse["Agentで使用"]
+    subgraph VPC["VPC (10.0.0.0/16) - セッション2で構築済み"]
+        subgraph PublicSubnets["パブリックサブネット"]
+            ALB["Application Load Balancer<br/>HTTP: 80"]
+            EC2["EC2 Instance<br/>(セッション2で構築済み)"]
+        end
+        
+        subgraph PrivateSubnets["プライベートサブネット"]
+            ECS["ECS Cluster<br/>Fargate Tasks x 2"]
+            RDS["RDS MySQL 8.0<br/>db.t3.micro"]
+        end
+        
+        ECR["ECR Repository<br/>Docker Images"]
     end
     
-    BaseTemplate --> LoadTemplate
-    LoadTemplate --> FillVariables
-    FillVariables --> GeneratePrompt
-    GeneratePrompt --> AgentUse
+    Users --> ALB
+    ALB --> ECS
+    ECS --> RDS
+    ECR -.->|"イメージプル"| ECS
 ```
 
 ### ファイル構成
 
 ```
 workspace/
-└── templates/
-    └── prompts/
-        ├── terraform_resource_template.txt  # 基本テンプレート
-        ├── bad_examples.txt                 # 悪いプロンプト例集
-        └── improvement_guide.md             # プロンプト改善ガイド
+└── terraform/
+    └── web-app/
+        ├── main.tf          # メインのTerraformコード
+        ├── variables.tf     # 変数定義
+        ├── outputs.tf       # 出力定義
+        └── terraform.tfvars # 変数の値
 ```
 
-### 成果物
+### 構築されるAWSリソース
 
-- 再利用可能なプロンプトテンプレート
-- プロンプト改善ガイド
-- 様々なリソースタイプに対応したプロンプト例
+- ALB（Application Load Balancer） - パブリックサブネット
+- ターゲットグループ（ALB用、ヘルスチェック設定）
+- ALBリスナー（HTTP: 80）
+- ECRリポジトリ - Dockerイメージの保存
+- ECSクラスターとサービス（Fargate） - プライベートサブネット
+- RDSデータベース（MySQL 8.0, db.t3.micro） - プライベートサブネット
+- セキュリティグループ（ALB用、ECS用、RDS用）
+- CloudWatch Logsグループ
+
+> **ポイント**: セッション2で構築したVPC、サブネットを再利用します。VPC IDやサブネットIDをコンテキストとして提供してください。
 
 ## 📚 事前準備
 
-- [セッション1](session1_guide.md) が完了していること
-- [セッション2](session2_guide.md) が完了していること
+- [セッション2](session2_guide.md) が完了していること（VPC/Subnet/EC2が構築済み）
+- セッション2で構築したVPC ID、サブネットIDを把握していること
 - Continueが正しく設定されていること
 
 ## 🚀 Agent開発の進め方
 
 ### Agent開発のアドバイス
 
-#### 1. プロンプトテンプレートの作成
+#### 1. 段階的な構築アプローチ
 
-**テンプレートの設計方針**:
-- セッション1とセッション2で学んだ良いプロンプトのパターンを抽出
-- 変数部分を`{variable_name}`形式で表現
-- 再利用可能な構造にする
+複雑なインフラは、以下の順序で段階的に構築することを推奨します：
 
-**基本テンプレート例**:
+1. **ネットワーク層**: ALB、ターゲットグループ、セキュリティグループ
+2. **コンテナ層**: ECRリポジトリ、ECSクラスター、タスク定義、サービス
+3. **データ層**: RDSサブネットグループ、セキュリティグループ、RDSインスタンス
+4. **統合**: すべてのリソースを連携
+
+各ステップで承認ワークフローを活用し、確認してから次に進みます。
+
+#### 2. Prompt Engineeringのヒント
+
+**統合構築用プロンプト例**:
 
 ```
-下記条件を満たす{resource_type}を構築するTerraformコードを生成してください。
+terraform/web-app/ フォルダに、下記条件を満たすWebアプリケーションインフラを構築するTerraformコードを生成してください。
+
+前提条件:
+- セッション2で構築したVPCとサブネットを使用する
+- VPC ID、サブネットIDは変数で指定する
 
 要件:
-- リージョン: {region}
-- {specific_requirements}
+1. ALB（Application Load Balancer）:
+   - 名前: training-web-alb
+   - タイプ: application
+   - パブリックサブネットに配置
+   - HTTP（ポート80）リスナー
+   - ヘルスチェック: /, 200 OK
+
+2. ECSクラスターとサービス:
+   - クラスター名: training-web-cluster
+   - サービス名: training-web-service
+   - 起動タイプ: FARGATE
+   - 希望タスク数: 2
+   - CPU: 256, メモリ: 512
+   - プライベートサブネットに配置
+   - ALBターゲットグループに接続
+
+3. ECRリポジトリ:
+   - 名前: training-web-app
+   - プッシュ時のスキャンを有効化
+
+4. RDSデータベース:
+   - エンジン: MySQL 8.0
+   - インスタンスクラス: db.t3.micro
+   - ストレージ: 20GB
+   - データベース名: webappdb
+   - プライベートサブネットに配置
+   - ECSセキュリティグループからのみアクセス可能（ポート3306）
+
+5. セキュリティグループ:
+   - ALB用: HTTP（80）を許可、送信は全許可
+   - ECS用: ALBセキュリティグループからのみ受信（80）
+   - RDS用: ECSセキュリティグループからのみ受信（3306）
 
 注意事項:
-- 足りていないパラメータなどがある場合は、そのまま構築するのではなく一度聞き返してください
-- 既存の{resource_type}と衝突しないように確認してください
+- 足りていないパラメータがある場合は、そのまま構築するのではなく一度聞き返してください
+- 依存関係を適切に設定してください
 - 変数定義を含めてください
 - コメントを適切に追加してください
 - ベストプラクティスに従ってください
-
-出力形式:
-- HCL形式のTerraformコード
-- 変数定義を含める
-- コメントを適切に追加
 ```
 
-**テンプレートの活用方法**:
-1. テンプレートファイルを作成
-2. 必要な変数を埋め込む
-3. ContinueのAgent機能で使用
+#### 3. Context Engineeringの活用
 
-#### 2. Context Engineeringの高度化
-
-**既存インフラ情報の動的取得**:
-
-Continueのチャット機能を使って、既存のAWSリソース情報を取得できます：
+**セッション2のリソース情報をコンテキストとして提供**:
 
 ```
-ap-northeast-1リージョンで既存のVPC情報を教えてください。
-既存のサブネット情報、セキュリティグループ情報、利用可能な可用性ゾーンも教えてください。
+既存のインフラ情報（セッション2で構築済み）:
+- VPC ID: vpc-xxxxx (10.0.0.0/16)
+- パブリックサブネット: subnet-xxxxx (10.0.1.0/24), subnet-yyyyy (10.0.2.0/24)
+- プライベートサブネット: subnet-zzzzz (10.0.10.0/24), subnet-wwwww (10.0.11.0/24)
+
+上記のリソースを利用して、Webアプリケーションインフラを構築してください。
 ```
 
-**依存関係の考慮**:
+> **ヒント**: セッション2の `terraform output` の結果をコンテキストとして提供すると効率的です。
 
-複数のリソースを構築する場合、依存関係を明確にプロンプトに含めます：
+#### 4. フィードバックループの実践
 
-```
-以下の順序でリソースを構築してください：
-1. VPC
-2. サブネット（VPCに依存）
-3. セキュリティグループ（VPCに依存）
-4. EC2インスタンス（サブネットとセキュリティグループに依存）
-```
+**複数ステップの承認ワークフロー**:
 
-#### 3. フィードバックループの実践
-
-**承認ワークフロー**:
-- Agentが生成したコードを確認してから承認
-- 特に複雑なリソース構成の場合、段階的に承認
-
-**エラー修正プロセス**:
-- エラーが発生した場合、エラーメッセージをコンテキストとして提供
-- Agentに修正を依頼
-
-**反復的改善**:
-- 生成されたコードを確認し、改善点があればフィードバックを提供
-- プロンプトテンプレート自体も改善
+1. **ステップ1**: ALBとターゲットグループのコード生成 → 確認 → 承認
+2. **ステップ2**: ECSクラスターとサービスのコード生成 → 確認 → 承認
+3. **ステップ3**: RDSのコード生成 → 確認 → 承認
+4. **ステップ4**: 統合後の最終確認
 
 ### 考えながら進めるポイント
 
-1. **どのようなテンプレート構造が効果的か**
-   - 汎用性と具体性のバランス
-   - 変数の設計（必須/任意、デフォルト値など）
+1. **どのような構築順序が効果的か**
+   - 依存関係を考慮した構築順序
+   - 各リソースの作成タイミング
 
-2. **どのようなコンテキストが必要か**
-   - 既存リソース情報の取得方法
-   - 依存関係の表現方法
+2. **セッション2のリソースをどのように活用するか**
+   - VPC IDやサブネットIDの取得方法
+   - 既存リソースとの連携
 
-3. **プロンプトテンプレートの改善方法**
-   - 実際の使用経験から学んだ改善点
-   - 様々なリソースタイプへの対応
+3. **セキュリティ設定の考慮**
+   - セキュリティグループの適切な設定
+   - プライベートサブネットの活用
+   - 最小権限の原則
 
-4. **効率的な開発フロー**
-   - テンプレートの使い回し
-   - コンテキスト情報の再利用
+4. **コスト最適化**
+   - 適切なインスタンスサイズの選択
+   - 不要なリソースの回避
 
 ## 📝 振り返り
 
 以下の点について振り返り、学んだことをまとめてください：
 
-- **プロンプトテンプレートの効果**: テンプレート化することで、どのような効率化が実現できたか
-- **Context Engineeringの高度化**: 既存インフラ情報の動的取得や依存関係の考慮が、どのようにコード生成の品質向上に寄与したか
-- **フィードバックループの実践**: 承認ワークフロー、エラー修正、反復的改善をどのように実践したか
-- **Agent形式での開発の深化**: セッション1、2と比較して、どのような進化を感じたか
+- **複雑なインフラ構築の体験**: ALB、ECS、RDSを含む複雑なインフラをどのように構築したか
+- **セッション2からの拡張**: 既存リソースを活用した構築の方法
+- **段階的な構築アプローチ**: 依存関係を考慮した構築順序の効果
+- **Agent形式での統合開発**: 複数のリソースを統合的に管理する方法
 
 <details>
 <summary>📝 解答例（クリックで展開）</summary>
 
-### プロンプトテンプレート例
+### 完成したTerraformコード例
 
-#### terraform_resource_template.txt
-
-```
-下記条件を満たす{resource_type}を構築するTerraformコードを生成してください。
-
-要件:
-- リージョン: {region}
-- {specific_requirements}
-
-注意事項:
-- 足りていないパラメータなどがある場合は、そのまま構築するのではなく一度聞き返してください
-- 既存の{resource_type}と衝突しないように確認してください
-- 変数定義を含めてください
-- コメントを適切に追加してください
-- ベストプラクティスに従ってください
-
-出力形式:
-- HCL形式のTerraformコード
-- 変数定義を含める
-- コメントを適切に追加
-```
-
-#### 使用例：S3バケット作成
-
-テンプレートを埋め込んだプロンプト：
-
-```
-下記条件を満たすS3バケットを構築するTerraformコードを生成してください。
-
-要件:
-- リージョン: ap-northeast-1
-- バケット名: training-bucket
-- バージョニングを有効化
-- 暗号化を有効化（AES256）
-- パブリックアクセスをブロック
-
-注意事項:
-- 足りていないパラメータなどがある場合は、そのまま構築するのではなく一度聞き返してください
-- 既存のS3バケットと衝突しないように確認してください
-- 変数定義を含めてください
-- コメントを適切に追加してください
-- ベストプラクティスに従ってください
-
-出力形式:
-- HCL形式のTerraformコード
-- 変数定義を含める
-- コメントを適切に追加
-```
-
-#### 生成コード例
+#### variables.tf
 
 ```hcl
-# variables.tf
-variable "bucket_name" {
-  description = "S3バケット名"
-  type        = string
-  default     = "training-bucket"
-}
-
 variable "region" {
   description = "AWSリージョン"
   type        = string
   default     = "ap-northeast-1"
 }
 
-# main.tf
+variable "vpc_id" {
+  description = "VPC ID（セッション2で構築したVPC）"
+  type        = string
+}
+
+variable "public_subnet_ids" {
+  description = "パブリックサブネットID（セッション2で構築したサブネット）"
+  type        = list(string)
+}
+
+variable "private_subnet_ids" {
+  description = "プライベートサブネットID（セッション2で構築したサブネット）"
+  type        = list(string)
+}
+
+variable "db_username" {
+  description = "RDSデータベースユーザー名"
+  type        = string
+  default     = "admin"
+}
+
+variable "db_password" {
+  description = "RDSデータベースパスワード"
+  type        = string
+  sensitive   = true
+}
+```
+
+#### main.tf
+
+```hcl
 provider "aws" {
   region = var.region
 }
 
-# S3バケット
-resource "aws_s3_bucket" "training_bucket" {
-  bucket = var.bucket_name
+# ALBセキュリティグループ
+resource "aws_security_group" "alb_sg" {
+  name        = "training-alb-sg"
+  description = "Security group for ALB"
+  vpc_id      = var.vpc_id
+
+  ingress {
+    description = "HTTP"
+    from_port   = 80
+    to_port     = 80
+    protocol    = "tcp"
+    cidr_blocks = ["0.0.0.0/0"]
+  }
+
+  egress {
+    from_port   = 0
+    to_port     = 0
+    protocol    = "-1"
+    cidr_blocks = ["0.0.0.0/0"]
+  }
 
   tags = {
-    Name        = var.bucket_name
+    Name        = "training-alb-sg"
     Environment = "training"
   }
 }
 
-# バージョニング
-resource "aws_s3_bucket_versioning" "training_bucket_versioning" {
-  bucket = aws_s3_bucket.training_bucket.id
+# ECSセキュリティグループ
+resource "aws_security_group" "ecs_sg" {
+  name        = "training-ecs-sg"
+  description = "Security group for ECS"
+  vpc_id      = var.vpc_id
 
-  versioning_configuration {
-    status = "Enabled"
+  ingress {
+    description     = "HTTP from ALB"
+    from_port       = 80
+    to_port         = 80
+    protocol        = "tcp"
+    security_groups = [aws_security_group.alb_sg.id]
+  }
+
+  egress {
+    from_port   = 0
+    to_port     = 0
+    protocol    = "-1"
+    cidr_blocks = ["0.0.0.0/0"]
+  }
+
+  tags = {
+    Name        = "training-ecs-sg"
+    Environment = "training"
   }
 }
 
-# 暗号化
-resource "aws_s3_bucket_server_side_encryption_configuration" "training_bucket_encryption" {
-  bucket = aws_s3_bucket.training_bucket.id
+# RDSセキュリティグループ
+resource "aws_security_group" "rds_sg" {
+  name        = "training-rds-sg"
+  description = "Security group for RDS"
+  vpc_id      = var.vpc_id
 
-  rule {
-    apply_server_side_encryption_by_default {
-      sse_algorithm = "AES256"
+  ingress {
+    description     = "MySQL from ECS"
+    from_port       = 3306
+    to_port         = 3306
+    protocol        = "tcp"
+    security_groups = [aws_security_group.ecs_sg.id]
+  }
+
+  egress {
+    from_port   = 0
+    to_port     = 0
+    protocol    = "-1"
+    cidr_blocks = ["0.0.0.0/0"]
+  }
+
+  tags = {
+    Name        = "training-rds-sg"
+    Environment = "training"
+  }
+}
+
+# ALB
+resource "aws_lb" "web_alb" {
+  name               = "training-web-alb"
+  internal           = false
+  load_balancer_type = "application"
+  security_groups    = [aws_security_group.alb_sg.id]
+  subnets            = var.public_subnet_ids
+
+  enable_deletion_protection = false
+
+  tags = {
+    Name        = "training-web-alb"
+    Environment = "training"
+  }
+}
+
+# ターゲットグループ
+resource "aws_lb_target_group" "web_tg" {
+  name        = "training-web-tg"
+  port        = 80
+  protocol    = "HTTP"
+  vpc_id      = var.vpc_id
+  target_type = "ip"
+
+  health_check {
+    enabled             = true
+    healthy_threshold   = 2
+    unhealthy_threshold = 2
+    timeout             = 5
+    interval            = 30
+    path                = "/"
+    matcher             = "200"
+  }
+
+  tags = {
+    Name        = "training-web-tg"
+    Environment = "training"
+  }
+}
+
+# ALBリスナー
+resource "aws_lb_listener" "web_listener" {
+  load_balancer_arn = aws_lb.web_alb.arn
+  port              = "80"
+  protocol          = "HTTP"
+
+  default_action {
+    type             = "forward"
+    target_group_arn = aws_lb_target_group.web_tg.arn
+  }
+}
+
+# ECRリポジトリ
+resource "aws_ecr_repository" "web_app" {
+  name                 = "training-web-app"
+  image_tag_mutability = "MUTABLE"
+
+  image_scanning_configuration {
+    scan_on_push = true
+  }
+
+  tags = {
+    Name        = "training-web-app"
+    Environment = "training"
+  }
+}
+
+# ECSクラスター
+resource "aws_ecs_cluster" "web_cluster" {
+  name = "training-web-cluster"
+
+  tags = {
+    Name        = "training-web-cluster"
+    Environment = "training"
+  }
+}
+
+# ECSタスク定義
+resource "aws_ecs_task_definition" "web_app" {
+  family                   = "training-web-app"
+  network_mode             = "awsvpc"
+  requires_compatibilities = ["FARGATE"]
+  cpu                      = "256"
+  memory                   = "512"
+
+  container_definitions = jsonencode([{
+    name  = "web-app"
+    image = "${aws_ecr_repository.web_app.repository_url}:latest"
+    portMappings = [{
+      containerPort = 80
+      protocol      = "tcp"
+    }]
+    environment = [
+      {
+        name  = "DB_HOST"
+        value = aws_db_instance.web_db.endpoint
+      },
+      {
+        name  = "DB_NAME"
+        value = "webappdb"
+      }
+    ]
+    logConfiguration = {
+      logDriver = "awslogs"
+      options = {
+        "awslogs-group"         = "/ecs/training-web-app"
+        "awslogs-region"        = var.region
+        "awslogs-stream-prefix" = "ecs"
+      }
     }
+  }])
+
+  tags = {
+    Name        = "training-web-app"
+    Environment = "training"
   }
 }
 
-# パブリックアクセスブロック
-resource "aws_s3_bucket_public_access_block" "training_bucket_pab" {
-  bucket = aws_s3_bucket.training_bucket.id
+# ECSサービス
+resource "aws_ecs_service" "web_service" {
+  name            = "training-web-service"
+  cluster         = aws_ecs_cluster.web_cluster.id
+  task_definition = aws_ecs_task_definition.web_app.arn
+  desired_count   = 2
+  launch_type     = "FARGATE"
 
-  block_public_acls       = true
-  block_public_policy     = true
-  ignore_public_acls      = true
-  restrict_public_buckets = true
+  network_configuration {
+    subnets          = var.private_subnet_ids
+    security_groups  = [aws_security_group.ecs_sg.id]
+    assign_public_ip = false
+  }
+
+  load_balancer {
+    target_group_arn = aws_lb_target_group.web_tg.arn
+    container_name   = "web-app"
+    container_port   = 80
+  }
+
+  depends_on = [aws_lb_listener.web_listener]
+
+  tags = {
+    Name        = "training-web-service"
+    Environment = "training"
+  }
+}
+
+# RDSサブネットグループ
+resource "aws_db_subnet_group" "web_db_subnet" {
+  name       = "training-web-db-subnet"
+  subnet_ids = var.private_subnet_ids
+
+  tags = {
+    Name        = "training-web-db-subnet"
+    Environment = "training"
+  }
+}
+
+# RDSインスタンス
+resource "aws_db_instance" "web_db" {
+  identifier              = "training-web-db"
+  engine                  = "mysql"
+  engine_version          = "8.0"
+  instance_class          = "db.t3.micro"
+  allocated_storage       = 20
+  storage_type            = "gp2"
+  db_name                 = "webappdb"
+  username                = var.db_username
+  password                = var.db_password
+  vpc_security_group_ids  = [aws_security_group.rds_sg.id]
+  db_subnet_group_name    = aws_db_subnet_group.web_db_subnet.name
+  skip_final_snapshot     = true
+  backup_retention_period = 7
+
+  tags = {
+    Name        = "training-web-db"
+    Environment = "training"
+  }
+}
+
+# CloudWatch Logsグループ
+resource "aws_cloudwatch_log_group" "ecs_logs" {
+  name              = "/ecs/training-web-app"
+  retention_in_days = 7
+
+  tags = {
+    Name        = "training-ecs-logs"
+    Environment = "training"
+  }
 }
 ```
 
-### 悪いプロンプト例集
+#### outputs.tf
 
-#### bad_examples.txt
+```hcl
+output "alb_dns_name" {
+  description = "ALBのDNS名"
+  value       = aws_lb.web_alb.dns_name
+}
 
-```
-# 悪いプロンプト例
+output "ecr_repository_url" {
+  description = "ECRリポジトリURL"
+  value       = aws_ecr_repository.web_app.repository_url
+}
 
-例1: EC2を作成して
-問題点: パラメータが不足、要件が不明確
+output "rds_endpoint" {
+  description = "RDSエンドポイント"
+  value       = aws_db_instance.web_db.endpoint
+  sensitive   = true
+}
 
-例2: VPCとEC2を作成してください
-問題点: CIDRブロック、可用性ゾーン、インスタンスタイプなどが不明確
-
-例3: S3バケットを作成
-問題点: バケット名、リージョン、設定項目が不明確
-
-例4: RDSを作成してください
-問題点: エンジンタイプ、インスタンスクラス、ストレージサイズなどが不明確
-```
-
-### プロンプト改善ガイド
-
-#### improvement_guide.md
-
-```
-# プロンプト改善ガイド
-
-## 改善ステップ
-
-1. **不足パラメータを特定**
-   - 生成されたコードを確認
-   - 不足しているパラメータをリストアップ
-
-2. **明確な要件定義を追加**
-   - リソースタイプ
-   - 必須パラメータ（CIDRブロック、インスタンスタイプなど）
-   - オプションパラメータ（タグ、設定項目など）
-
-3. **「足りていないパラメータがある場合は聞き返してください」を追加**
-   - AIが不足パラメータを検出できるようにする
-
-4. **既存リソースとの衝突回避指示を追加**
-   - 既存のリソース情報をコンテキストとして提供
-   - 衝突チェックの指示
-
-5. **ベストプラクティスの要求を追加**
-   - 変数定義の使用
-   - 適切なコメント
-   - タグの設定
-   - セキュリティ設定
-
-## 改善例
-
-### 改善前
-```
-EC2を作成してください
-```
-
-### 改善後
-```
-下記条件を満たすEC2インスタンスを構築するTerraformコードを生成してください。
-
-要件:
-- リージョン: ap-northeast-1
-- インスタンスタイプ: t3.micro
-- OS: Amazon Linux 2023
-- セキュリティグループ: SSH（ポート22）のみ許可、送信は全許可
-- タグ: Name = "training-ec2", Environment = "training"
-
-注意事項:
-- 足りていないパラメータなどがある場合は、そのまま構築するのではなく一度聞き返してください
-- 既存のEC2インスタンスと衝突しないように確認してください
-- 変数定義を含めてください
-- コメントを適切に追加してください
-- ベストプラクティスに従ってください
-```
-```
-
-### Context Engineeringの高度化例
-
-**複数リソースの統合構築**:
-
-```
-既存のインフラ情報:
-- 既存VPC: vpc-xxxxx (10.1.0.0/16)
-- 既存サブネット: 10.1.1.0/24, 10.1.2.0/24
-- 利用可能な可用性ゾーン: ap-northeast-1a, ap-northeast-1c, ap-northeast-1d
-
-上記の情報を考慮して、以下の順序でリソースを構築するTerraformコードを生成してください：
-1. 新しいVPC（既存VPCとCIDRが衝突しないように）
-2. パブリックサブネット（2つの可用性ゾーン）
-3. プライベートサブネット（2つの可用性ゾーン）
-4. インターネットゲートウェイ
-5. ルートテーブル
-6. セキュリティグループ
-7. EC2インスタンス（パブリックサブネットに配置）
-
-依存関係を適切に設定し、既存リソースと衝突しないように注意してください。
+output "ecs_cluster_name" {
+  description = "ECSクラスター名"
+  value       = aws_ecs_cluster.web_cluster.name
+}
 ```
 
 </details>
@@ -385,38 +545,57 @@ EC2を作成してください
 ## ✅ チェックリスト
 
 - [ ] 最終的な目標構成を理解した
-- [ ] プロンプトテンプレートを作成した
-- [ ] テンプレートを使用してコード生成を実践した
-- [ ] Context Engineeringの高度化を実践した（既存インフラ情報の動的取得、依存関係の考慮）
-- [ ] フィードバックループを実践した（承認ワークフロー、エラー修正、反復的改善）
-- [ ] 様々なリソースタイプに対応したプロンプト例を作成した
-- [ ] Agent形式での開発の振り返りを行った
+- [ ] セッション2で構築したVPC/Subnetの情報を取得した
+- [ ] Agent形式でALBとターゲットグループを構築した
+- [ ] Agent形式でECRリポジトリを作成した
+- [ ] Agent形式でECSクラスターとサービスを構築した
+- [ ] Agent形式でRDSデータベースを構築した
+- [ ] セキュリティグループを適切に設定した
+- [ ] すべてのリソースの連携を確認した
+- [ ] 段階的な構築アプローチを実践した
+- [ ] Agent形式での統合開発の振り返りを行った
 
 ## 🆘 トラブルシューティング
 
-### テンプレートがうまく機能しない
+### ALB接続エラー
 
-- 変数の埋め込みが正しいか確認してください
-- テンプレートの構造を見直してください
-- 実際の使用例から改善点を抽出してください
+- セキュリティグループの設定を確認（ALB → ECS）
+- ターゲットグループのヘルスチェックを確認
+- ECSタスクが正常に起動しているか確認
 
-### コンテキスト情報の取得がうまくいかない
+### ECSタスク起動エラー
 
-- Continueのチャット機能を使って、段階的に情報を取得してください
-- 取得した情報を整理してからコンテキストとして提供してください
+- タスク定義の確認（コンテナイメージ、リソース設定）
+- ネットワーク設定の確認（サブネット、セキュリティグループ）
+- IAMロールの確認（タスク実行ロール、タスクロール）
+- CloudWatch Logsの確認
 
-### 依存関係が正しく反映されない
+### RDS接続エラー
 
-- プロンプト内で依存関係を明示的に記述してください
-- 段階的な構築アプローチを検討してください
+- セキュリティグループの設定を確認（ECS → RDS）
+- サブネットグループの設定を確認
+- データベース認証情報の確認
+
+### セッション2のリソースが見つからない
+
+- セッション2のTerraformの状態を確認（`terraform state list`）
+- `terraform output` で各IDを取得
 
 ## 📚 参考資料
 
-- [Continue公式ドキュメント](https://continue.dev/docs)
 - [Terraform公式ドキュメント](https://developer.hashicorp.com/terraform/docs)
-- [セッション1ガイド](session1_guide.md)
+- [AWS ALB公式ドキュメント](https://docs.aws.amazon.com/elasticloadbalancing/latest/application/)
+- [AWS ECS公式ドキュメント](https://docs.aws.amazon.com/ecs/)
+- [AWS RDS公式ドキュメント](https://docs.aws.amazon.com/rds/)
 - [セッション2ガイド](session2_guide.md)
 
 ## ➡️ 次のステップ
 
-セッション3が完了したら、[セッション4：Ansible運用基礎とAgent形式でのPlaybook生成](session4_guide.md) に進んでください。
+セッション3が完了したら、[セッション4：サーバー再起動の自動化](session4_guide.md) に進んでください。
+
+**重要**: 作成したリソースは、ワークショップ終了後に必ず削除してください：
+
+```bash
+cd workspace/terraform/web-app
+terraform destroy
+```

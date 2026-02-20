@@ -31,8 +31,6 @@ ls -la
 # 期待される構造:
 # .
 # ├── docs/
-# ├── sample_code/
-# ├── templates/
 # ├── scripts/
 # └── evaluation/
 ```
@@ -229,8 +227,6 @@ tree -L 2
 # 期待される構造:
 # .
 # ├── docs/
-# ├── sample_code/
-# ├── templates/
 # ├── scripts/
 # └── evaluation/
 ```
@@ -299,7 +295,7 @@ python3 -m pip cache purge
 
 ## 次のステップ
 セットアップが完了したら、以下のセッションガイドを参照してください：
-- `docs/session_guides/session0_guide.md`
+- `docs/session_guides/session1_guide.md`
 
 ## 参考資料
 - [OpenShift DevSpaces公式ドキュメント](https://access.redhat.com/documentation/en-us/red_hat_openshift_dev_spaces/)

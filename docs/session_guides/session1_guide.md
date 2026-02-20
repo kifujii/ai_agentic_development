@@ -392,7 +392,6 @@ AWS環境情報:
 - [Continue公式ドキュメント](https://continue.dev/docs)
 - [Terraform公式ドキュメント](https://developer.hashicorp.com/terraform/docs)
 - [AWS公式ドキュメント](https://docs.aws.amazon.com/)
-- [サンプルコード](../../sample_code/terraform/basic_ec2/)
 
 ## ➡️ 次のステップ
 

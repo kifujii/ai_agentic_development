@@ -1,8 +1,8 @@
-# セッション2：Agent形式でのVPC/Subnet/EC2構築 詳細ガイド
+# セッション2：VPC/Subnet/EC2の設計・構築・検証 詳細ガイド
 
 ## 📋 目的
 
-このセッションでは、ContinueのAgent機能を使って、VPC、サブネット、EC2インスタンスを構築します。セッション1で学んだPrompt Engineering、Context Engineering、フィードバックループを実践しながら、より複雑なインフラ構築を体験します。
+このセッションでは、ContinueのAgent機能を使って、VPC、サブネット、EC2インスタンスを設計・構築・検証します。セッション1で学んだPrompt Engineering、Context Engineering、フィードバックループを実践しながら、実際のAWSインフラを構築する体験をします。
 
 ### 学習目標
 
@@ -10,7 +10,7 @@
 - Context Engineeringの実践（既存AWSリソース情報の活用）
 - Agent形式での複雑なインフラ構築体験
 - フィードバックループの実践（エラー修正、反復的改善、承認ワークフロー）
-- Agent形式での開発の振り返り
+- 構築結果の検証（terraform plan/apply、SSH接続テスト）
 
 ## 🎯 最終的な目標構成
 
@@ -33,7 +33,7 @@ graph TB
             PrivateSubnet2["10.0.11.0/24<br/>(ap-northeast-1c)"]
         end
         
-        EC2[EC2 Instance<br/>t3.micro<br/>Amazon Linux 2023]
+        EC2["EC2 Instance<br/>t3.micro<br/>Amazon Linux 2023<br/>SSH Key Pair"]
         SG[Security Group<br/>SSH: 22]
         
         IGW --> PublicSubnet1
@@ -65,7 +65,10 @@ workspace/
 - インターネットゲートウェイ
 - ルートテーブル（パブリック/プライベート）
 - セキュリティグループ（SSH: ポート22）
-- EC2インスタンス（t3.micro, Amazon Linux 2023）
+- キーペア（SSH接続用）
+- EC2インスタンス（t3.micro, Amazon Linux 2023, キーペア付き）
+
+> **重要**: このEC2インスタンスはセッション4以降のAnsible操作の対象になります。SSH接続ができる状態にしておいてください。
 
 ## 📚 事前準備
 
@@ -94,12 +97,14 @@ terraform/vpc-subnet-ec2/ フォルダに、下記条件を満たすVPC、サブ
 - パブリックサブネット: 10.0.1.0/24 (ap-northeast-1a), 10.0.2.0/24 (ap-northeast-1c)
 - プライベートサブネット: 10.0.10.0/24 (ap-northeast-1a), 10.0.11.0/24 (ap-northeast-1c)
 - EC2インスタンス: t3.micro, Amazon Linux 2023, パブリックサブネットに配置
+- キーペア: SSH接続用のキーペアを作成または既存のキーペアを使用
 - インターネットゲートウェイとルートテーブルを適切に設定
 - セキュリティグループ: SSH（ポート22）のみ許可、送信は全許可
 
 注意事項:
 - 足りていないパラメータがある場合は、そのまま構築するのではなく一度聞き返してください
 - 既存のVPCやサブネットと衝突しないように確認してください
+- SSH接続ができるようにキーペアを設定してください
 - 変数定義を含めてください
 - コメントを適切に追加してください
 - ベストプラクティスに従ってください
@@ -107,6 +112,7 @@ terraform/vpc-subnet-ec2/ フォルダに、下記条件を満たすVPC、サブ
 
 **プロンプト作成のポイント**:
 - 明確な要件定義（CIDRブロック、可用性ゾーン、インスタンスタイプなど）
+- SSH接続のためのキーペア設定の指示
 - 既存リソースとの衝突回避の指示
 - 不足パラメータの聞き返し指示
 - ベストプラクティスの要求
@@ -148,6 +154,39 @@ ap-northeast-1リージョンで既存のVPC情報を教えてください。
 - 構築後、改善したい点があればフィードバックを提供してください
 - 例：「セキュリティグループをより厳格にしてください」「タグを追加してください」
 
+### 構築後の検証
+
+構築が完了したら、以下の手順で検証してください：
+
+#### 1. Terraform出力の確認
+
+Agentに以下を指示してください：
+
+```
+terraform output コマンドを実行して、構築されたリソースの情報を確認してください。
+特にEC2インスタンスのパブリックIPアドレスを教えてください。
+```
+
+#### 2. SSH接続テスト
+
+EC2インスタンスに対してSSH接続を試みてください：
+
+```bash
+ssh -i ~/.ssh/training-key.pem ec2-user@<EC2のパブリックIP>
+```
+
+接続に成功すれば、構築は完了です。
+
+> **ヒント**: SSH接続できることを確認しておくことで、セッション4以降でAnsibleを使ったサーバー操作がスムーズに行えます。
+
+#### 3. リソースの確認
+
+Agentに以下を指示して、構築されたリソースを確認してください：
+
+```
+terraform state list コマンドを実行して、構築されたリソース一覧を確認してください。
+```
+
 ### 考えながら進めるポイント
 
 1. **どのようなプロンプトが効果的か**
@@ -173,7 +212,7 @@ ap-northeast-1リージョンで既存のVPC情報を教えてください。
 - **Prompt Engineeringの効果**: 複雑な要件をどのようにプロンプトに反映したか
 - **Context Engineeringの重要性**: 既存リソース情報を活用することで、どのような問題を回避できたか
 - **フィードバックループの体験**: エラー修正、反復的改善、承認ワークフローをどのように体験したか
-- **Agent形式での開発体験**: チャット形式と比較して、どのような改善を感じたか
+- **構築結果の検証**: terraform plan/apply の結果確認、SSH接続テストをどのように行ったか
 
 <details>
 <summary>📝 解答例（クリックで展開）</summary>
@@ -199,6 +238,12 @@ variable "instance_type" {
   description = "EC2インスタンスタイプ"
   type        = string
   default     = "t3.micro"
+}
+
+variable "key_name" {
+  description = "SSH接続用のキーペア名"
+  type        = string
+  default     = "training-key"
 }
 
 variable "public_subnet_cidrs" {
@@ -243,6 +288,17 @@ data "aws_ami" "amazon_linux" {
   }
 }
 
+# キーペア
+resource "aws_key_pair" "training_key" {
+  key_name   = var.key_name
+  public_key = file("~/.ssh/training-key.pub")
+
+  tags = {
+    Name        = var.key_name
+    Environment = "training"
+  }
+}
+
 # VPC
 resource "aws_vpc" "training_vpc" {
   cidr_block           = var.vpc_cidr
@@ -250,7 +306,7 @@ resource "aws_vpc" "training_vpc" {
   enable_dns_support   = true
 
   tags = {
-    Name = "training-vpc"
+    Name        = "training-vpc"
     Environment = "training"
   }
 }
@@ -260,7 +316,7 @@ resource "aws_internet_gateway" "training_igw" {
   vpc_id = aws_vpc.training_vpc.id
 
   tags = {
-    Name = "training-igw"
+    Name        = "training-igw"
     Environment = "training"
   }
 }
@@ -273,9 +329,9 @@ resource "aws_subnet" "public_subnet_1" {
   map_public_ip_on_launch = true
 
   tags = {
-    Name = "training-public-subnet-1"
+    Name        = "training-public-subnet-1"
     Environment = "training"
-    Type = "public"
+    Type        = "public"
   }
 }
 
@@ -287,9 +343,9 @@ resource "aws_subnet" "public_subnet_2" {
   map_public_ip_on_launch = true
 
   tags = {
-    Name = "training-public-subnet-2"
+    Name        = "training-public-subnet-2"
     Environment = "training"
-    Type = "public"
+    Type        = "public"
   }
 }
 
@@ -300,9 +356,9 @@ resource "aws_subnet" "private_subnet_1" {
   availability_zone = var.availability_zones[0]
 
   tags = {
-    Name = "training-private-subnet-1"
+    Name        = "training-private-subnet-1"
     Environment = "training"
-    Type = "private"
+    Type        = "private"
   }
 }
 
@@ -313,9 +369,9 @@ resource "aws_subnet" "private_subnet_2" {
   availability_zone = var.availability_zones[1]
 
   tags = {
-    Name = "training-private-subnet-2"
+    Name        = "training-private-subnet-2"
     Environment = "training"
-    Type = "private"
+    Type        = "private"
   }
 }
 
@@ -329,7 +385,7 @@ resource "aws_route_table" "public_rt" {
   }
 
   tags = {
-    Name = "training-public-rt"
+    Name        = "training-public-rt"
     Environment = "training"
   }
 }
@@ -367,7 +423,7 @@ resource "aws_security_group" "training_sg" {
   }
 
   tags = {
-    Name = "training-sg"
+    Name        = "training-sg"
     Environment = "training"
   }
 }
@@ -377,11 +433,12 @@ resource "aws_instance" "training_ec2" {
   ami           = data.aws_ami.amazon_linux.id
   instance_type = var.instance_type
   subnet_id     = aws_subnet.public_subnet_1.id
+  key_name      = aws_key_pair.training_key.key_name
 
   vpc_security_group_ids = [aws_security_group.training_sg.id]
 
   tags = {
-    Name = "training-ec2"
+    Name        = "training-ec2"
     Environment = "training"
   }
 }
@@ -414,17 +471,30 @@ output "instance_id" {
   description = "EC2インスタンスID"
   value       = aws_instance.training_ec2.id
 }
+
+output "security_group_id" {
+  description = "セキュリティグループID"
+  value       = aws_security_group.training_sg.id
+}
+
+output "key_name" {
+  description = "キーペア名"
+  value       = aws_key_pair.training_key.key_name
+}
 ```
 
-### プロンプト例
+### 検証手順例
 
-**段階的な構築アプローチの例**:
+```bash
+# 1. 構築されたリソースの確認
+terraform output
 
-1. まずVPCとサブネットを構築
-2. 次にセキュリティグループを構築
-3. 最後にEC2インスタンスを構築
+# 2. SSH接続テスト
+ssh -i ~/.ssh/training-key.pem ec2-user@$(terraform output -raw instance_public_ip)
 
-各段階でAgentに指示を出し、承認ワークフローを活用しながら進めることができます。
+# 3. リソース一覧の確認
+terraform state list
+```
 
 </details>
 
@@ -432,11 +502,14 @@ output "instance_id" {
 
 - [ ] 最終的な目標構成を理解した
 - [ ] Agent形式でVPC、サブネット、EC2インスタンスを構築した
+- [ ] SSH接続用のキーペアを設定した
 - [ ] Prompt Engineeringを実践した（複雑な要件への対応）
 - [ ] Context Engineeringを実践した（既存AWSリソース情報の活用）
 - [ ] 承認ワークフローを体験した
 - [ ] エラー修正プロセスを体験した
 - [ ] 反復的改善プロセスを体験した
+- [ ] terraform plan/apply で構築結果を確認した
+- [ ] SSH接続テストに成功した
 - [ ] Agent形式での開発の振り返りを行った
 
 ## 🆘 トラブルシューティング
@@ -445,6 +518,13 @@ output "instance_id" {
 
 - Continueのチャット機能を使って既存リソース情報を取得し、コンテキストとして提供してください
 - CIDRブロックが既存のVPCと衝突していないか確認してください
+
+### SSH接続エラー
+
+- セキュリティグループでSSH（ポート22）が許可されているか確認
+- キーペアファイルの権限を確認（`chmod 400 ~/.ssh/training-key.pem`）
+- パブリックIPが割り当てられているか確認
+- EC2インスタンスが起動しているか確認
 
 ### エラー修正がうまくいかない
 
@@ -464,4 +544,4 @@ output "instance_id" {
 
 ## ➡️ 次のステップ
 
-セッション2が完了したら、[セッション3：Terraform自動化エージェント開発](session3_guide.md) に進んでください。
+セッション2が完了したら、[セッション3：Webシステム構築（任意）](session3_guide.md) に進むか、[セッション4：サーバー再起動の自動化](session4_guide.md) に進んでください。

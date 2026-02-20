@@ -76,7 +76,7 @@
 
 **A: セッション1のガイドから開始してください。**
 
-1. `docs/session_guides/session0_guide.md`を開く
+1. `docs/session_guides/session1_guide.md`を開く
 2. 手順に従って進める
 3. 各セッションのガイドを順番に参照
 

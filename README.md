@@ -19,15 +19,14 @@
 
 ### セッション構成
 
-| セッション | 内容 | 時間 | ガイド |
-|-----------|------|------|--------|
-| **セッション1** | AI x IaC基礎実践とAgent開発の理解 | 1.5時間 | [詳細ガイド](docs/session_guides/session1_guide.md) |
-| **セッション2** | Agent形式でのVPC/Subnet/EC2構築 | 1.5時間 | [詳細ガイド](docs/session_guides/session2_guide.md) |
-| **セッション3** | Terraform自動化エージェント開発 | 1.5時間 | [詳細ガイド](docs/session_guides/session3_guide.md) |
-| **セッション4** | Ansible運用基礎とAgent形式でのPlaybook生成 | 1時間 | [詳細ガイド](docs/session_guides/session4_guide.md) |
-| **セッション5** | Ansible自動化エージェント開発 | 1.5時間 | [詳細ガイド](docs/session_guides/session5_guide.md) |
-| **セッション6** | 統合管理エージェント開発 | 1.5時間 | [詳細ガイド](docs/session_guides/session6_guide.md) |
-| **セッション7** | Webシステム構築（任意） | 1時間 | [詳細ガイド](docs/session_guides/session7_guide.md) |
+| セッション | 内容 | 時間 | 必須/任意 | ガイド |
+|-----------|------|------|-----------|--------|
+| **セッション1** | AI x IaC基礎実践とAgent開発の理解 | 1.5時間 | 必須 | [詳細ガイド](docs/session_guides/session1_guide.md) |
+| **セッション2** | VPC/Subnet/EC2の設計・構築・検証 | 1.5時間 | 必須 | [詳細ガイド](docs/session_guides/session2_guide.md) |
+| **セッション3** | Webシステム構築 (ALB/ECS/ECR/RDS) | 1時間 | 任意 | [詳細ガイド](docs/session_guides/session3_guide.md) |
+| **セッション4** | サーバー再起動の自動化 | 1.5時間 | 必須 | [詳細ガイド](docs/session_guides/session4_guide.md) |
+| **セッション5** | エージェントインストール・セットアップ | 1.5時間 | 必須 | [詳細ガイド](docs/session_guides/session5_guide.md) |
+| **セッション6** | サーバー情報取得・運用レポート作成 | 1時間 | 任意 | [詳細ガイド](docs/session_guides/session6_guide.md) |
 
 ### トレーニング概要
 
@@ -35,6 +34,18 @@
 - **形式**: ハンズオン形式のライブコーディング
 - **環境**: OpenShift DevSpaces + AWS
 - **技術スタック**: Terraform, Ansible, Continue（AWS Bedrock）
+
+```
+Day 1 (4h): インフラ構築 (Terraform)
+├── Session 1: AI x IaC基礎実践とAgent開発の理解 [必須]
+├── Session 2: VPC/Subnet/EC2の設計・構築・検証  [必須]
+└── Session 3: Webシステム構築                    [任意]
+
+Day 2 (4h): システム運用 (Ansible)
+├── Session 4: サーバー再起動の自動化              [必須]
+├── Session 5: エージェントインストール・セットアップ [必須]
+└── Session 6: サーバー情報取得・運用レポート作成   [任意]
+```
 
 詳細は [`docs/TRAINING_MENU.md`](docs/TRAINING_MENU.md) を参照してください。
 
@@ -59,9 +70,9 @@
 
 各セッションガイドには、以下の情報が含まれています：
 - **目的**: セッションで達成すべき目標
-- **目指すべき構成**: 最終的に作成する構成の概要
-- **手順**: ステップバイステップの手順
-- **回答例**: 折りたたみ可能な回答例（クリックで展開）
+- **目指すべき構成**: 最終的に作成する構成の概要（Mermaid図）
+- **Agent開発のアドバイス**: プロンプト例やコンテキスト活用のヒント
+- **解答例**: 折りたたみ可能な解答例（クリックで展開）
 
 ## ディレクトリ構成
 
@@ -70,35 +81,30 @@ ai_agentic/
 ├── docs/                          # ドキュメント
 │   ├── TRAINING_MENU.md          # トレーニングメニュー詳細
 │   ├── session_guides/           # セッションガイド
-│   │   ├── session0_guide.md     # AI x IaC基礎実践
-│   │   ├── session1_guide.md     # VPC/Subnet/EC2構築
-│   │   ├── session2_guide.md     # Terraform自動化エージェント
-│   │   ├── session3_guide.md     # Ansible運用基礎
-│   │   ├── session4_guide.md     # Ansible自動化エージェント
-│   │   ├── session5_guide.md     # 統合管理エージェント
-│   │   └── session6_guide.md     # Webシステム構築（任意）
+│   │   ├── session1_guide.md     # AI x IaC基礎実践
+│   │   ├── session2_guide.md     # VPC/Subnet/EC2構築
+│   │   ├── session3_guide.md     # Webシステム構築（任意）
+│   │   ├── session4_guide.md     # サーバー再起動の自動化
+│   │   ├── session5_guide.md     # エージェントインストール
+│   │   └── session6_guide.md     # サーバー情報取得（任意）
 │   └── setup/                     # セットアップ手順
 │       ├── ENVIRONMENT_SETUP.md  # 環境セットアップガイド
 │       ├── CONTINUE_SETUP.md      # Continueセットアップ
 │       ├── DEVSPACES_SETUP.md    # DevSpaces環境セットアップ
 │       └── FAQ.md                 # よくある質問
-├── sample_code/                  # サンプルコード
-│   ├── terraform/                 # Terraformサンプル
-│   │   ├── basic_ec2/            # 基本的なEC2
-│   │   ├── vpc_subnet_ec2/       # VPC/Subnet/EC2
-│   │   └── s3_bucket/             # S3バケット
-│   └── ansible/                   # Ansibleサンプル
-│       ├── basic_playbook/       # 基本Playbook
-│       └── monitoring_setup/      # 監視セットアップ
-├── templates/                     # テンプレート
-│   └── ai_agents/                 # AIエージェントテンプレート
 ├── evaluation/                    # 評価チェックリスト
-│   ├── session0_checklist.md
 │   ├── session1_checklist.md
+│   ├── session2_checklist.md
 │   └── ...
 ├── scripts/                       # スクリプト
 │   ├── setup_devspaces.sh        # DevSpacesセットアップスクリプト
 │   └── requirements.txt          # Python依存関係
+├── terraform/                     # セッション1用Terraformフォルダ
+│   ├── bad_prompt/
+│   ├── improved_prompt/
+│   ├── no_context/
+│   ├── with_context/
+│   └── agent_practice/
 ├── .continue/                     # Continue設定
 │   └── config.json                # Continue設定ファイル
 └── README.md                      # このファイル
@@ -134,10 +140,6 @@ EC2を作成して
 - ベストプラクティスに従ってください
 ```
 
-### コード生成
-
-良いプロンプトを使用してコード生成を行います。詳細は [`templates/prompts/`](templates/prompts/) を参照してください。
-
 ### コードレビュー
 
 コードを選択してから：
@@ -150,13 +152,6 @@ EC2を作成して
 ```
 「このエラーメッセージの原因と解決方法を教えてください：
 [エラーメッセージを貼り付け]」
-```
-
-### ベストプラクティス
-
-```
-「このAnsible Playbookをより冪等性が高く、
-再利用可能な形にリファクタリングしてください」
 ```
 
 詳細は [`docs/setup/CONTINUE_SETUP.md`](docs/setup/CONTINUE_SETUP.md) を参照してください。
