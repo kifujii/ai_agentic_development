@@ -21,13 +21,13 @@
 
 | セッション | 内容 | 時間 | ガイド |
 |-----------|------|------|--------|
-| **セッション0** | AI x IaC基礎実践とAgent開発の理解 | 1.5時間 | [詳細ガイド](docs/session_guides/session0_guide.md) |
-| **セッション1** | Agent形式でのVPC/Subnet/EC2構築 | 1.5時間 | [詳細ガイド](docs/session_guides/session1_guide.md) |
-| **セッション2** | Terraform自動化エージェント開発 | 1.5時間 | [詳細ガイド](docs/session_guides/session2_guide.md) |
-| **セッション3** | Ansible運用基礎とAgent形式でのPlaybook生成 | 1時間 | [詳細ガイド](docs/session_guides/session3_guide.md) |
-| **セッション4** | Ansible自動化エージェント開発 | 1.5時間 | [詳細ガイド](docs/session_guides/session4_guide.md) |
-| **セッション5** | 統合管理エージェント開発 | 1.5時間 | [詳細ガイド](docs/session_guides/session5_guide.md) |
-| **セッション6** | Webシステム構築（任意） | 1時間 | [詳細ガイド](docs/session_guides/session6_guide.md) |
+| **セッション1** | AI x IaC基礎実践とAgent開発の理解 | 1.5時間 | [詳細ガイド](docs/session_guides/session1_guide.md) |
+| **セッション2** | Agent形式でのVPC/Subnet/EC2構築 | 1.5時間 | [詳細ガイド](docs/session_guides/session2_guide.md) |
+| **セッション3** | Terraform自動化エージェント開発 | 1.5時間 | [詳細ガイド](docs/session_guides/session3_guide.md) |
+| **セッション4** | Ansible運用基礎とAgent形式でのPlaybook生成 | 1時間 | [詳細ガイド](docs/session_guides/session4_guide.md) |
+| **セッション5** | Ansible自動化エージェント開発 | 1.5時間 | [詳細ガイド](docs/session_guides/session5_guide.md) |
+| **セッション6** | 統合管理エージェント開発 | 1.5時間 | [詳細ガイド](docs/session_guides/session6_guide.md) |
+| **セッション7** | Webシステム構築（任意） | 1時間 | [詳細ガイド](docs/session_guides/session7_guide.md) |
 
 ### トレーニング概要
 
@@ -55,7 +55,7 @@
 
 ### 2. ワークショップの開始
 
-環境セットアップが完了したら、[セッション0](docs/session_guides/session0_guide.md) から開始してください。
+環境セットアップが完了したら、[セッション1](docs/session_guides/session1_guide.md) から開始してください。
 
 各セッションガイドには、以下の情報が含まれています：
 - **目的**: セッションで達成すべき目標

@@ -1,16 +1,16 @@
-# セッション1：Agent形式でのVPC/Subnet/EC2構築 詳細ガイド
+# セッション1：AI x IaC基礎実践とAgent開発の理解 詳細ガイド
 
 ## 📋 目的
 
-このセッションでは、Prompt Engineering、Context Engineering、フィードバックループを実践しながら、Agent形式でVPC/Subnet/EC2を構築し、Agent形式での開発体験を深めます。
+このセッションでは、Prompt Engineering、Context Engineering、フィードバックループ、開発方式比較を通じて、Agent形式での開発の本質を理解し、AI x IaCの基礎を習得します。
 
 ### 学習目標
 
-- Prompt Engineeringの実践（悪いプロンプトから良いプロンプトへの改善）
-- Context Engineeringの実践（既存AWSリソース情報の活用）
-- Agent形式での構築体験
-- フィードバックループの実践（エラー修正、反復的改善、承認ワークフロー）
-- Agent形式での開発の振り返り
+- 良いプロンプトと悪いプロンプトの違いを理解し、効果的なプロンプトを作成できる
+- コンテキスト情報を適切に活用して、品質の高いコードを生成できる
+- チャット形式（コードコピー方式）とAgent形式の違いを体験できる
+- Agent形式での開発の本質を理解し、開発体験の改善を実感できる
+- フィードバックループ（エラー修正、反復的改善、承認ワークフロー）を実践できる
 
 ## 🎯 目指すべき構成
 
@@ -18,70 +18,97 @@
 
 ```
 workspace/
-└── terraform/
-    └── vpc-subnet-ec2/
-        ├── main.tf          # メインのTerraformコード
-        ├── variables.tf     # 変数定義
-        ├── outputs.tf       # 出力定義
-        └── terraform.tfvars # 変数の値
+├── terraform/
+│   └── ec2_instance.tf          # 生成されたTerraformコード
+└── prompts/
+    └── terraform_ec2_template.txt # プロンプトテンプレート
 ```
-
-**構築されるAWSリソース**:
-- VPC（10.0.0.0/16）
-- パブリックサブネット（10.0.1.0/24, 10.0.2.0/24）
-- プライベートサブネット（10.0.10.0/24, 10.0.11.0/24）
-- インターネットゲートウェイ
-- ルートテーブル
-- EC2インスタンス（t3.micro）
 
 ## 📚 事前準備
 
-- [セッション0](session0_guide.md) が完了していること
+- [環境セットアップガイド](../setup/ENVIRONMENT_SETUP.md) を完了していること
+- Continueが正しく設定されていること（[Continueセットアップガイド](../setup/CONTINUE_SETUP.md) を参照）
 - AWS認証情報が設定されていること
-- Terraformがインストールされていること
 
 ## 🚀 手順
 
-### 1. Prompt Engineeringの実践（20分）
+### 1. 環境セットアップ（10分）
 
-#### 1.1 悪いプロンプトから始める
+#### 1.1 OpenShift DevSpaces環境の確認
 
-**タスク**: VPC、パブリック/プライベートサブネット、EC2インスタンスを構築
+```bash
+# 現在のディレクトリ確認
+pwd
 
-Continueを起動して、以下の**悪いプロンプト**を試してみましょう。
+# 環境変数の確認
+env | grep -E "AWS"
+```
+
+#### 1.2 AWS CLI/認証情報の設定
+
+```bash
+# AWS CLIのインストール確認
+aws --version
+
+# .envファイルから環境変数を読み込む
+export $(cat .env | grep -v '^#' | xargs)
+
+# 認証情報の確認
+aws sts get-caller-identity
+```
+
+**注意**: `.env`ファイルを環境変数としてエクスポートすれば、AWS CLIとTerraformの両方が認証情報を使用できます。`aws configure`は不要です。
+
+詳細は [環境セットアップガイド](../setup/ENVIRONMENT_SETUP.md) を参照してください。
+
+#### 1.3 必要なツールのインストール確認
+
+```bash
+# Terraformのインストール確認（コード生成時に参照されるため）
+terraform version
+```
+
+**注意**: セッション1では、Terraformコードを生成するだけで実行はしません。環境セットアップガイドでContinueの動作確認まで完了していることを前提とします。
+
+### 2. Prompt Engineering実践（30分）
+
+#### 2.1 悪いプロンプトでの体験（10分）
+
+**タスク**: EC2インスタンスを作成するTerraformコードを生成する
+
+Continueを起動（`Ctrl+L` / `Cmd+L`）して、以下の**悪いプロンプト**を試してみましょう。
 
 **悪いプロンプト例**:
 ```
-VPCとEC2を作成してください
+EC2を作成してください
 ```
 
-**問題点の確認**:
-- 不足パラメータ（CIDRブロック、可用性ゾーン、インスタンスタイプなど）
-- 不明確な要件（パブリック/プライベートサブネットの指定がない）
-- インターネットゲートウェイやNAT Gatewayの設定がない
-- セキュリティグループの設定が不適切
+**体験ポイント**:
+- 生成されたコードに不足パラメータがある（リージョン、インスタンスタイプ、AMIなど）
+- デフォルト値が不適切な場合がある
+- 要件が不明確で何度も修正が必要
+- エラーが発生しやすい
+- セキュリティグループの設定が不適切な場合がある
 
 **記録**: 生成されたコードを確認し、不足しているパラメータや問題点を記録してください。
 
-#### 1.2 良いプロンプトへの改善
+#### 2.2 良いプロンプトでの体験（10分）
 
 次に、以下の**良いプロンプト**を試してみましょう。
 
 **良いプロンプト例**:
 ```
-下記条件を満たすVPC、サブネット、EC2インスタンスを構築するTerraformコードを生成してください。
+下記条件を満たすEC2インスタンスを構築するTerraformコードを生成してください。
 
 要件:
-- VPC CIDR: 10.0.0.0/16
-- パブリックサブネット: 10.0.1.0/24 (ap-northeast-1a)
-- プライベートサブネット: 10.0.2.0/24 (ap-northeast-1c)
-- EC2インスタンス: t3.micro, Amazon Linux 2023, パブリックサブネットに配置
-- インターネットゲートウェイとNAT Gatewayを適切に設定
+- リージョン: ap-northeast-1
+- インスタンスタイプ: t3.micro
+- OS: Amazon Linux 2023
 - セキュリティグループ: SSH（ポート22）のみ許可、送信は全許可
+- タグ: Name = "training-ec2", Environment = "training"
 
 注意事項:
-- 足りていないパラメータがある場合は、そのまま構築するのではなく一度聞き返してください
-- 既存のVPCやサブネットと衝突しないように確認してください
+- 足りていないパラメータなどがある場合は、そのまま構築するのではなく一度聞き返してください
 - 変数定義を含めてください
 - コメントを適切に追加してください
 - ベストプラクティスに従ってください
@@ -89,383 +116,232 @@ VPCとEC2を作成してください
 
 **体験ポイント**:
 - 明確な要件定義で一発で適切なコードが生成される
-- 不足パラメータがある場合、AIが聞き返す
-- 既存リソースとの衝突を回避できる
+- 不足パラメータがある場合、AIが聞き返す（「足りていないパラメータがある場合は聞き返してください」の指示により）
 - エラーが発生しにくい
+- 修正回数が少ない
+- セキュリティグループの設定が適切
+
+**記録**: 生成されたコードを確認し、悪いプロンプトとの違いを記録してください。
+
+**注意**: 生成されるコードは、プロンプトの内容やAIモデルによって異なる場合があります。ここで示したプロンプト例は、より良いコードを生成するための参考として活用してください。
+
+#### 2.3 プロンプト改善の実践（10分）
+
+悪いプロンプトから良いプロンプトへの段階的改善を実践しましょう。
+
+**ステップ1**: 悪いプロンプトで生成されたコードを確認
+- 不足しているパラメータを特定
+- エラーが発生する可能性のある箇所を特定
+
+**ステップ2**: プロンプトを改善
+- 不足パラメータを明記
+- 明確な要件定義を追加
+- 「足りていないパラメータがある場合は聞き返してください」を追加
+
+**ステップ3**: 改善したプロンプトで再生成
+- 生成コードの品質を確認
+- 改善前後の比較
+
+**フィードバックループ**: 生成コードの確認→不足点の指摘→プロンプト改善→再生成
 
 **記録**: 改善前後のコード品質、修正回数、作業時間を比較してください。
 
-### 2. Context Engineeringの実践（20分）
+### 3. Context Engineering実践（15分）
 
-#### 2.1 既存のAWSリソース情報を取得
+#### 3.1 コンテキストなしでの生成（7分）
 
-既存のAWSリソース情報を取得して、コンテキストとして活用します。
+**タスク**: AWS環境情報を取得せずに、固定値やデフォルト値でEC2インスタンスを作成するTerraformコードを生成
 
-以下のAWS CLIコマンドを実行します：
-
-```bash
-# 既存のVPC情報を取得
-aws ec2 describe-vpcs --region ap-northeast-1 --query 'Vpcs[*].[VpcId,CidrBlock]' --output json
-
-# 既存のサブネット情報を取得
-aws ec2 describe-subnets --region ap-northeast-1 --query 'Subnets[*].[SubnetId,CidrBlock,AvailabilityZone]' --output json
-
-# 既存のセキュリティグループ情報を取得
-aws ec2 describe-security-groups --region ap-northeast-1 --query 'SecurityGroups[*].[GroupId,GroupName]' --output json
-
-# 利用可能な可用性ゾーンを取得
-aws ec2 describe-availability-zones --region ap-northeast-1 --query 'AvailabilityZones[*].ZoneName' --output json
-```
-
-#### 2.2 コンテキストをAgentに提供
-
-取得したコンテキスト情報をContinueに提供します。
+Continueに以下のプロンプトを入力します：
 
 ```
-既存のインフラ情報:
-{上記のAWS CLIコマンドで取得した情報を貼り付け}
-
-上記の情報を考慮して、新しいVPC、サブネット、EC2インスタンスを作成するTerraformコードを生成してください。
-既存のリソースと衝突しないように注意してください。
+EC2インスタンスを作成するTerraformコードを生成してください。
+リージョンはap-northeast-1、インスタンスタイプはt3.microです。
 ```
 
 **体験ポイント**:
-- 既存リソースとの整合性を保ったコード生成
-- リソース名の重複回避
-- CIDRブロックの適切な割り当て
-- エラーが発生しにくい
+- AMI IDが古い可能性（ハードコードされたAMI IDが存在しない、または最新でない）
+- 利用可能なインスタンスタイプが確認されていない
+- リージョン固有の情報が考慮されていない
+- エラーが発生しやすい（特にAMI IDが存在しない場合）
 
-**記録**: コンテキストありとコンテキストなしの生成コードを比較し、違いを記録してください。
+**記録**: 生成されたコードを確認し、固定値やデフォルト値の使用による問題点を記録してください。
 
-### 3. Agent形式での構築とフィードバックループ（40分）
+#### 3.2 コンテキストありでの生成（8分）
 
-#### 3.1 Agentの拡張
+**タスク**: Continueのチャット機能を使ってAWS環境情報を取得し、コンテキストとして提供して実際の環境に適合したコードを生成
 
-セッション0で使用したシンプルなAgentを拡張して、VPC、Subnet、EC2の統合構築に対応させます。
+**重要**: セッション1では、まだTerraformコードを実行してAWSにリソースをデプロイしていません。そのため、既存のVPCやサブネットなどのリソース情報は取得できません。代わりに、AWSアカウントの制約情報や利用可能なリソース情報（AMI、インスタンスタイプ、リージョン情報など）を取得してコンテキストとして提供します。
 
-```bash
-# Agentテンプレートを確認
-cat templates/ai_agents/simple_agent_template.py
-```
+**Context Engineeringのポイント**: AIは最新のAWS環境情報（最新のAMI IDなど）を知りません。そのため、AIに直接質問して情報を取得し、それをコンテキストとして提供することで、より正確なコードを生成できます。
 
-#### 3.2 Agentが計画を提示（承認ワークフロー）
+1. Continueのチャット機能を使って、AWS環境情報を取得します：
 
-Agentに以下の指示を入力します：
+Continueに以下のプロンプトを入力して、必要な情報を取得します：
 
 ```
-下記条件を満たすVPC、サブネット、EC2インスタンスを構築するTerraformコードを生成してください。
+ap-northeast-1リージョンで利用可能な最新のAmazon Linux 2023のAMI IDを教えてください。
+また、t3.microインスタンスタイプが利用可能かどうか、利用可能な可用性ゾーンも教えてください。
+```
+
+AIが回答した情報を確認します。例えば、以下のような情報が得られる場合があります：
+
+- 最新のAmazon Linux 2023のAMI ID: `ami-0c3fd0f5d33134a76`
+- t3.microインスタンスタイプ: 利用可能（ap-northeast-1a, ap-northeast-1c, ap-northeast-1d）
+- 利用可能な可用性ゾーン: ap-northeast-1a, ap-northeast-1c, ap-northeast-1d
+
+2. 取得した情報をコンテキストとして提供し、コードを生成します：
+
+Continueに以下のプロンプトを入力します：
+
+```
+以下のAWS環境情報を考慮して、EC2インスタンスを作成するTerraformコードを生成してください。
+
+AWS環境情報:
+- リージョン: ap-northeast-1
+- 最新のAmazon Linux 2023のAMI ID: ami-0c3fd0f5d33134a76
+- インスタンスタイプ: t3.micro（利用可能）
+- 利用可能な可用性ゾーン: ap-northeast-1a, ap-northeast-1c, ap-northeast-1d
 
 要件:
-- VPC CIDR: 10.0.0.0/16
-- パブリックサブネット: 10.0.1.0/24 (ap-northeast-1a)
-- プライベートサブネット: 10.0.2.0/24 (ap-northeast-1c)
-- EC2インスタンス: t3.micro, Amazon Linux 2023, パブリックサブネットに配置
-- インターネットゲートウェイとNAT Gatewayを適切に設定
+- 上記のAMI IDを使用してください
+- セキュリティグループはSSH（ポート22）のみ許可、送信は全許可
+- タグ: Name = "training-ec2", Environment = "training"
 ```
 
-**承認ワークフロー**:
-1. Agentが実行計画を表示
-2. 計画を確認（リソースの種類、数、依存関係など）
-3. 人間が承認（`y`を入力）または修正要求
+**体験ポイント**:
+- Continueのチャット機能を使って、コマンド操作なしでAWS環境情報を取得できる
+- 実際のAWS環境情報に基づいたコード生成
+- 最新のAMI IDの使用（存在しないAMI IDによるエラーを回避）
+- 利用可能なインスタンスタイプの確認
+- リージョン固有の情報の考慮
+- エラーが発生しにくい
+- AIに直接質問することで、Context Engineeringの概念を理解しやすい
 
-**記録**: Agentが提示した計画を確認し、承認前に必要な情報が含まれているか確認してください。
+**記録**: コンテキストありとコンテキストなしの生成コードを比較し、違いを記録してください。特に、AMI IDが実際の環境情報に基づいているか、固定値になっているかを確認してください。また、Continueのチャット機能を使って情報を取得する方法が、コマンド操作と比べてどのように簡単だったかも記録してください。
 
-#### 3.3 Agentがコード生成→検証→実行
+### 4. チャット形式 vs Agent形式の比較（15分）
 
-Agentが承認後、以下の処理を自動的に実行します：
+#### 4.1 チャット形式での開発（7分）
 
-1. **コード生成**: プロンプトとコンテキスト情報に基づいてTerraformコードを生成
-2. **検証**: `terraform fmt`と`terraform validate`を自動実行
-3. **実行**: `terraform init`と`terraform plan`を実行
+**タスク**: 同じEC2インスタンス作成をチャット形式（コードコピー方式）で実行
 
-**記録**: 生成されたコード、検証結果、実行計画を確認してください。
+**プロセス**:
+1. Continueにプロンプトを入力
+2. 生成されたコードをコピー
+3. ファイルに貼り付け
+4. エラーが発生した場合、エラーメッセージをコピーしてContinueに質問
+5. 修正コードをコピーして貼り付け
+6. 繰り返し修正
 
-#### 3.4 エラー発生時の処理（エラー修正プロセス）
+**記録**: 作業時間、手動操作回数（コピー・貼り付け・ファイル編集）、エラー修正回数を記録してください。
 
-エラーが発生した場合、Agentが自動的に以下を実行します：
+#### 4.2 Agent形式での開発（8分）
 
-1. **エラー検出**: エラーメッセージを解析
-2. **修正提案**: エラーの原因を特定し、修正案を提示
-3. **人間の承認**: 修正案を確認し、承認（`y`）または拒否（`n`）
-4. **修正適用**: 承認後、修正を適用して再実行
+**タスク**: 同じEC2インスタンス作成をAgent形式で実行
 
-**例**:
-```
-エラー: Resource 'aws_vpc.training_vpc' already exists
-修正提案: 既存のVPCを使用するか、新しいVPC名を指定してください。
-承認しますか？ (y/n): y
-```
+**プロセス**:
+1. シンプルなAgentを起動（テンプレート提供）
+2. 「EC2インスタンスを作成してください」と指示
+3. Agentが自動的にコード生成→検証→実行
+4. エラー発生時、Agentが自動検出→修正提案→人間が承認
+5. 修正後の再実行
 
-**記録**: エラー修正プロセスの体験を記録してください。
+**記録**: 作業時間、手動操作回数、エラー修正回数を記録してください。
 
-#### 3.5 反復的改善の実践
+**比較**: チャット形式とAgent形式の作業時間、手動操作回数、エラー修正回数を比較してください。
 
-構築後、以下のようなフィードバックをAgentに提供します：
+### 5. Agent形式での開発の理解（20分）
 
-```
-セキュリティグループをより厳格にしてください。
-SSHのアクセス元を特定のIPアドレスのみに制限してください。
-```
+#### 5.1 Agent形式の本質的理解（10分）
 
-**反復的改善プロセス**:
-1. 人間のフィードバックを提供
-2. Agentが改善案を提示
-3. 人間が承認
-4. Agentが改善を適用→再検証→実行
+**Agent形式の特徴**:
+- コード生成から実行までの自動化
+- コンテキストの自動管理
+- エラー検出と修正提案の自動化
+- 人間の判断が必要な場面での中断と確認（human in the loop）
 
-**記録**: 反復的改善の体験を記録してください。
+**Agent形式のメリット**:
+- 開発速度の向上
+- エラー修正の効率化
+- コンテキスト管理の自動化
+- 一貫性のあるコード生成
 
-<details>
-<summary>📝 生成コード例（クリックで展開）</summary>
+**Agent形式の適用場面**:
+- 繰り返し作業の自動化
+- 複雑な依存関係の管理
+- エラーハンドリングの自動化
 
-```hcl
-# variables.tf
-variable "region" {
-  description = "AWSリージョン"
-  type        = string
-  default     = "ap-northeast-1"
-}
+#### 5.2 Agent形式での実践（10分）
 
-variable "vpc_cidr" {
-  description = "VPC CIDRブロック"
-  type        = string
-  default     = "10.0.0.0/16"
-}
+**タスク**: 同じEC2インスタンス作成をAgent形式で実践
 
-variable "instance_type" {
-  description = "EC2インスタンスタイプ"
-  type        = string
-  default     = "t3.micro"
-}
+**プロセス**:
+1. Agentに自然言語で指示
+   ```
+   ap-northeast-1リージョンに、t3.microインスタンスタイプのEC2インスタンスを作成してください。
+   セキュリティグループはSSH（ポート22）のみ許可し、Nameタグに"training-ec2"を設定してください。
+   ```
+2. Agentが計画を提示（承認ワークフロー）
+   - Agentが実行計画を表示
+   - 人間が承認
+3. Agentがコード生成→検証→実行
+4. エラー発生時、自動検出→修正提案→承認→再実行（エラー修正プロセス）
+5. 「セキュリティグループをより厳格にしてください」などのフィードバック（反復的改善）
+6. Agentが改善→再検証→実行
 
-# main.tf
-provider "aws" {
-  region = var.region
-}
+**フィードバックループの3つのパターン**:
+1. **エラー修正プロセス**: AIがエラー検出→修正提案→人間が承認
+2. **反復的改善**: 人間のフィードバック→AIが改善→再検証
+3. **承認ワークフロー**: AIが計画提示→人間が承認→実行
 
-# VPC
-resource "aws_vpc" "training_vpc" {
-  cidr_block           = var.vpc_cidr
-  enable_dns_hostnames = true
-  enable_dns_support   = true
+**体験ポイント**:
+- Agent形式での開発フローの理解
+- フィードバックループの実践
+- human in the loopの重要性の理解
+- 開発体験の改善を実感
 
-  tags = {
-    Name = "training-vpc"
-  }
-}
+**記録**: Agent形式での開発体験を記録し、チャット形式との違いをまとめてください。
 
-# インターネットゲートウェイ
-resource "aws_internet_gateway" "training_igw" {
-  vpc_id = aws_vpc.training_vpc.id
-
-  tags = {
-    Name = "training-igw"
-  }
-}
-
-# パブリックサブネット1
-resource "aws_subnet" "public_subnet_1" {
-  vpc_id                  = aws_vpc.training_vpc.id
-  cidr_block              = "10.0.1.0/24"
-  availability_zone       = "ap-northeast-1a"
-  map_public_ip_on_launch = true
-
-  tags = {
-    Name = "training-public-subnet-1"
-  }
-}
-
-# パブリックサブネット2
-resource "aws_subnet" "public_subnet_2" {
-  vpc_id                  = aws_vpc.training_vpc.id
-  cidr_block              = "10.0.2.0/24"
-  availability_zone       = "ap-northeast-1c"
-  map_public_ip_on_launch = true
-
-  tags = {
-    Name = "training-public-subnet-2"
-  }
-}
-
-# プライベートサブネット1
-resource "aws_subnet" "private_subnet_1" {
-  vpc_id            = aws_vpc.training_vpc.id
-  cidr_block        = "10.0.10.0/24"
-  availability_zone = "ap-northeast-1a"
-
-  tags = {
-    Name = "training-private-subnet-1"
-  }
-}
-
-# プライベートサブネット2
-resource "aws_subnet" "private_subnet_2" {
-  vpc_id            = aws_vpc.training_vpc.id
-  cidr_block        = "10.0.11.0/24"
-  availability_zone = "ap-northeast-1c"
-
-  tags = {
-    Name = "training-private-subnet-2"
-  }
-}
-
-# パブリックルートテーブル
-resource "aws_route_table" "public_rt" {
-  vpc_id = aws_vpc.training_vpc.id
-
-  route {
-    cidr_block = "0.0.0.0/0"
-    gateway_id = aws_internet_gateway.training_igw.id
-  }
-
-  tags = {
-    Name = "training-public-rt"
-  }
-}
-
-# パブリックサブネットとルートテーブルの関連付け
-resource "aws_route_table_association" "public_subnet_1_assoc" {
-  subnet_id      = aws_subnet.public_subnet_1.id
-  route_table_id = aws_route_table.public_rt.id
-}
-
-resource "aws_route_table_association" "public_subnet_2_assoc" {
-  subnet_id      = aws_subnet.public_subnet_2.id
-  route_table_id = aws_route_table.public_rt.id
-}
-
-# セキュリティグループ
-resource "aws_security_group" "training_sg" {
-  name        = "training-sg"
-  description = "Training security group for EC2"
-  vpc_id      = aws_vpc.training_vpc.id
-
-  ingress {
-    description = "SSH"
-    from_port   = 22
-    to_port     = 22
-    protocol    = "tcp"
-    cidr_blocks = ["0.0.0.0/0"]
-  }
-
-  egress {
-    from_port   = 0
-    to_port     = 0
-    protocol    = "-1"
-    cidr_blocks = ["0.0.0.0/0"]
-  }
-
-  tags = {
-    Name = "training-sg"
-  }
-}
-
-# EC2インスタンス
-resource "aws_instance" "training_ec2" {
-  ami           = "ami-0c3fd0f5d33134a76" # Amazon Linux 2023
-  instance_type = var.instance_type
-  subnet_id     = aws_subnet.public_subnet_1.id
-
-  vpc_security_group_ids = [aws_security_group.training_sg.id]
-
-  tags = {
-    Name = "training-ec2"
-  }
-}
-
-# outputs.tf
-output "vpc_id" {
-  description = "VPC ID"
-  value       = aws_vpc.training_vpc.id
-}
-
-output "public_subnet_ids" {
-  description = "パブリックサブネットID"
-  value       = [aws_subnet.public_subnet_1.id, aws_subnet.public_subnet_2.id]
-}
-
-output "instance_public_ip" {
-  description = "EC2インスタンスのパブリックIP"
-  value       = aws_instance.training_ec2.public_ip
-}
-```
-
-</details>
-
-### 4. Agent形式での開発の振り返り（10分）
-
-#### 4.1 Prompt Engineeringの効果
-
-**振り返り項目**:
-- 悪いプロンプトと良いプロンプトの違いは何でしたか？
-- 良いプロンプトを使用することで、どのような改善が見られましたか？
-- 不足パラメータの聞き返し機能は役に立ちましたか？
-
-**記録**: Prompt Engineeringの効果をまとめてください。
-
-#### 4.2 Context Engineeringの重要性
-
-**振り返り項目**:
-- コンテキストなしとコンテキストありでの生成コードの違いは何でしたか？
-- 既存リソース情報を提供することで、どのような問題を回避できましたか？
-- Context Engineeringの重要性をどのように感じましたか？
-
-**記録**: Context Engineeringの重要性をまとめてください。
-
-#### 4.3 フィードバックループの体験
-
-**振り返り項目**:
-- エラー修正プロセスはどのように機能しましたか？
-- 反復的改善プロセスはどのように機能しましたか？
-- 承認ワークフローはどのように機能しましたか？
-- human in the loopの重要性をどのように感じましたか？
-
-**記録**: フィードバックループの体験をまとめてください。
-
-#### 4.4 Agent形式での開発体験の改善点
-
-**振り返り項目**:
-- Agent形式での開発で、どのような点が改善されましたか？
-- チャット形式（コードコピー方式）と比較して、どのような違いを感じましたか？
-- 開発速度、エラー修正の効率、コンテキスト管理の自動化など、どの点が最も改善されましたか？
-- Agent形式での開発の課題や改善点はありますか？
-
-**記録**: Agent形式での開発体験の改善点をまとめてください。
 
 ## ✅ チェックリスト
 
-- [ ] Prompt Engineeringの実践を行った（悪いプロンプトと良いプロンプトの比較）
-- [ ] Context Engineeringの実践を行った（既存AWSリソース情報の活用）
-- [ ] Agent形式での構築を体験した
-- [ ] 承認ワークフローを体験した
-- [ ] エラー修正プロセスを体験した
-- [ ] 反復的改善プロセスを体験した
-- [ ] Agent形式での開発の振り返りを行った
-- [ ] VPC、Subnet、EC2インスタンスが構築された
+- [ ] 環境セットアップが完了した（[環境セットアップガイド](../setup/ENVIRONMENT_SETUP.md)を参照）
+- [ ] AWS認証情報が正しく設定されている
+- [ ] 悪いプロンプトと良いプロンプトの比較体験を行った
+- [ ] プロンプト改善の実践を行った
+- [ ] コンテキストなしとコンテキストありでの生成を比較した
+- [ ] チャット形式とAgent形式の比較体験を行った
+- [ ] Agent形式での開発の理解を深めた
+- [ ] フィードバックループの3つのパターンを体験した
 
 ## 🆘 トラブルシューティング
 
-### Agentがエラーを検出できない
+### Continueが起動しない
 
-- Agentのエラーハンドリング機能を確認
-- エラーメッセージの形式を確認
+- 拡張機能が正しくインストールされているか確認
+- VS Code/Cursorを再起動
+- Continueの設定ファイル（`.continue/config.json`）が正しいか確認
 
-### コンテキスト情報の取得エラー
+詳細は [Continueセットアップガイド](../setup/CONTINUE_SETUP.md) を参照してください。
 
-- AWS認証情報が正しく設定されているか確認
+### AWS認証エラー
+
+- 認証情報が正しく設定されているか確認
 - IAM権限が適切か確認
 
-### 承認ワークフローが機能しない
+### Terraformエラー
 
-- Agentの設定を確認
-- 人間の承認プロセスが正しく実装されているか確認
+- プロバイダーのバージョンを確認
+- リソース名の重複を確認
 
 ## 📚 参考資料
 
+- [Continue公式ドキュメント](https://continue.dev/docs)
 - [Terraform公式ドキュメント](https://developer.hashicorp.com/terraform/docs)
 - [AWS公式ドキュメント](https://docs.aws.amazon.com/)
-- [サンプルコード](../../sample_code/terraform/vpc_subnet_ec2/)
+- [サンプルコード](../../sample_code/terraform/basic_ec2/)
 
 ## ➡️ 次のステップ
 
-セッション1が完了したら、[セッション2：Terraform自動化エージェント](session2_guide.md) に進んでください。
+セッション1が完了したら、[セッション2：VPC/Subnet/EC2構築](session2_guide.md) に進んでください。

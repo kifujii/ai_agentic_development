@@ -4,13 +4,13 @@
 
 ## チェックリスト一覧
 
-- [セッション0チェックリスト](session0_checklist.md) - AI x IaC基礎実践
-- [セッション1チェックリスト](session1_checklist.md) - 環境セットアップとVPC/Subnet/EC2構築
-- [セッション2チェックリスト](session2_checklist.md) - Terraformコード生成・実行自動化エージェント開発
-- [セッション3チェックリスト](session3_checklist.md) - システム運用基礎とAnsible Playbook作成
-- [セッション4チェックリスト](session4_checklist.md) - Ansible Playbook生成・実行自動化エージェント開発
-- [セッション5チェックリスト](session5_checklist.md) - インフラ管理タスク自動化エージェント開発
-- [セッション6チェックリスト](session6_checklist.md) - Webシステム構築と統合実践（任意・発展）
+- [セッション1チェックリスト](session1_checklist.md) - AI x IaC基礎実践
+- [セッション2チェックリスト](session2_checklist.md) - 環境セットアップとVPC/Subnet/EC2構築
+- [セッション3チェックリスト](session3_checklist.md) - Terraformコード生成・実行自動化エージェント開発
+- [セッション4チェックリスト](session4_checklist.md) - システム運用基礎とAnsible Playbook作成
+- [セッション5チェックリスト](session5_checklist.md) - Ansible Playbook生成・実行自動化エージェント開発
+- [セッション6チェックリスト](session6_checklist.md) - インフラ管理タスク自動化エージェント開発
+- [セッション7チェックリスト](session7_checklist.md) - Webシステム構築と統合実践（任意・発展）
 
 ## 評価方法
 

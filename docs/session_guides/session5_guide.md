@@ -1,19 +1,19 @@
-# セッション5：統合管理エージェント 詳細ガイド
+# セッション5：Ansible自動化エージェント 詳細ガイド
 
 ## 📋 目的
 
-このセッションでは、Continueを活用して、TerraformとAnsibleを統合的に管理するエージェントの実装方法を学びます。
+このセッションでは、Continueを活用して、Ansible Playbook生成・実行を自動化するエージェントの実装方法を学びます。
 
 ### 学習目標
 
-- 複雑なPrompt Engineeringの実践（複数リソースの統合構築用プロンプト）
-- 高度なContext Engineeringの実践（複数のコンテキストソースの統合）
-- 複雑なワークフローでのフィードバックループの実装（複数ステップの承認ワークフロー、エラー発生時のロールバックと再試行、人間の判断が必要な場面での中断と確認）
-- Agent形式での開発の総合理解を実践する
-- タスク分類と優先順位付けの実装方法を理解する
-- TerraformとAnsibleの統合実行方法を理解する
-- タスク分解と依存関係解決の実装方法を理解する
-- ワークフロー自動化の実装方法を理解する
+- Prompt Engineeringの実践（Ansible Playbook生成用）
+- Context Engineeringの実践（サーバー情報の活用）
+- フィードバックループの実装（承認ワークフロー、エラー修正、反復的改善）
+- Agent形式での開発の深化を実践する
+- Continueを活用したAnsible Playbook生成の実装方法を理解する
+- Playbook検証機能の実装方法を理解する
+- Ansible実行自動化の実装方法を理解する
+- エラーハンドリングとリトライ機能の実装方法を理解する
 
 ## 🎯 目指すべき構成
 
@@ -22,583 +22,516 @@
 ```
 workspace/
 └── agents/
-    └── integrated_agent/
+    └── ansible_agent/
         ├── agent.py           # メインのエージェントコード
-        ├── classifier.py      # タスク分類モジュール
-        ├── prioritizer.py     # 優先順位付けモジュール
-        └── workflow.py        # ワークフロー自動化モジュール
+        ├── playbook_generator.py # Playbook生成モジュール
+        ├── validator.py       # Playbook検証モジュール
+        └── executor.py        # Ansible実行モジュール
 ```
 
 **エージェントの機能**:
-- タスクの自動分類（Terraform/Ansible/Hybrid）
-- 優先順位付け
-- タスク分解と依存関係解決
-- ワークフロー自動化
+- Continueを活用したAnsible Playbook生成
+- Playbook検証
+- Ansible実行の自動化
+- エラーハンドリングとリトライ
 
 ## 📚 事前準備
 
-- [セッション2](session2_guide.md) が完了していること
 - [セッション4](session4_guide.md) が完了していること
-- Terraform/Ansibleエージェントの理解
+- Ansibleの基本理解
 - Continueが正しく設定されていること
 
 ## 🚀 手順
 
-### 1. 複雑なPrompt Engineering（15分）
+### 1. Prompt EngineeringとContext Engineeringの実践（20分）
 
-#### 1.1 複数リソースの統合構築用プロンプト
-
-**タスク**: VPC、EC2、RDS、ALBを含むWebアプリケーションインフラを構築
-
-Continueを起動して、以下のプロンプトを試してみましょう。
+#### 1.1 Prompt Engineering（Ansible Playbook生成用）
 
 **悪いプロンプト例**:
 ```
-Webアプリケーションのインフラを構築してください
+Ansible Playbookを生成してください。
+パッケージをインストールしてサービスを開始してください。
 ```
 
 **良いプロンプト例**:
 ```
-下記条件を満たすWebアプリケーションインフラを構築するTerraformコードを生成してください。
+下記条件を満たすAnsible Playbookを生成してください。
 
 要件:
-- VPC: 10.0.0.0/16
-- パブリックサブネット: 10.0.1.0/24, 10.0.2.0/24（2つのAZ）
-- プライベートサブネット: 10.0.10.0/24, 10.0.11.0/24（2つのAZ）
-- EC2インスタンス: t3.micro x 2（パブリックサブネット、Auto Scaling Group）
-- RDS: db.t3.micro, MySQL 8.0（プライベートサブネット）
-- ALB: Application Load Balancer（パブリックサブネット）
-- セキュリティグループ: 適切に設定
+- パッケージ（htop, git, curl）をインストールする
+- 設定ファイルをコピーする
+- サービス（nginx）を開始する
+- 冪等性を確保する
+- エラーハンドリングを含める
 
 注意事項:
-- 足りていないパラメータがある場合は、そのまま構築するのではなく一度聞き返してください
-- 既存のリソースと衝突しないように確認してください
-- 依存関係を適切に設定してください
-- 変数定義を含めてください
+- 足りていないパラメータがある場合は、そのまま実行するのではなく一度聞き返してください
+- ハンドラーを使用してください
 - コメントを適切に追加してください
 - ベストプラクティスに従ってください
+
+出力形式:
+- YAML形式のAnsible Playbook
+- 適切なモジュールを使用
 ```
 
-**体験ポイント**:
-- 複数リソースの統合構築用プロンプトの設計
-- 依存関係の明確化
-- 複雑な要件の構造化
+#### 1.2 Context Engineering（サーバー情報）
 
-### 2. 高度なContext Engineering（15分）
+既存のサーバー情報を取得して、コンテキストとして活用します。
 
-#### 2.1 複数のコンテキストソースの統合
-
-既存のAWSリソース情報、サーバー情報、既存コードなどを統合してコンテキストとして活用します。
-
-```python
-class AdvancedContextManager:
-    def get_integrated_context(self):
-        """複数のコンテキストソースを統合"""
-        context = {
-            'aws_resources': self.get_aws_context(),
-            'server_info': self.get_server_context(),
-            'existing_code': self.get_existing_code_context(),
-            'dependencies': self.get_dependency_graph()
-        }
-        return context
+```bash
+# セッション4で使用したAnsibleコマンドを実行
+ansible all -i workspace/ansible/inventory.ini -m setup -a "filter=ansible_distribution*"
 ```
 
-#### 2.2 既存インフラ情報の動的取得
+コンテキスト情報をContinueに提供します。
 
-コード生成前に最新のAWSリソース情報を取得し、実行前に再度確認します。
+### 2. Ansible Playbook生成エージェントの実装（40分）
 
-### 3. タスク分類と優先順位付け（20分）
-
-#### 1.1 タスク分類の実装
-
-Continueを活用して、タスクを自動的に分類する機能を実装します。
+#### 2.1 Continueを活用したPlaybook生成
 
 <details>
-<summary>📝 タスク分類クラス例（クリックで展開）</summary>
-
-```python
-# classifier.py
-class TaskClassifier:
-    """タスク分類クラス"""
-    
-    TASK_TYPES = {
-        'terraform': [
-            '作成', '構築', 'デプロイ', 'リソース作成',
-            'VPC', 'EC2', 'S3', 'RDS', 'インフラ'
-        ],
-        'ansible': [
-            '設定', 'インストール', '起動', '停止',
-            '再起動', 'パッケージ', 'サービス', 'ファイル'
-        ],
-        'hybrid': [
-            'セットアップ', '環境構築', 'デプロイ',
-            '監視開始', 'バックアップ'
-        ]
-    }
-    
-    def classify(self, instruction):
-        """
-        タスクタイプの分類
-        
-        Args:
-            instruction: 自然言語の指示
-        
-        Returns:
-            タスクタイプ（terraform/ansible/hybrid）
-        """
-        instruction_lower = instruction.lower()
-        
-        terraform_score = sum(1 for keyword in self.TASK_TYPES['terraform'] 
-                             if keyword in instruction_lower)
-        ansible_score = sum(1 for keyword in self.TASK_TYPES['ansible'] 
-                           if keyword in instruction_lower)
-        
-        if terraform_score > ansible_score:
-            return 'terraform'
-        elif ansible_score > terraform_score:
-            return 'ansible'
-        else:
-            return 'hybrid'
-```
-
-</details>
-
-#### 1.2 優先順位付けの実装
-
-<details>
-<summary>📝 優先順位付けクラス例（クリックで展開）</summary>
-
-```python
-# prioritizer.py
-class TaskPrioritizer:
-    """タスク優先順位付けクラス"""
-    
-    PRIORITY_MAP = {
-        '削除': 1,  # 最優先（慎重に）
-        '作成': 2,
-        '更新': 3,
-        '確認': 4,
-        '取得': 5
-    }
-    
-    def prioritize(self, tasks):
-        """
-        タスクの優先順位付け
-        
-        Args:
-            tasks: タスクのリスト
-        
-        Returns:
-            優先順位付けされたタスクのリスト
-        """
-        return sorted(tasks, key=lambda t: self.PRIORITY_MAP.get(t.get('type', ''), 99))
-```
-
-</details>
-
-### 4. 統合エージェントの実装と複雑なワークフローでのフィードバックループ（40分）
-
-#### 4.1 統合エージェントクラス
-
-Continueを活用して、TerraformとAnsibleを統合的に管理するエージェントを実装します。
-
-<details>
-<summary>📝 統合エージェントクラス例（クリックで展開）</summary>
-
-```python
-# agent.py
-from classifier import TaskClassifier
-from prioritizer import TaskPrioritizer
-# Terraform/Ansibleエージェントはセッション2、4で実装済みと仮定
-
-class IntegratedInfrastructureAgent:
-    """統合インフラ管理エージェント"""
-    
-    def __init__(self, aws_context=None, inventory_file=None):
-        self.aws_context = aws_context
-        self.inventory_file = inventory_file
-        
-        # セッション2、4で実装したエージェントを使用
-        # self.terraform_agent = TerraformAgent(aws_context)
-        # self.ansible_agent = AnsibleAgent(inventory_file)
-        
-        self.classifier = TaskClassifier()
-        self.prioritizer = TaskPrioritizer()
-    
-    def process(self, instruction, execute=False):
-        """
-        統合処理
-        
-        Args:
-            instruction: 自然言語の指示
-            execute: 実際に実行するか
-        
-        Returns:
-            処理結果
-        """
-        # 1. タスクタイプの判定
-        task_type = self.classifier.classify(instruction)
-        
-        # 2. タスクの分解（複合タスクの場合）
-        tasks = self.decompose_task(instruction, task_type)
-        
-        # 3. 優先順位付け
-        tasks = self.prioritizer.prioritize(tasks)
-        
-        # 4. 依存関係の解決
-        execution_plan = self.resolve_dependencies(tasks)
-        
-        # 5. 実行
-        results = []
-        for task in execution_plan:
-            if task['type'] == 'terraform':
-                # ContinueでTerraformコード生成
-                # セッション2の手順を参照
-                result = self.process_terraform_task(task, execute)
-            elif task['type'] == 'ansible':
-                # ContinueでAnsible Playbook生成
-                # セッション4の手順を参照
-                result = self.process_ansible_task(task, execute)
-            else:
-                result = self.process_hybrid_task(task, execute)
-            
-            results.append({
-                'task': task,
-                'result': result
-            })
-        
-        return {
-            'tasks': tasks,
-            'execution_plan': execution_plan,
-            'results': results
-        }
-    
-    def decompose_task(self, instruction, task_type):
-        """複合タスクの分解"""
-        if task_type == 'hybrid':
-            # Continueを使ってタスクを分解
-            # Continueを起動して、以下のプロンプトを入力:
-            """
-            以下のタスクを、TerraformタスクとAnsibleタスクに分解してください。
-            
-            タスク: {instruction}
-            
-            出力形式:
-            - Terraformタスク: [リスト]
-            - Ansibleタスク: [リスト]
-            - 依存関係: [リスト]
-            """
-            # 生成された分解結果をパース
-            # 実際の実装では、Continueの応答をパースする必要がある
-        
-        return [{'type': task_type, 'instruction': instruction}]
-    
-    def resolve_dependencies(self, tasks):
-        """依存関係の解決"""
-        # 依存関係グラフの構築
-        graph = self.build_dependency_graph(tasks)
-        
-        # トポロジカルソート
-        execution_order = self.topological_sort(graph)
-        
-        return execution_order
-```
-
-</details>
-
-#### 4.2 複雑なワークフローでのフィードバックループ
-
-**複数ステップの承認ワークフロー**:
-
-```python
-def create_multi_step_plan(self, instruction):
-    """複数ステップの実行計画を作成して人間の承認を求める"""
-    execution_plan = self.decompose_and_plan(instruction)
-    
-    print("実行計画（複数ステップ）:")
-    for i, step in enumerate(execution_plan, 1):
-        print(f"\nステップ {i}:")
-        print(f"  タスクタイプ: {step['type']}")
-        print(f"  内容: {step['instruction']}")
-        print(f"  依存関係: {step['dependencies']}")
-    
-    approval = input("\nすべてのステップを実行しますか？ (y/n): ")
-    if approval.lower() == 'y':
-        return execution_plan
-    else:
-        # 個別承認
-        approved_steps = []
-        for step in execution_plan:
-            step_approval = input(f"ステップ '{step['instruction']}' を実行しますか？ (y/n): ")
-            if step_approval.lower() == 'y':
-                approved_steps.append(step)
-        return approved_steps
-```
-
-**エラー発生時のロールバックと再試行**:
-
-```python
-def execute_with_rollback(self, execution_plan):
-    """ロールバック機能付きで実行"""
-    executed_steps = []
-    
-    for step in execution_plan:
-        try:
-            result = self.execute_step(step)
-            executed_steps.append({'step': step, 'result': result})
-        except Exception as e:
-            print(f"エラー発生: {e}")
-            rollback_approval = input("ロールバックしますか？ (y/n): ")
-            if rollback_approval.lower() == 'y':
-                self.rollback(executed_steps)
-            else:
-                retry_approval = input("再試行しますか？ (y/n): ")
-                if retry_approval.lower() == 'y':
-                    result = self.execute_step(step)
-                    executed_steps.append({'step': step, 'result': result})
-            raise
-```
-
-**人間の判断が必要な場面での中断と確認**:
-
-```python
-def execute_with_human_checkpoints(self, execution_plan):
-    """人間の判断が必要な場面で中断"""
-    for step in execution_plan:
-        if self.requires_human_decision(step):
-            print(f"人間の判断が必要なステップ: {step['instruction']}")
-            decision = input("続行しますか？ (y/n): ")
-            if decision.lower() != 'y':
-                print("実行を中断しました")
-                return
-        self.execute_step(step)
-```
-
-### 5. Agent形式での開発の総合理解と実践的なシナリオ演習（20分）
-
-#### 5.1 Agent形式での開発の総合理解
-
-**複雑なワークフローでのAgent形式開発の実践**:
-- 複数リソースの統合構築
-- 複数ステップの承認ワークフロー
-- エラー発生時のロールバックと再試行
-- 人間の判断が必要な場面での中断と確認
-
-**Agent形式での開発の総合理解**:
-- Prompt Engineering、Context Engineering、フィードバックループの統合活用
-- 複雑なワークフローでのAgent形式開発の実践
-- human in the loopの重要性の理解
-
-#### 5.2 実践的なシナリオ演習
-
-#### 3.1 シナリオ1: 監視エージェントのセットアップ
-
-Continueを起動して、以下のプロンプトを入力します：
-
-```
-EC2インスタンスにPrometheus node_exporterをインストールして起動してください。
-設定ファイルは/etc/prometheus/node_exporter.confに配置し、
-systemdサービスとして登録してください。
-```
-
-<details>
-<summary>📝 生成されるAnsible Playbook例（クリックで展開）</summary>
+<summary>📝 生成Playbook例（クリックで展開）</summary>
 
 ```yaml
 ---
-- name: Prometheus node_exporterのインストールと設定
+- name: パッケージインストールとサービス設定
   hosts: webservers
   become: yes
   
   tasks:
-    - name: node_exporterユーザーを作成
-      user:
-        name: node_exporter
-        system: yes
-        shell: /bin/false
-        home: /var/lib/node_exporter
+    - name: 必要なパッケージをインストール
+      yum:
+        name:
+          - htop
+          - git
+          - curl
+        state: present
+      register: package_result
+      failed_when: false
     
-    - name: node_exporterをダウンロード
-      get_url:
-        url: https://github.com/prometheus/node_exporter/releases/download/v1.6.1/node_exporter-1.6.1.linux-amd64.tar.gz
-        dest: /tmp/node_exporter.tar.gz
+    - name: パッケージインストール結果の確認
+      debug:
+        msg: "パッケージインストール結果: {{ package_result }}"
+      when: package_result.failed
     
-    - name: node_exporterを展開
-      unarchive:
-        src: /tmp/node_exporter.tar.gz
-        dest: /opt
-        remote_src: yes
-    
-    - name: node_exporterバイナリをコピー
+    - name: 設定ファイルをコピー
       copy:
-        src: /opt/node_exporter-1.6.1.linux-amd64/node_exporter
-        dest: /usr/local/bin/node_exporter
-        owner: root
-        group: root
-        mode: '0755'
-        remote_src: yes
-    
-    - name: 設定ファイルを作成
-      copy:
-        content: |
-          # node_exporter configuration
-        dest: /etc/prometheus/node_exporter.conf
-        owner: node_exporter
-        group: node_exporter
-        mode: '0644'
-    
-    - name: systemdサービスファイルを作成
-      copy:
-        content: |
-          [Unit]
-          Description=Prometheus Node Exporter
-          After=network.target
-          
-          [Service]
-          User=node_exporter
-          Group=node_exporter
-          ExecStart=/usr/local/bin/node_exporter --config.file=/etc/prometheus/node_exporter.conf
-          Restart=always
-          
-          [Install]
-          WantedBy=multi-user.target
-        dest: /etc/systemd/system/node_exporter.service
+        src: config/nginx.conf
+        dest: /etc/nginx/nginx.conf
         owner: root
         group: root
         mode: '0644'
+      notify: restart nginx
     
-    - name: systemdをリロード
+    - name: nginxサービスを開始
       systemd:
-        daemon_reload: yes
-    
-    - name: node_exporterサービスを開始
-      systemd:
-        name: node_exporter
+        name: nginx
         state: started
         enabled: yes
+  
+  handlers:
+    - name: restart nginx
+      systemd:
+        name: nginx
+        state: restarted
 ```
 
 </details>
 
-#### 3.2 シナリオ2: 複数リソースの一括管理
+#### 1.2 プロンプトテンプレートの作成
 
-Continueを起動して、以下のプロンプトを入力します：
-
-```
-以下のリソースを作成してください:
-1. VPC (10.0.0.0/16)
-2. パブリックサブネット (10.0.1.0/24)
-3. EC2インスタンス (t3.micro)
-4. セキュリティグループ (SSH許可)
-5. EC2インスタンスに監視エージェントをインストール
-```
-
-このシナリオでは、TerraformタスクとAnsibleタスクが組み合わさった複合タスクになります。
-
-### 6. ワークフロー自動化（10分）
-
-#### 4.1 ワークフロー定義
+再利用可能なプロンプトテンプレートを作成します。
 
 <details>
-<summary>📝 ワークフロー自動化クラス例（クリックで展開）</summary>
+<summary>📝 プロンプトテンプレート例（クリックで展開）</summary>
 
 ```python
-# workflow.py
-class WorkflowAutomator:
-    """ワークフロー自動化クラス"""
-    
-    def automate_workflow(self, workflow_description):
-        """
-        ワークフローの自動化
-        
-        例: 新規サーバ追加→設定→監視開始
-        """
-        steps = [
-            {
-                'name': 'サーバ作成',
-                'type': 'terraform',
-                'instruction': workflow_description['server_creation']
-            },
-            {
-                'name': 'サーバ設定',
-                'type': 'ansible',
-                'instruction': workflow_description['server_config'],
-                'depends_on': ['サーバ作成']
-            },
-            {
-                'name': '監視開始',
-                'type': 'ansible',
-                'instruction': workflow_description['monitoring_setup'],
-                'depends_on': ['サーバ設定']
-            }
-        ]
-        
-        return self.execute_workflow(steps)
-    
-    def execute_workflow(self, steps):
-        """ワークフローの実行"""
-        results = []
-        
-        for step in steps:
-            # 依存関係の確認
-            if step.get('depends_on'):
-                for dep in step['depends_on']:
-                    # 依存タスクが完了しているか確認
-                    if not self.is_task_completed(dep):
-                        raise Exception(f"Dependency {dep} not completed")
-            
-            # タスクの実行
-            if step['type'] == 'terraform':
-                result = self.execute_terraform_task(step)
-            elif step['type'] == 'ansible':
-                result = self.execute_ansible_task(step)
-            
-            results.append({
-                'step': step,
-                'result': result
-            })
-        
-        return results
+# prompt_templates.py
+class AnsiblePromptBuilder:
+    def build_prompt(self, instruction, context=None):
+        """Ansible Playbook生成用のプロンプト構築"""
+        prompt = f"""
+以下の要件でAnsible Playbookを生成してください。
+
+要件:
+{instruction}
+
+既存のインフラ情報:
+{context if context else "なし"}
+
+出力形式:
+- YAML形式のAnsible Playbook
+- 適切なモジュールを使用
+- 冪等性を確保
+- エラーハンドリングを含める
+- ハンドラーを適切に使用
+- コメントを追加
+- ベストプラクティスに従う
+
+Ansibleの主要モジュール:
+- yum/apt: パッケージ管理
+- systemd: サービス管理
+- copy/template: ファイル操作
+- shell/command: コマンド実行
+- user/group: ユーザー管理
+- file: ファイル・ディレクトリ操作
+"""
+        return prompt
 ```
 
 </details>
+
+### 3. Playbook検証機能とフィードバックループの実装（20分）
+
+#### 3.1 Playbook検証機能
+
+#### 2.1 YAML検証の実装
+
+```python
+# validator.py
+import yaml
+import subprocess
+import tempfile
+import os
+
+class AnsiblePlaybookValidator:
+    """Ansible Playbook検証クラス"""
+    
+    def validate(self, playbook):
+        """
+        Playbookの検証
+        
+        Args:
+            playbook: Ansible Playbook（YAML文字列）
+        
+        Returns:
+            検証結果（valid, errors, warnings）
+        """
+        result = {
+            'valid': True,
+            'errors': [],
+            'warnings': []
+        }
+        
+        # 1. YAML構文チェック
+        yaml_check = self.check_yaml_syntax(playbook)
+        if not yaml_check['valid']:
+            result['valid'] = False
+            result['errors'].extend(yaml_check['errors'])
+        
+        # 2. ansible-lint（利用可能な場合）
+        lint_check = self.run_ansible_lint(playbook)
+        if lint_check['errors']:
+            result['warnings'].extend(lint_check['errors'])
+        
+        return result
+    
+    def check_yaml_syntax(self, playbook):
+        """YAML構文チェック"""
+        try:
+            yaml.safe_load(playbook)
+            return {'valid': True, 'errors': []}
+        except yaml.YAMLError as e:
+            return {
+                'valid': False,
+                'errors': [f"YAML syntax error: {str(e)}"]
+            }
+    
+    def run_ansible_lint(self, playbook):
+        """ansible-lintの実行"""
+        work_dir = tempfile.mkdtemp()
+        
+        try:
+            # Playbookをファイルに保存
+            playbook_file = os.path.join(work_dir, 'playbook.yml')
+            with open(playbook_file, 'w') as f:
+                f.write(playbook)
+            
+            # ansible-lint実行
+            lint_result = subprocess.run(
+                ['ansible-lint', playbook_file],
+                capture_output=True,
+                text=True
+            )
+            
+            if lint_result.returncode != 0:
+                return {'errors': lint_result.stderr.split('\n')}
+            
+            return {'errors': []}
+        except FileNotFoundError:
+            # ansible-lintがインストールされていない場合
+            return {'errors': []}
+        finally:
+            import shutil
+            shutil.rmtree(work_dir)
+```
+
+<details>
+<summary>📝 使用例（クリックで展開）</summary>
+
+```python
+from validator import AnsiblePlaybookValidator
+
+validator = AnsiblePlaybookValidator()
+
+playbook = """
+---
+- name: Test playbook
+  hosts: webservers
+  tasks:
+    - name: Test task
+      debug:
+        msg: "Hello"
+"""
+
+result = validator.validate(playbook)
+print(f"Valid: {result['valid']}")
+if result['errors']:
+    print(f"Errors: {result['errors']}")
+```
+
+</details>
+
+#### 3.2 フィードバックループの実装
+
+**承認ワークフロー**:
+
+```python
+def create_plan(self, instruction):
+    """実行計画を作成して人間の承認を求める"""
+    plan = self.generate_plan(instruction)
+    print("実行計画:")
+    print(plan)
+    approval = input("実行しますか？ (y/n): ")
+    if approval.lower() == 'y':
+        return plan
+    else:
+        return None
+```
+
+**エラーハンドリングで自動修正提案機能**:
+
+```python
+def handle_error(self, error, playbook):
+    """エラーを検出して修正提案を行う"""
+    error_analysis = self.analyze_error(error)
+    fix_proposal = self.propose_fix(error_analysis, playbook)
+    print(f"エラー: {error}")
+    print(f"修正提案: {fix_proposal}")
+    approval = input("修正を適用しますか？ (y/n): ")
+    if approval.lower() == 'y':
+        return self.apply_fix(fix_proposal, playbook)
+    return None
+```
+
+**生成Playbookの品質改善で反復的改善プロセス**:
+
+```python
+def improve_playbook(self, playbook, feedback):
+    """人間のフィードバックに基づいてPlaybookを改善"""
+    improved_playbook = self.generate_improvement(playbook, feedback)
+    validation_result = self.validator.validate(improved_playbook)
+    if validation_result['valid']:
+        return improved_playbook
+    else:
+        # 再改善を試みる
+        return self.improve_playbook(improved_playbook, feedback)
+```
+
+### 4. Ansible実行自動化（20分）
+
+#### 4.1 自動実行パイプライン
+
+```python
+# executor.py
+import subprocess
+import tempfile
+import os
+import shutil
+
+class AnsibleExecutor:
+    """Ansible実行クラス"""
+    
+    def execute(self, playbook, inventory, extra_vars=None):
+        """
+        Ansible Playbookの自動実行
+        
+        Args:
+            playbook: Ansible Playbook（YAML文字列）
+            inventory: インベントリファイルのパス
+            extra_vars: 追加変数（辞書）
+        
+        Returns:
+            実行結果
+        """
+        work_dir = tempfile.mkdtemp()
+        
+        try:
+            # Playbookをファイルに保存
+            playbook_file = os.path.join(work_dir, 'playbook.yml')
+            with open(playbook_file, 'w') as f:
+                f.write(playbook)
+            
+            # ansible-playbookコマンドの構築
+            cmd = ['ansible-playbook', '-i', inventory, playbook_file]
+            
+            # 追加変数の設定
+            if extra_vars:
+                vars_str = ' '.join([f"{k}={v}" for k, v in extra_vars.items()])
+                cmd.extend(['--extra-vars', vars_str])
+            
+            # 実行
+            result = subprocess.run(
+                cmd,
+                capture_output=True,
+                text=True
+            )
+            
+            return {
+                'success': result.returncode == 0,
+                'stdout': result.stdout,
+                'stderr': result.stderr,
+                'returncode': result.returncode
+            }
+        
+        except Exception as e:
+            return {
+                'success': False,
+                'error': str(e)
+            }
+        finally:
+            # クリーンアップ（必要に応じて）
+            # shutil.rmtree(work_dir)  # デバッグ時はコメントアウト
+            pass
+```
+
+<details>
+<summary>📝 使用例（クリックで展開）</summary>
+
+```python
+from executor import AnsibleExecutor
+
+executor = AnsibleExecutor()
+
+playbook = """
+---
+- name: Test playbook
+  hosts: webservers
+  tasks:
+    - name: Test task
+      debug:
+        msg: "Hello"
+"""
+
+result = executor.execute(
+    playbook,
+    inventory='inventory.ini',
+    extra_vars={'var1': 'value1'}
+)
+
+if result['success']:
+    print("Playbook executed successfully!")
+    print(result['stdout'])
+else:
+    print(f"Error: {result['stderr']}")
+```
+
+</details>
+
+### 5. Agent形式での開発の深化とエージェントの統合（10分）
+
+#### 5.1 Agent形式での開発の深化
+
+**実装した機能**:
+- Prompt Engineeringの実践（Ansible Playbook生成用）
+- Context Engineeringの実践（サーバー情報の活用）
+- フィードバックループの実装（承認ワークフロー、エラー修正、反復的改善）
+
+**Agent形式での開発の深化**:
+- Playbook生成から実行までの完全自動化
+- サーバー情報の自動取得とコンテキスト化
+- エラー検出と修正提案の自動化
+- human in the loopの実践
+
+#### 5.2 エージェントクラスの実装
+
+```python
+# agent.py
+from validator import AnsiblePlaybookValidator
+from executor import AnsibleExecutor
+
+class AnsibleAgent:
+    """Ansible Playbook生成・実行自動化エージェント"""
+    
+    def __init__(self, inventory):
+        self.inventory = inventory
+        self.validator = AnsiblePlaybookValidator()
+        self.executor = AnsibleExecutor()
+    
+    def process(self, instruction):
+        """
+        メイン処理フロー
+        
+        Args:
+            instruction: 自然言語の指示
+        
+        Returns:
+            処理結果
+        """
+        # 1. ContinueでPlaybook生成（手動）
+        # Continueを起動して、instructionを入力
+        # 生成されたPlaybookを取得
+        
+        # 2. 検証
+        validation_result = self.validator.validate(playbook)
+        if not validation_result['valid']:
+            # エラーがあれば修正を試みる
+            # Continueに修正を依頼
+            playbook = self.fix_playbook(playbook, validation_result['errors'])
+        
+        # 3. 実行（オプション）
+        if self.should_execute():
+            execution_result = self.executor.execute(playbook, self.inventory)
+            return execution_result
+        
+        return {'playbook': playbook, 'validation': validation_result}
+```
 
 ## ✅ チェックリスト
 
-- [ ] タスク分類機能を実装した
-- [ ] 優先順位付け機能を実装した
-- [ ] 統合エージェントを実装した
-- [ ] Terraform/Ansibleの統合実行を実装した
-- [ ] タスク分解機能を実装した
-- [ ] 依存関係解決機能を実装した
-- [ ] ワークフロー自動化を実装した
-- [ ] 監視エージェントセットアップの自動化を実践した
-- [ ] 複数リソースの一括管理を実践した
-- [ ] 統合テストを実施した
+- [ ] Prompt Engineeringの実践を行った（Ansible Playbook生成用）
+- [ ] Context Engineeringの実践を行った（サーバー情報の活用）
+- [ ] フィードバックループの実装を行った（承認ワークフロー、エラー修正、反復的改善）
+- [ ] Agent形式での開発の深化を実践した
+- [ ] Continueを活用したPlaybook生成を実践した
+- [ ] Playbook検証機能を実装した
+- [ ] Ansible実行自動化を実装した
+- [ ] エラーハンドリングを実装した
+- [ ] リトライ機能を実装した
+- [ ] 基本的な動作確認を行った
+- [ ] 生成Playbookの品質を確認した
 
 ## 🆘 トラブルシューティング
 
-### タスク分類エラー
+### Continueが応答しない
 
-- キーワードマッチングの精度を向上
-- Continueを使った分類の導入
+- Continueの設定を確認（`.continue/config.json`）
+- ネットワーク接続を確認
 
-### 依存関係エラー
+### Ansible実行エラー
 
-- 依存関係グラフの可視化
-- 循環依存の検出
-
-### 実行順序エラー
-
-- 実行前のプレビュー機能
-- ロールバック機能
+- インベントリファイルの設定を確認
+- SSH接続を確認
+- 権限を確認
 
 ## 📚 参考資料
 
 - [Continue公式ドキュメント](https://continue.dev/docs)
-- [テンプレート](../../templates/ai_agents/integrated_agent_template.py)
-- [サンプルコード](../../sample_code/)
+- [Ansible公式ドキュメント](https://docs.ansible.com/)
+- [サンプルコード](../../sample_code/ansible/)
+- [テンプレート](../../templates/ai_agents/ansible_agent_template.py)
 
 ## ➡️ 次のステップ
 
-セッション5が完了したら、[セッション6：Webシステム構築（任意）](session6_guide.md) に進むか、ワークショップを完了してください。
+セッション5が完了したら、[セッション6：統合管理エージェント](session6_guide.md) に進んでください。

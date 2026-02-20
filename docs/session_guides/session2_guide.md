@@ -1,19 +1,16 @@
-# セッション2：Terraform自動化エージェント 詳細ガイド
+# セッション2：Agent形式でのVPC/Subnet/EC2構築 詳細ガイド
 
 ## 📋 目的
 
-このセッションでは、Continueを活用して、Terraformコード生成・実行を自動化するエージェントの実装方法を学びます。
+このセッションでは、Prompt Engineering、Context Engineering、フィードバックループを実践しながら、Agent形式でVPC/Subnet/EC2を構築し、Agent形式での開発体験を深めます。
 
 ### 学習目標
 
-- プロンプトテンプレートの作成方法を理解する
-- Context Engineeringの高度化（既存インフラ情報の動的取得、依存関係の自動解決、リソース間の整合性チェック）を実装する
-- フィードバックループの実装（承認ワークフロー、エラー修正、反復的改善）を理解する
-- Agent形式での開発の深化を実践する
-- Continueを活用したTerraformコード生成の実装方法を理解する
-- コード検証とフォーマット機能の実装方法を理解する
-- Terraform実行自動化の実装方法を理解する
-- エラーハンドリングとリトライ機能の実装方法を理解する
+- Prompt Engineeringの実践（悪いプロンプトから良いプロンプトへの改善）
+- Context Engineeringの実践（既存AWSリソース情報の活用）
+- Agent形式での構築体験
+- フィードバックループの実践（エラー修正、反復的改善、承認ワークフロー）
+- Agent形式での開発の振り返り
 
 ## 🎯 目指すべき構成
 
@@ -21,679 +18,454 @@
 
 ```
 workspace/
-└── agents/
-    └── terraform_agent/
-        ├── agent.py           # メインのエージェントコード
-        ├── code_generator.py # コード生成モジュール
-        ├── validator.py      # コード検証モジュール
-        └── executor.py       # Terraform実行モジュール
+└── terraform/
+    └── vpc-subnet-ec2/
+        ├── main.tf          # メインのTerraformコード
+        ├── variables.tf     # 変数定義
+        ├── outputs.tf       # 出力定義
+        └── terraform.tfvars # 変数の値
 ```
 
-**エージェントの機能**:
-- Continueを活用したTerraformコード生成
-- コード検証とフォーマット
-- Terraform実行の自動化
-- エラーハンドリングとリトライ
+**構築されるAWSリソース**:
+- VPC（10.0.0.0/16）
+- パブリックサブネット（10.0.1.0/24, 10.0.2.0/24）
+- プライベートサブネット（10.0.10.0/24, 10.0.11.0/24）
+- インターネットゲートウェイ
+- ルートテーブル
+- EC2インスタンス（t3.micro）
 
 ## 📚 事前準備
 
-- [セッション0](session0_guide.md) が完了していること
-- [セッション1](session1_guide.md) で構築したインフラの理解
-- Continueが正しく設定されていること
+- [セッション1](session1_guide.md) が完了していること
+- AWS認証情報が設定されていること
+- Terraformがインストールされていること
 
 ## 🚀 手順
 
-### 1. プロンプトテンプレートの作成（20分）
+### 1. Prompt Engineeringの実践（20分）
 
-#### 1.1 再利用可能なプロンプトテンプレートの設計
+#### 1.1 悪いプロンプトから始める
 
-セッション0とセッション1で学んだ良いプロンプトをテンプレート化します。
+**タスク**: VPC、パブリック/プライベートサブネット、EC2インスタンスを構築
 
-```bash
-mkdir -p templates/prompts
+Continueを起動して、以下の**悪いプロンプト**を試してみましょう。
+
+**悪いプロンプト例**:
+```
+VPCとEC2を作成してください
 ```
 
-**良いプロンプトテンプレート例** (`templates/prompts/terraform_resource_template.txt`):
+**問題点の確認**:
+- 不足パラメータ（CIDRブロック、可用性ゾーン、インスタンスタイプなど）
+- 不明確な要件（パブリック/プライベートサブネットの指定がない）
+- インターネットゲートウェイやNAT Gatewayの設定がない
+- セキュリティグループの設定が不適切
 
+**記録**: 生成されたコードを確認し、不足しているパラメータや問題点を記録してください。
+
+#### 1.2 良いプロンプトへの改善
+
+次に、以下の**良いプロンプト**を試してみましょう。
+
+**良いプロンプト例**:
 ```
-下記条件を満たす{resource_type}を構築するTerraformコードを生成してください。
+下記条件を満たすVPC、サブネット、EC2インスタンスを構築するTerraformコードを生成してください。
 
 要件:
-- リージョン: {region}
-- {specific_requirements}
+- VPC CIDR: 10.0.0.0/16
+- パブリックサブネット: 10.0.1.0/24 (ap-northeast-1a)
+- プライベートサブネット: 10.0.2.0/24 (ap-northeast-1c)
+- EC2インスタンス: t3.micro, Amazon Linux 2023, パブリックサブネットに配置
+- インターネットゲートウェイとNAT Gatewayを適切に設定
+- セキュリティグループ: SSH（ポート22）のみ許可、送信は全許可
 
 注意事項:
-- 足りていないパラメータなどがある場合は、そのまま構築するのではなく一度聞き返してください
-- 既存の{resource_type}と衝突しないように確認してください
+- 足りていないパラメータがある場合は、そのまま構築するのではなく一度聞き返してください
+- 既存のVPCやサブネットと衝突しないように確認してください
 - 変数定義を含めてください
 - コメントを適切に追加してください
 - ベストプラクティスに従ってください
-
-出力形式:
-- HCL形式のTerraformコード
-- 変数定義を含める
-- コメントを適切に追加
 ```
 
-**悪いプロンプト例集** (`templates/prompts/bad_examples.txt`):
+**体験ポイント**:
+- 明確な要件定義で一発で適切なコードが生成される
+- 不足パラメータがある場合、AIが聞き返す
+- 既存リソースとの衝突を回避できる
+- エラーが発生しにくい
 
-```
-# 悪いプロンプト例
+**記録**: 改善前後のコード品質、修正回数、作業時間を比較してください。
 
-例1: EC2を作成して
-例2: VPCとEC2を作成してください
-例3: S3バケットを作成
-```
+### 2. Context Engineeringの実践（20分）
 
-**プロンプト改善ガイド** (`templates/prompts/improvement_guide.md`):
+#### 2.1 既存のAWSリソース情報を取得
 
-プロンプト改善のステップ:
-1. 不足パラメータを特定
-2. 明確な要件定義を追加
-3. 「足りていないパラメータがある場合は聞き返してください」を追加
-4. 既存リソースとの衝突回避指示を追加
+既存のAWSリソース情報を取得して、コンテキストとして活用します。
 
-#### 1.2 プロンプトテンプレートの活用
+以下のAWS CLIコマンドを実行します：
 
-エージェントでプロンプトテンプレートを読み込んで使用します。
+```bash
+# 既存のVPC情報を取得
+aws ec2 describe-vpcs --region ap-northeast-1 --query 'Vpcs[*].[VpcId,CidrBlock]' --output json
 
-```python
-def load_prompt_template(template_path, **kwargs):
-    """プロンプトテンプレートを読み込んで変数を置換"""
-    with open(template_path, 'r') as f:
-        template = f.read()
-    return template.format(**kwargs)
-```
+# 既存のサブネット情報を取得
+aws ec2 describe-subnets --region ap-northeast-1 --query 'Subnets[*].[SubnetId,CidrBlock,AvailabilityZone]' --output json
 
-### 2. エージェントアーキテクチャの設計とContext Engineeringの高度化（30分）
+# 既存のセキュリティグループ情報を取得
+aws ec2 describe-security-groups --region ap-northeast-1 --query 'SecurityGroups[*].[GroupId,GroupName]' --output json
 
-#### 1.1 エージェントの基本構造
-
-Continueを活用したエージェントの基本構造を理解します。
-
-<details>
-<summary>📝 エージェントアーキテクチャ例（クリックで展開）</summary>
-
-```python
-# agent.py
-class TerraformAgent:
-    """
-    Terraformコード生成・実行自動化エージェント
-    
-    このエージェントは、Continueを活用してTerraformコードを生成し、
-    検証・実行まで自動化します。
-    """
-    
-    def __init__(self, aws_context=None):
-        self.aws_context = aws_context
-        self.validator = TerraformValidator()
-        self.executor = TerraformExecutor()
-        self.logger = AgentLogger()
-    
-    def process(self, instruction):
-        """
-        メイン処理フロー
-        
-        Args:
-            instruction: 自然言語の指示
-        
-        Returns:
-            処理結果（コード、検証結果、実行結果など）
-        """
-        try:
-            # 1. Continueでコード生成（手動）
-            # Continueを起動して、instructionを入力
-            # 生成されたコードを取得
-            
-            # 2. 検証
-            validation_result = self.validator.validate(code)
-            if not validation_result['valid']:
-                # エラーがあれば修正を試みる
-                # Continueに修正を依頼
-                code = self.fix_code(code, validation_result['errors'])
-            
-            # 3. 実行（オプション）
-            if self.should_execute():
-                execution_result = self.executor.execute(code)
-                return execution_result
-            
-            return {'code': code, 'validation': validation_result}
-        except Exception as e:
-            self.logger.log_error(e)
-            raise
+# 利用可能な可用性ゾーンを取得
+aws ec2 describe-availability-zones --region ap-northeast-1 --query 'AvailabilityZones[*].ZoneName' --output json
 ```
 
-</details>
+#### 2.2 コンテキストをAgentに提供
 
-#### 2.1 エージェントの基本構造
-
-Continueを活用したエージェントの基本構造を理解します。
-
-エージェントを以下のモジュールに分割します：
-
-- **CodeGenerator**: コード生成（Continueを使用）
-- **Validator**: コード検証
-- **Executor**: Terraform実行
-- **Logger**: ログ機能
-- **ContextManager**: コンテキスト管理（高度化）
-
-#### 2.2 Context Engineeringの高度化
-
-**既存インフラ情報の動的取得**:
-
-```python
-class ContextManager:
-    def get_aws_context(self):
-        """既存のAWSリソース情報を動的に取得"""
-        ec2 = boto3.client('ec2', region_name='ap-northeast-1')
-        
-        # 既存のVPC情報
-        vpcs = ec2.describe_vpcs()
-        
-        # 既存のサブネット情報
-        subnets = ec2.describe_subnets()
-        
-        # 既存のセキュリティグループ情報
-        security_groups = ec2.describe_security_groups()
-        
-        return {
-            'existing_vpcs': [vpc['VpcId'] for vpc in vpcs['Vpcs']],
-            'existing_subnets': [subnet['SubnetId'] for subnet in subnets['Subnets']],
-            'existing_security_groups': [sg['GroupId'] for sg in security_groups['SecurityGroups']],
-            'available_azs': self.get_available_availability_zones()
-        }
-    
-    def check_resource_conflicts(self, new_resource, existing_resources):
-        """リソース間の整合性チェック"""
-        # リソース名の重複チェック
-        # CIDRブロックの衝突チェック
-        # 依存関係のチェック
-        pass
-```
-
-**依存関係の自動解決**:
-
-```python
-def resolve_dependencies(resources):
-    """リソースの依存関係を自動解決"""
-    # 依存関係グラフの構築
-    # 実行順序の決定
-    pass
-```
-
-**リソース間の整合性チェック**:
-
-```python
-def check_consistency(code, context):
-    """リソース間の整合性をチェック"""
-    # VPCとサブネットの整合性
-    # セキュリティグループとVPCの整合性
-    # CIDRブロックの衝突チェック
-    pass
-```
-
-### 3. Terraformコード生成機能の強化とフィードバックループの実装（30分）
-
-#### 3.1 Continueを活用したコード生成
-
-Continueを起動（`Ctrl+L` / `Cmd+L`）して、以下のプロンプトを入力します：
+取得したコンテキスト情報をContinueに提供します。
 
 ```
-以下の要件でTerraformコードを生成してください。
+既存のインフラ情報:
+{上記のAWS CLIコマンドで取得した情報を貼り付け}
+
+上記の情報を考慮して、新しいVPC、サブネット、EC2インスタンスを作成するTerraformコードを生成してください。
+既存のリソースと衝突しないように注意してください。
+```
+
+**体験ポイント**:
+- 既存リソースとの整合性を保ったコード生成
+- リソース名の重複回避
+- CIDRブロックの適切な割り当て
+- エラーが発生しにくい
+
+**記録**: コンテキストありとコンテキストなしの生成コードを比較し、違いを記録してください。
+
+### 3. Agent形式での構築とフィードバックループ（40分）
+
+#### 3.1 Agentの拡張
+
+セッション1で使用したシンプルなAgentを拡張して、VPC、Subnet、EC2の統合構築に対応させます。
+
+```bash
+# Agentテンプレートを確認
+cat templates/ai_agents/simple_agent_template.py
+```
+
+#### 3.2 Agentが計画を提示（承認ワークフロー）
+
+Agentに以下の指示を入力します：
+
+```
+下記条件を満たすVPC、サブネット、EC2インスタンスを構築するTerraformコードを生成してください。
 
 要件:
-- S3バケットを作成
-- バケット名: training-bucket
-- バージョニングを有効化
-- 暗号化を有効化（AES256）
-
-出力形式:
-- HCL形式のTerraformコード
-- 変数定義を含める
-- コメントを適切に追加
-- ベストプラクティスに従う
+- VPC CIDR: 10.0.0.0/16
+- パブリックサブネット: 10.0.1.0/24 (ap-northeast-1a)
+- プライベートサブネット: 10.0.2.0/24 (ap-northeast-1c)
+- EC2インスタンス: t3.micro, Amazon Linux 2023, パブリックサブネットに配置
+- インターネットゲートウェイとNAT Gatewayを適切に設定
 ```
+
+**承認ワークフロー**:
+1. Agentが実行計画を表示
+2. 計画を確認（リソースの種類、数、依存関係など）
+3. 人間が承認（`y`を入力）または修正要求
+
+**記録**: Agentが提示した計画を確認し、承認前に必要な情報が含まれているか確認してください。
+
+#### 3.3 Agentがコード生成→検証→実行
+
+Agentが承認後、以下の処理を自動的に実行します：
+
+1. **コード生成**: プロンプトとコンテキスト情報に基づいてTerraformコードを生成
+2. **検証**: `terraform fmt`と`terraform validate`を自動実行
+3. **実行**: `terraform init`と`terraform plan`を実行
+
+**記録**: 生成されたコード、検証結果、実行計画を確認してください。
+
+#### 3.4 エラー発生時の処理（エラー修正プロセス）
+
+エラーが発生した場合、Agentが自動的に以下を実行します：
+
+1. **エラー検出**: エラーメッセージを解析
+2. **修正提案**: エラーの原因を特定し、修正案を提示
+3. **人間の承認**: 修正案を確認し、承認（`y`）または拒否（`n`）
+4. **修正適用**: 承認後、修正を適用して再実行
+
+**例**:
+```
+エラー: Resource 'aws_vpc.training_vpc' already exists
+修正提案: 既存のVPCを使用するか、新しいVPC名を指定してください。
+承認しますか？ (y/n): y
+```
+
+**記録**: エラー修正プロセスの体験を記録してください。
+
+#### 3.5 反復的改善の実践
+
+構築後、以下のようなフィードバックをAgentに提供します：
+
+```
+セキュリティグループをより厳格にしてください。
+SSHのアクセス元を特定のIPアドレスのみに制限してください。
+```
+
+**反復的改善プロセス**:
+1. 人間のフィードバックを提供
+2. Agentが改善案を提示
+3. 人間が承認
+4. Agentが改善を適用→再検証→実行
+
+**記録**: 反復的改善の体験を記録してください。
 
 <details>
 <summary>📝 生成コード例（クリックで展開）</summary>
 
 ```hcl
 # variables.tf
-variable "bucket_name" {
-  description = "S3バケット名"
+variable "region" {
+  description = "AWSリージョン"
   type        = string
-  default     = "training-bucket"
+  default     = "ap-northeast-1"
+}
+
+variable "vpc_cidr" {
+  description = "VPC CIDRブロック"
+  type        = string
+  default     = "10.0.0.0/16"
+}
+
+variable "instance_type" {
+  description = "EC2インスタンスタイプ"
+  type        = string
+  default     = "t3.micro"
 }
 
 # main.tf
-resource "aws_s3_bucket" "training_bucket" {
-  bucket = var.bucket_name
+provider "aws" {
+  region = var.region
+}
+
+# VPC
+resource "aws_vpc" "training_vpc" {
+  cidr_block           = var.vpc_cidr
+  enable_dns_hostnames = true
+  enable_dns_support   = true
 
   tags = {
-    Name = var.bucket_name
+    Name = "training-vpc"
   }
 }
 
-resource "aws_s3_bucket_versioning" "training_bucket_versioning" {
-  bucket = aws_s3_bucket.training_bucket.id
+# インターネットゲートウェイ
+resource "aws_internet_gateway" "training_igw" {
+  vpc_id = aws_vpc.training_vpc.id
 
-  versioning_configuration {
-    status = "Enabled"
+  tags = {
+    Name = "training-igw"
   }
 }
 
-resource "aws_s3_bucket_server_side_encryption_configuration" "training_bucket_encryption" {
-  bucket = aws_s3_bucket.training_bucket.id
+# パブリックサブネット1
+resource "aws_subnet" "public_subnet_1" {
+  vpc_id                  = aws_vpc.training_vpc.id
+  cidr_block              = "10.0.1.0/24"
+  availability_zone       = "ap-northeast-1a"
+  map_public_ip_on_launch = true
 
-  rule {
-    apply_server_side_encryption_by_default {
-      sse_algorithm = "AES256"
-    }
+  tags = {
+    Name = "training-public-subnet-1"
   }
 }
-```
 
-</details>
+# パブリックサブネット2
+resource "aws_subnet" "public_subnet_2" {
+  vpc_id                  = aws_vpc.training_vpc.id
+  cidr_block              = "10.0.2.0/24"
+  availability_zone       = "ap-northeast-1c"
+  map_public_ip_on_launch = true
 
-#### 2.2 コード生成の自動化（参考）
-
-Continueはエディタ拡張機能なので、完全な自動化は難しいですが、以下のようなワークフローを実装できます：
-
-1. Continueでコード生成
-2. 生成されたコードをファイルに保存
-3. 検証とフォーマットを自動実行
-
-#### 3.2 フィードバックループの実装
-
-**承認ワークフロー**:
-
-```python
-def create_plan(self, instruction):
-    """実行計画を作成して人間の承認を求める"""
-    plan = self.generate_plan(instruction)
-    print("実行計画:")
-    print(plan)
-    approval = input("実行しますか？ (y/n): ")
-    if approval.lower() == 'y':
-        return plan
-    else:
-        return None
-```
-
-**エラーハンドリングで自動修正提案機能**:
-
-```python
-def handle_error(self, error, code):
-    """エラーを検出して修正提案を行う"""
-    error_analysis = self.analyze_error(error)
-    fix_proposal = self.propose_fix(error_analysis, code)
-    print(f"エラー: {error}")
-    print(f"修正提案: {fix_proposal}")
-    approval = input("修正を適用しますか？ (y/n): ")
-    if approval.lower() == 'y':
-        return self.apply_fix(fix_proposal, code)
-    return None
-```
-
-**生成コードの品質改善で反復的改善プロセス**:
-
-```python
-def improve_code(self, code, feedback):
-    """人間のフィードバックに基づいてコードを改善"""
-    improved_code = self.generate_improvement(code, feedback)
-    validation_result = self.validator.validate(improved_code)
-    if validation_result['valid']:
-        return improved_code
-    else:
-        # 再改善を試みる
-        return self.improve_code(improved_code, feedback)
-```
-
-### 4. コード検証とフォーマット機能（20分）
-
-#### 3.1 Terraform検証の実装
-
-```python
-# validator.py
-import subprocess
-import tempfile
-import os
-
-class TerraformValidator:
-    """Terraformコードの検証クラス"""
-    
-    def validate(self, code):
-        """
-        コードの検証
-        
-        Args:
-            code: Terraformコード（文字列）
-        
-        Returns:
-            検証結果（valid, errors, warnings）
-        """
-        result = {
-            'valid': True,
-            'errors': [],
-            'warnings': []
-        }
-        
-        # 1. 構文チェック
-        syntax_check = self.check_syntax(code)
-        if not syntax_check['valid']:
-            result['valid'] = False
-            result['errors'].extend(syntax_check['errors'])
-        
-        # 2. terraform fmt
-        formatted_code = self.format(code)
-        
-        # 3. terraform validate（一時ファイルに保存して実行）
-        validation = self.run_terraform_validate(formatted_code)
-        if not validation['valid']:
-            result['valid'] = False
-            result['errors'].extend(validation['errors'])
-        
-        return result
-    
-    def format(self, code):
-        """terraform fmtの実行"""
-        with tempfile.NamedTemporaryFile(mode='w', suffix='.tf', delete=False) as f:
-            f.write(code)
-            temp_file = f.name
-        
-        try:
-            subprocess.run(['terraform', 'fmt', temp_file], check=True, capture_output=True)
-            with open(temp_file, 'r') as f:
-                return f.read()
-        finally:
-            os.unlink(temp_file)
-    
-    def run_terraform_validate(self, code):
-        """terraform validateの実行"""
-        work_dir = tempfile.mkdtemp()
-        
-        try:
-            # コードをファイルに保存
-            with open(os.path.join(work_dir, 'main.tf'), 'w') as f:
-                f.write(code)
-            
-            # terraform init
-            init_result = subprocess.run(
-                ['terraform', 'init'],
-                cwd=work_dir,
-                capture_output=True,
-                text=True
-            )
-            
-            if init_result.returncode != 0:
-                return {
-                    'valid': False,
-                    'errors': [f"terraform init failed: {init_result.stderr}"]
-                }
-            
-            # terraform validate
-            validate_result = subprocess.run(
-                ['terraform', 'validate'],
-                cwd=work_dir,
-                capture_output=True,
-                text=True
-            )
-            
-            if validate_result.returncode != 0:
-                return {
-                    'valid': False,
-                    'errors': [f"terraform validate failed: {validate_result.stderr}"]
-                }
-            
-            return {'valid': True, 'errors': []}
-        finally:
-            import shutil
-            shutil.rmtree(work_dir)
-```
-
-<details>
-<summary>📝 使用例（クリックで展開）</summary>
-
-```python
-from validator import TerraformValidator
-
-validator = TerraformValidator()
-
-code = """
-resource "aws_s3_bucket" "test" {
-  bucket = "test-bucket"
+  tags = {
+    Name = "training-public-subnet-2"
+  }
 }
-"""
 
-result = validator.validate(code)
-print(f"Valid: {result['valid']}")
-if result['errors']:
-    print(f"Errors: {result['errors']}")
-```
+# プライベートサブネット1
+resource "aws_subnet" "private_subnet_1" {
+  vpc_id            = aws_vpc.training_vpc.id
+  cidr_block        = "10.0.10.0/24"
+  availability_zone = "ap-northeast-1a"
 
-</details>
-
-### 5. Terraform実行自動化（20分）
-
-#### 4.1 自動実行パイプライン
-
-```python
-# executor.py
-import subprocess
-import tempfile
-import os
-import shutil
-
-class TerraformExecutor:
-    """Terraform実行クラス"""
-    
-    def execute(self, code, auto_approve=False):
-        """
-        Terraformの自動実行
-        
-        Args:
-            code: Terraformコード（文字列）
-            auto_approve: 自動承認するか
-        
-        Returns:
-            実行結果
-        """
-        work_dir = tempfile.mkdtemp()
-        
-        try:
-            # コードをファイルに保存
-            with open(os.path.join(work_dir, 'main.tf'), 'w') as f:
-                f.write(code)
-            
-            # terraform init
-            init_result = subprocess.run(
-                ['terraform', 'init'],
-                cwd=work_dir,
-                capture_output=True,
-                text=True
-            )
-            
-            if init_result.returncode != 0:
-                return {
-                    'success': False,
-                    'error': 'init failed',
-                    'details': init_result.stderr
-                }
-            
-            # terraform plan
-            plan_result = subprocess.run(
-                ['terraform', 'plan', '-out=tfplan'],
-                cwd=work_dir,
-                capture_output=True,
-                text=True
-            )
-            
-            if plan_result.returncode != 0:
-                return {
-                    'success': False,
-                    'error': 'plan failed',
-                    'details': plan_result.stderr
-                }
-            
-            # プレビュー表示
-            print(plan_result.stdout)
-            
-            # terraform apply（承認が必要な場合）
-            if auto_approve:
-                apply_result = subprocess.run(
-                    ['terraform', 'apply', '-auto-approve', 'tfplan'],
-                    cwd=work_dir,
-                    capture_output=True,
-                    text=True
-                )
-                return {
-                    'success': apply_result.returncode == 0,
-                    'output': apply_result.stdout,
-                    'error': apply_result.stderr if apply_result.returncode != 0 else None
-                }
-            else:
-                return {
-                    'success': True,
-                    'pending_approval': True,
-                    'plan': plan_result.stdout
-                }
-        
-        except Exception as e:
-            return {
-                'success': False,
-                'error': str(e)
-            }
-        finally:
-            # クリーンアップ（必要に応じて）
-            # shutil.rmtree(work_dir)  # デバッグ時はコメントアウト
-            pass
-```
-
-<details>
-<summary>📝 使用例（クリックで展開）</summary>
-
-```python
-from executor import TerraformExecutor
-
-executor = TerraformExecutor()
-
-code = """
-resource "aws_s3_bucket" "test" {
-  bucket = "test-bucket"
+  tags = {
+    Name = "training-private-subnet-1"
+  }
 }
-"""
 
-result = executor.execute(code, auto_approve=False)
-if result['success']:
-    if result.get('pending_approval'):
-        print("Plan created. Review and approve manually.")
-    else:
-        print("Resources created successfully!")
-else:
-    print(f"Error: {result['error']}")
-```
+# プライベートサブネット2
+resource "aws_subnet" "private_subnet_2" {
+  vpc_id            = aws_vpc.training_vpc.id
+  cidr_block        = "10.0.11.0/24"
+  availability_zone = "ap-northeast-1c"
 
-</details>
-
-#### 4.2 エラーハンドリングとリトライ
-
-```python
-import time
-
-def execute_with_retry(self, code, max_retries=3):
-    """リトライ機能付き実行"""
-    for attempt in range(max_retries):
-        try:
-            result = self.execute(code)
-            if result['success']:
-                return result
-        except Exception as e:
-            if attempt == max_retries - 1:
-                raise
-            time.sleep(2 ** attempt)  # 指数バックオフ
-```
-
-### 6. Agent形式での開発の深化と動作確認（10分）
-
-#### 6.1 より高度なAgent機能の実装と理解
-
-**実装した機能**:
-- プロンプトテンプレートの活用
-- Context Engineeringの高度化（既存インフラ情報の動的取得、依存関係の自動解決、リソース間の整合性チェック）
-- フィードバックループの実装（承認ワークフロー、エラー修正、反復的改善）
-
-**Agent形式での開発の深化**:
-- コード生成から実行までの完全自動化
-- コンテキストの自動管理と更新
-- エラー検出と修正提案の自動化
-- human in the loopの実践
-
-#### 6.2 エージェントの動作確認とテスト
-
-#### 5.1 基本的な動作確認
-
-1. Continueでコード生成
-2. 生成されたコードを検証
-3. 必要に応じて実行
-
-<details>
-<summary>📝 テスト例（クリックで展開）</summary>
-
-```python
-# test_agent.py
-from validator import TerraformValidator
-from executor import TerraformExecutor
-
-# 検証のテスト
-validator = TerraformValidator()
-code = """
-resource "aws_s3_bucket" "test" {
-  bucket = "test-bucket"
+  tags = {
+    Name = "training-private-subnet-2"
+  }
 }
-"""
 
-result = validator.validate(code)
-print(f"Validation result: {result}")
+# パブリックルートテーブル
+resource "aws_route_table" "public_rt" {
+  vpc_id = aws_vpc.training_vpc.id
 
-# 実行のテスト（実際には実行しない）
-executor = TerraformExecutor()
-# result = executor.execute(code, auto_approve=False)
+  route {
+    cidr_block = "0.0.0.0/0"
+    gateway_id = aws_internet_gateway.training_igw.id
+  }
+
+  tags = {
+    Name = "training-public-rt"
+  }
+}
+
+# パブリックサブネットとルートテーブルの関連付け
+resource "aws_route_table_association" "public_subnet_1_assoc" {
+  subnet_id      = aws_subnet.public_subnet_1.id
+  route_table_id = aws_route_table.public_rt.id
+}
+
+resource "aws_route_table_association" "public_subnet_2_assoc" {
+  subnet_id      = aws_subnet.public_subnet_2.id
+  route_table_id = aws_route_table.public_rt.id
+}
+
+# セキュリティグループ
+resource "aws_security_group" "training_sg" {
+  name        = "training-sg"
+  description = "Training security group for EC2"
+  vpc_id      = aws_vpc.training_vpc.id
+
+  ingress {
+    description = "SSH"
+    from_port   = 22
+    to_port     = 22
+    protocol    = "tcp"
+    cidr_blocks = ["0.0.0.0/0"]
+  }
+
+  egress {
+    from_port   = 0
+    to_port     = 0
+    protocol    = "-1"
+    cidr_blocks = ["0.0.0.0/0"]
+  }
+
+  tags = {
+    Name = "training-sg"
+  }
+}
+
+# EC2インスタンス
+resource "aws_instance" "training_ec2" {
+  ami           = "ami-0c3fd0f5d33134a76" # Amazon Linux 2023
+  instance_type = var.instance_type
+  subnet_id     = aws_subnet.public_subnet_1.id
+
+  vpc_security_group_ids = [aws_security_group.training_sg.id]
+
+  tags = {
+    Name = "training-ec2"
+  }
+}
+
+# outputs.tf
+output "vpc_id" {
+  description = "VPC ID"
+  value       = aws_vpc.training_vpc.id
+}
+
+output "public_subnet_ids" {
+  description = "パブリックサブネットID"
+  value       = [aws_subnet.public_subnet_1.id, aws_subnet.public_subnet_2.id]
+}
+
+output "instance_public_ip" {
+  description = "EC2インスタンスのパブリックIP"
+  value       = aws_instance.training_ec2.public_ip
+}
 ```
 
 </details>
+
+### 4. Agent形式での開発の振り返り（10分）
+
+#### 4.1 Prompt Engineeringの効果
+
+**振り返り項目**:
+- 悪いプロンプトと良いプロンプトの違いは何でしたか？
+- 良いプロンプトを使用することで、どのような改善が見られましたか？
+- 不足パラメータの聞き返し機能は役に立ちましたか？
+
+**記録**: Prompt Engineeringの効果をまとめてください。
+
+#### 4.2 Context Engineeringの重要性
+
+**振り返り項目**:
+- コンテキストなしとコンテキストありでの生成コードの違いは何でしたか？
+- 既存リソース情報を提供することで、どのような問題を回避できましたか？
+- Context Engineeringの重要性をどのように感じましたか？
+
+**記録**: Context Engineeringの重要性をまとめてください。
+
+#### 4.3 フィードバックループの体験
+
+**振り返り項目**:
+- エラー修正プロセスはどのように機能しましたか？
+- 反復的改善プロセスはどのように機能しましたか？
+- 承認ワークフローはどのように機能しましたか？
+- human in the loopの重要性をどのように感じましたか？
+
+**記録**: フィードバックループの体験をまとめてください。
+
+#### 4.4 Agent形式での開発体験の改善点
+
+**振り返り項目**:
+- Agent形式での開発で、どのような点が改善されましたか？
+- チャット形式（コードコピー方式）と比較して、どのような違いを感じましたか？
+- 開発速度、エラー修正の効率、コンテキスト管理の自動化など、どの点が最も改善されましたか？
+- Agent形式での開発の課題や改善点はありますか？
+
+**記録**: Agent形式での開発体験の改善点をまとめてください。
 
 ## ✅ チェックリスト
 
-- [ ] エージェントアーキテクチャを設計した
-- [ ] Continueを活用したコード生成を実践した
-- [ ] コード検証機能を実装した
-- [ ] Terraform実行自動化を実装した
-- [ ] エラーハンドリングを実装した
-- [ ] リトライ機能を実装した
-- [ ] 基本的な動作確認を行った
-- [ ] 生成コードの品質を確認した
+- [ ] Prompt Engineeringの実践を行った（悪いプロンプトと良いプロンプトの比較）
+- [ ] Context Engineeringの実践を行った（既存AWSリソース情報の活用）
+- [ ] Agent形式での構築を体験した
+- [ ] 承認ワークフローを体験した
+- [ ] エラー修正プロセスを体験した
+- [ ] 反復的改善プロセスを体験した
+- [ ] Agent形式での開発の振り返りを行った
+- [ ] VPC、Subnet、EC2インスタンスが構築された
 
 ## 🆘 トラブルシューティング
 
-### Continueが応答しない
+### Agentがエラーを検出できない
 
-- Continueの設定を確認（`.continue/config.json`）
-- ネットワーク接続を確認
-- AWS Bedrockのサービス状態を確認（AWSコンソールで確認）
+- Agentのエラーハンドリング機能を確認
+- エラーメッセージの形式を確認
 
-### Terraform実行エラー
+### コンテキスト情報の取得エラー
 
-- IAM権限を確認
-- リソース制限を確認
-- 状態ファイルの競合を確認
+- AWS認証情報が正しく設定されているか確認
+- IAM権限が適切か確認
+
+### 承認ワークフローが機能しない
+
+- Agentの設定を確認
+- 人間の承認プロセスが正しく実装されているか確認
 
 ## 📚 参考資料
 
-- [Continue公式ドキュメント](https://continue.dev/docs)
 - [Terraform公式ドキュメント](https://developer.hashicorp.com/terraform/docs)
-- [サンプルコード](../../sample_code/terraform/)
-- [テンプレート](../../templates/ai_agents/terraform_agent_template.py)
+- [AWS公式ドキュメント](https://docs.aws.amazon.com/)
+- [サンプルコード](../../sample_code/terraform/vpc_subnet_ec2/)
 
 ## ➡️ 次のステップ
 
-セッション2が完了したら、[セッション3：Ansible運用基礎](session3_guide.md) に進んでください。
+セッション2が完了したら、[セッション3：Terraform自動化エージェント](session3_guide.md) に進んでください。

@@ -1,19 +1,19 @@
-# セッション4：Ansible自動化エージェント 詳細ガイド
+# セッション4：Ansible運用基礎 詳細ガイド
 
 ## 📋 目的
 
-このセッションでは、Continueを活用して、Ansible Playbook生成・実行を自動化するエージェントの実装方法を学びます。
+このセッションでは、Ansibleを使った基本的な運用タスクの自動化を実践します。
 
 ### 学習目標
 
-- Prompt Engineeringの実践（Ansible Playbook生成用）
-- Context Engineeringの実践（サーバー情報の活用）
-- フィードバックループの実装（承認ワークフロー、エラー修正、反復的改善）
-- Agent形式での開発の深化を実践する
-- Continueを活用したAnsible Playbook生成の実装方法を理解する
-- Playbook検証機能の実装方法を理解する
-- Ansible実行自動化の実装方法を理解する
-- エラーハンドリングとリトライ機能の実装方法を理解する
+- Prompt Engineering（Ansible用）の実践（良いプロンプトと悪いプロンプトの比較）
+- Context Engineering（サーバー情報）の実践
+- Agent形式でのPlaybook生成の体験
+- Agent形式での開発の理解（Ansible）
+- Ansibleの基本概念を理解する
+- インベントリファイルの設定方法を習得する
+- Playbookの作成と実行方法を習得する
+- 基本的な運用タスクの自動化を実践する
 
 ## 🎯 目指すべき構成
 
@@ -21,81 +21,318 @@
 
 ```
 workspace/
-└── agents/
-    └── ansible_agent/
-        ├── agent.py           # メインのエージェントコード
-        ├── playbook_generator.py # Playbook生成モジュール
-        ├── validator.py       # Playbook検証モジュール
-        └── executor.py        # Ansible実行モジュール
+└── ansible/
+    ├── inventory.ini          # インベントリファイル
+    ├── playbooks/
+    │   ├── restart_server.yml # サーバー再起動Playbook
+    │   └── install_packages.yml # パッケージインストールPlaybook
+    └── group_vars/
+        └── webservers.yml     # グループ変数
 ```
 
-**エージェントの機能**:
-- Continueを活用したAnsible Playbook生成
-- Playbook検証
-- Ansible実行の自動化
-- エラーハンドリングとリトライ
+**自動化されるタスク**:
+- サーバー再起動
+- パッケージのインストール
+- ファイルのコピー
+- サービスの管理
 
 ## 📚 事前準備
 
-- [セッション3](session3_guide.md) が完了していること
-- Ansibleの基本理解
-- Continueが正しく設定されていること
+- [セッション2](session2_guide.md) で構築したEC2インスタンスが起動していること
+- Ansibleがインストールされていること
+- EC2インスタンスへのSSH接続が可能なこと
 
 ## 🚀 手順
 
-### 1. Prompt EngineeringとContext Engineeringの実践（20分）
+### 1. Prompt Engineering（Ansible用）（15分）
 
-#### 1.1 Prompt Engineering（Ansible Playbook生成用）
+#### 1.1 悪いプロンプトと良いプロンプトの比較
+
+**タスク**: サーバー再起動を自動化するAnsible Playbookを生成
+
+Continueを起動して、以下のプロンプトを試してみましょう。
 
 **悪いプロンプト例**:
 ```
-Ansible Playbookを生成してください。
-パッケージをインストールしてサービスを開始してください。
+サーバーを再起動するAnsible Playbookを作成してください
 ```
 
 **良いプロンプト例**:
 ```
-下記条件を満たすAnsible Playbookを生成してください。
+下記条件を満たすサーバー再起動を自動化するAnsible Playbookを生成してください。
 
 要件:
-- パッケージ（htop, git, curl）をインストールする
-- 設定ファイルをコピーする
-- サービス（nginx）を開始する
-- 冪等性を確保する
-- エラーハンドリングを含める
+- 対象サーバー: インベントリファイルのwebserversグループ
+- 再起動前: サービス状態の確認、ログのバックアップ
+- 再起動後: サービス状態の確認、ヘルスチェック
+- エラーハンドリング: 失敗時のロールバック
 
 注意事項:
 - 足りていないパラメータがある場合は、そのまま実行するのではなく一度聞き返してください
+- 冪等性を確保してください
 - ハンドラーを使用してください
 - コメントを適切に追加してください
-- ベストプラクティスに従ってください
-
-出力形式:
-- YAML形式のAnsible Playbook
-- 適切なモジュールを使用
 ```
 
-#### 1.2 Context Engineering（サーバー情報）
+**体験ポイント**:
+- 明確な要件定義で一発で適切なPlaybookが生成される
+- 冪等性、エラーハンドリング、ハンドラーの使用が適切に実装される
+
+### 2. Context Engineering（サーバー情報）（15分）
+
+#### 2.1 既存サーバー情報をコンテキストとして活用
 
 既存のサーバー情報を取得して、コンテキストとして活用します。
 
+以下のAnsibleコマンドを実行します：
+
 ```bash
-# セッション3で使用したAnsibleコマンドを実行
+# サーバー情報を取得（OS情報など）
 ansible all -i workspace/ansible/inventory.ini -m setup -a "filter=ansible_distribution*"
+
+# サービス情報を取得
+ansible all -i workspace/ansible/inventory.ini -m shell -a "systemctl list-units --type=service --state=running"
 ```
 
-コンテキスト情報をContinueに提供します。
+#### 2.2 コンテキストをAgentに提供
 
-### 2. Ansible Playbook生成エージェントの実装（40分）
+取得したコンテキスト情報をContinueに提供します。
 
-#### 2.1 Continueを活用したPlaybook生成
+```
+既存のサーバー情報:
+{上記のAnsibleコマンドで取得した情報を貼り付け}
+
+上記の情報を考慮して、サーバー再起動を自動化するAnsible Playbookを生成してください。
+既存のサービス状態を確認し、適切に再起動してください。
+```
+
+### 3. Agent形式でのPlaybook生成（20分）
+
+#### 3.1 チャット形式とAgent形式の比較体験
+
+**チャット形式でのPlaybook生成（10分）**:
+- プロンプト入力→Playbook生成→コピー→貼り付け→エラー修正の繰り返し
+
+**Agent形式でのPlaybook生成（10分）**:
+- Agentに指示→自動生成→検証→実行
+- エラー検出と修正提案の自動化
+
+### 4. Agent形式での開発の理解（Ansible）（10分）
+
+#### 4.1 AnsibleでのAgent形式開発の特徴
+
+- Playbook生成から実行までの自動化
+- サーバー情報の自動取得とコンテキスト化
+- エラー検出と修正提案の自動化
+- human in the loopの実践
+
+#### 4.2 フィードバックループの実践
+
+- エラー修正プロセス: AIがエラー検出→修正提案→人間が承認
+- 反復的改善: 人間のフィードバック→AIが改善→再検証
+- 承認ワークフロー: AIが計画提示→人間が承認→実行
+
+### 5. Ansibleインベントリの設定（15分）
+
+#### 1.1 インベントリファイルの作成
+
+`workspace/ansible/inventory.ini`を作成します。
+
+<details>
+<summary>📝 インベントリファイル例（クリックで展開）</summary>
+
+```ini
+[webservers]
+web1 ansible_host=<ec2-public-ip> ansible_user=ec2-user ansible_ssh_private_key_file=training-key.pem
+
+[webservers:vars]
+ansible_ssh_common_args='-o StrictHostKeyChecking=no'
+```
+
+**設定項目の説明**:
+- `ansible_host`: EC2インスタンスのパブリックIP
+- `ansible_user`: SSH接続ユーザー（Amazon Linux 2023の場合は`ec2-user`）
+- `ansible_ssh_private_key_file`: キーペアファイルのパス
+- `ansible_ssh_common_args`: SSH接続オプション
+
+</details>
+
+#### 1.2 SSH鍵の設定
+
+```bash
+# キーペアファイルの権限確認
+chmod 400 training-key.pem
+
+# SSH接続テスト
+ssh -i training-key.pem ec2-user@<ec2-public-ip>
+```
+
+#### 1.3 接続テスト
+
+```bash
+# Ansible接続テスト
+ansible all -i workspace/ansible/inventory.ini -m ping
+
+# システム情報の取得
+ansible all -i workspace/ansible/inventory.ini -m setup
+```
+
+<details>
+<summary>📝 実行結果例（クリックで展開）</summary>
+
+```
+web1 | SUCCESS => {
+    "changed": false,
+    "ping": "pong"
+}
+```
+
+</details>
+
+### 6. サーバー再起動の自動化（30分）
+
+#### 2.1 Continueを活用したPlaybook作成
+
+Continueを起動（`Ctrl+L` / `Cmd+L`）して、以下のプロンプトを入力します：
+
+```
+Ansible Playbookを作成してください。
+
+要件:
+- サーバーを再起動する
+- 再起動前後の稼働時間を表示する
+- 再起動後にSSHサービスとcronサービスを再起動する
+- エラーハンドリングを含める
+
+出力形式:
+- YAML形式のAnsible Playbook
+- 適切なコメントを含める
+- ベストプラクティスに従う
+```
 
 <details>
 <summary>📝 生成Playbook例（クリックで展開）</summary>
 
 ```yaml
 ---
-- name: パッケージインストールとサービス設定
+- name: サーバー再起動の自動化
+  hosts: webservers
+  become: yes
+  
+  handlers:
+    - name: restart services
+      systemd:
+        name: "{{ item }}"
+        state: restarted
+      loop:
+        - sshd
+        - crond
+  
+  tasks:
+    - name: 再起動前の状態確認
+      shell: uptime
+      register: uptime_before
+      changed_when: false
+    
+    - name: 再起動前の状態を表示
+      debug:
+        msg: "再起動前の稼働時間: {{ uptime_before.stdout }}"
+    
+    - name: サーバーを再起動
+      reboot:
+        reboot_timeout: 300
+        pre_reboot_delay: 10
+        post_reboot_delay: 30
+      register: reboot_result
+      ignore_errors: yes
+    
+    - name: 再起動結果の確認
+      debug:
+        msg: "再起動結果: {{ reboot_result }}"
+      when: reboot_result.failed
+    
+    - name: 再起動後の状態確認
+      shell: uptime
+      register: uptime_after
+      changed_when: false
+    
+    - name: 再起動後の状態を表示
+      debug:
+        msg: "再起動後の稼働時間: {{ uptime_after.stdout }}"
+    
+    - name: サービスの再起動
+      notify: restart services
+```
+
+</details>
+
+#### 2.2 Playbookの保存
+
+生成されたPlaybookを`workspace/ansible/playbooks/restart_server.yml`に保存します。
+
+#### 2.3 Playbookの実行
+
+```bash
+# ディレクトリに移動
+cd workspace/ansible
+
+# ドライラン（実際には実行しない）
+ansible-playbook -i inventory.ini playbooks/restart_server.yml --check
+
+# 実行
+ansible-playbook -i inventory.ini playbooks/restart_server.yml
+
+# 詳細な出力
+ansible-playbook -i inventory.ini playbooks/restart_server.yml -v
+```
+
+<details>
+<summary>📝 実行結果例（クリックで展開）</summary>
+
+```
+PLAY [サーバー再起動の自動化] **********************************************
+
+TASK [再起動前の状態確認] **********************************************
+ok: [web1]
+
+TASK [再起動前の状態を表示] **********************************************
+ok: [web1] => {
+    "msg": "再起動前の稼働時間:  10:30:00 up 2 days,  3:15,  1 user,  load average: 0.00, 0.01, 0.05"
+}
+
+TASK [サーバーを再起動] **********************************************
+changed: [web1]
+
+TASK [再起動後の状態確認] **********************************************
+ok: [web1]
+
+TASK [再起動後の状態を表示] **********************************************
+ok: [web1] => {
+    "msg": "再起動後の稼働時間:  10:35:00 up 0 min,  1 user,  load average: 0.00, 0.00, 0.00"
+}
+
+RUNNING HANDLER [restart services] **********************************************
+ok: [web1] => (item=sshd)
+ok: [web1] => (item=crond)
+
+PLAY RECAP **********************************************
+web1                      : ok=6    changed=1    unreachable=0    failed=0
+```
+
+</details>
+
+### 3. その他の基本タスク（15分）
+
+#### 3.1 パッケージのインストール
+
+Continueを活用して、パッケージインストール用のPlaybookを作成します。
+
+<details>
+<summary>📝 Playbook例（クリックで展開）</summary>
+
+```yaml
+---
+- name: パッケージのインストール
   hosts: webservers
   become: yes
   
@@ -107,431 +344,91 @@ ansible all -i workspace/ansible/inventory.ini -m setup -a "filter=ansible_distr
           - git
           - curl
         state: present
-      register: package_result
-      failed_when: false
-    
-    - name: パッケージインストール結果の確認
-      debug:
-        msg: "パッケージインストール結果: {{ package_result }}"
-      when: package_result.failed
-    
+```
+
+</details>
+
+#### 3.2 ファイルのコピー
+
+<details>
+<summary>📝 Playbook例（クリックで展開）</summary>
+
+```yaml
+---
+- name: ファイルのコピー
+  hosts: webservers
+  
+  tasks:
     - name: 設定ファイルをコピー
       copy:
-        src: config/nginx.conf
-        dest: /etc/nginx/nginx.conf
+        src: config/app.conf
+        dest: /etc/app/app.conf
         owner: root
         group: root
         mode: '0644'
-      notify: restart nginx
-    
-    - name: nginxサービスを開始
+```
+
+</details>
+
+#### 3.3 サービスの管理
+
+<details>
+<summary>📝 Playbook例（クリックで展開）</summary>
+
+```yaml
+---
+- name: サービスの管理
+  hosts: webservers
+  become: yes
+  
+  tasks:
+    - name: サービスを開始
       systemd:
         name: nginx
         state: started
         enabled: yes
-  
-  handlers:
-    - name: restart nginx
-      systemd:
-        name: nginx
-        state: restarted
 ```
 
 </details>
 
-#### 1.2 プロンプトテンプレートの作成
+### 4. サンプルコードの参照
 
-再利用可能なプロンプトテンプレートを作成します。
-
-<details>
-<summary>📝 プロンプトテンプレート例（クリックで展開）</summary>
-
-```python
-# prompt_templates.py
-class AnsiblePromptBuilder:
-    def build_prompt(self, instruction, context=None):
-        """Ansible Playbook生成用のプロンプト構築"""
-        prompt = f"""
-以下の要件でAnsible Playbookを生成してください。
-
-要件:
-{instruction}
-
-既存のインフラ情報:
-{context if context else "なし"}
-
-出力形式:
-- YAML形式のAnsible Playbook
-- 適切なモジュールを使用
-- 冪等性を確保
-- エラーハンドリングを含める
-- ハンドラーを適切に使用
-- コメントを追加
-- ベストプラクティスに従う
-
-Ansibleの主要モジュール:
-- yum/apt: パッケージ管理
-- systemd: サービス管理
-- copy/template: ファイル操作
-- shell/command: コマンド実行
-- user/group: ユーザー管理
-- file: ファイル・ディレクトリ操作
-"""
-        return prompt
-```
-
-</details>
-
-### 3. Playbook検証機能とフィードバックループの実装（20分）
-
-#### 3.1 Playbook検証機能
-
-#### 2.1 YAML検証の実装
-
-```python
-# validator.py
-import yaml
-import subprocess
-import tempfile
-import os
-
-class AnsiblePlaybookValidator:
-    """Ansible Playbook検証クラス"""
-    
-    def validate(self, playbook):
-        """
-        Playbookの検証
-        
-        Args:
-            playbook: Ansible Playbook（YAML文字列）
-        
-        Returns:
-            検証結果（valid, errors, warnings）
-        """
-        result = {
-            'valid': True,
-            'errors': [],
-            'warnings': []
-        }
-        
-        # 1. YAML構文チェック
-        yaml_check = self.check_yaml_syntax(playbook)
-        if not yaml_check['valid']:
-            result['valid'] = False
-            result['errors'].extend(yaml_check['errors'])
-        
-        # 2. ansible-lint（利用可能な場合）
-        lint_check = self.run_ansible_lint(playbook)
-        if lint_check['errors']:
-            result['warnings'].extend(lint_check['errors'])
-        
-        return result
-    
-    def check_yaml_syntax(self, playbook):
-        """YAML構文チェック"""
-        try:
-            yaml.safe_load(playbook)
-            return {'valid': True, 'errors': []}
-        except yaml.YAMLError as e:
-            return {
-                'valid': False,
-                'errors': [f"YAML syntax error: {str(e)}"]
-            }
-    
-    def run_ansible_lint(self, playbook):
-        """ansible-lintの実行"""
-        work_dir = tempfile.mkdtemp()
-        
-        try:
-            # Playbookをファイルに保存
-            playbook_file = os.path.join(work_dir, 'playbook.yml')
-            with open(playbook_file, 'w') as f:
-                f.write(playbook)
-            
-            # ansible-lint実行
-            lint_result = subprocess.run(
-                ['ansible-lint', playbook_file],
-                capture_output=True,
-                text=True
-            )
-            
-            if lint_result.returncode != 0:
-                return {'errors': lint_result.stderr.split('\n')}
-            
-            return {'errors': []}
-        except FileNotFoundError:
-            # ansible-lintがインストールされていない場合
-            return {'errors': []}
-        finally:
-            import shutil
-            shutil.rmtree(work_dir)
-```
-
-<details>
-<summary>📝 使用例（クリックで展開）</summary>
-
-```python
-from validator import AnsiblePlaybookValidator
-
-validator = AnsiblePlaybookValidator()
-
-playbook = """
----
-- name: Test playbook
-  hosts: webservers
-  tasks:
-    - name: Test task
-      debug:
-        msg: "Hello"
-"""
-
-result = validator.validate(playbook)
-print(f"Valid: {result['valid']}")
-if result['errors']:
-    print(f"Errors: {result['errors']}")
-```
-
-</details>
-
-#### 3.2 フィードバックループの実装
-
-**承認ワークフロー**:
-
-```python
-def create_plan(self, instruction):
-    """実行計画を作成して人間の承認を求める"""
-    plan = self.generate_plan(instruction)
-    print("実行計画:")
-    print(plan)
-    approval = input("実行しますか？ (y/n): ")
-    if approval.lower() == 'y':
-        return plan
-    else:
-        return None
-```
-
-**エラーハンドリングで自動修正提案機能**:
-
-```python
-def handle_error(self, error, playbook):
-    """エラーを検出して修正提案を行う"""
-    error_analysis = self.analyze_error(error)
-    fix_proposal = self.propose_fix(error_analysis, playbook)
-    print(f"エラー: {error}")
-    print(f"修正提案: {fix_proposal}")
-    approval = input("修正を適用しますか？ (y/n): ")
-    if approval.lower() == 'y':
-        return self.apply_fix(fix_proposal, playbook)
-    return None
-```
-
-**生成Playbookの品質改善で反復的改善プロセス**:
-
-```python
-def improve_playbook(self, playbook, feedback):
-    """人間のフィードバックに基づいてPlaybookを改善"""
-    improved_playbook = self.generate_improvement(playbook, feedback)
-    validation_result = self.validator.validate(improved_playbook)
-    if validation_result['valid']:
-        return improved_playbook
-    else:
-        # 再改善を試みる
-        return self.improve_playbook(improved_playbook, feedback)
-```
-
-### 4. Ansible実行自動化（20分）
-
-#### 4.1 自動実行パイプライン
-
-```python
-# executor.py
-import subprocess
-import tempfile
-import os
-import shutil
-
-class AnsibleExecutor:
-    """Ansible実行クラス"""
-    
-    def execute(self, playbook, inventory, extra_vars=None):
-        """
-        Ansible Playbookの自動実行
-        
-        Args:
-            playbook: Ansible Playbook（YAML文字列）
-            inventory: インベントリファイルのパス
-            extra_vars: 追加変数（辞書）
-        
-        Returns:
-            実行結果
-        """
-        work_dir = tempfile.mkdtemp()
-        
-        try:
-            # Playbookをファイルに保存
-            playbook_file = os.path.join(work_dir, 'playbook.yml')
-            with open(playbook_file, 'w') as f:
-                f.write(playbook)
-            
-            # ansible-playbookコマンドの構築
-            cmd = ['ansible-playbook', '-i', inventory, playbook_file]
-            
-            # 追加変数の設定
-            if extra_vars:
-                vars_str = ' '.join([f"{k}={v}" for k, v in extra_vars.items()])
-                cmd.extend(['--extra-vars', vars_str])
-            
-            # 実行
-            result = subprocess.run(
-                cmd,
-                capture_output=True,
-                text=True
-            )
-            
-            return {
-                'success': result.returncode == 0,
-                'stdout': result.stdout,
-                'stderr': result.stderr,
-                'returncode': result.returncode
-            }
-        
-        except Exception as e:
-            return {
-                'success': False,
-                'error': str(e)
-            }
-        finally:
-            # クリーンアップ（必要に応じて）
-            # shutil.rmtree(work_dir)  # デバッグ時はコメントアウト
-            pass
-```
-
-<details>
-<summary>📝 使用例（クリックで展開）</summary>
-
-```python
-from executor import AnsibleExecutor
-
-executor = AnsibleExecutor()
-
-playbook = """
----
-- name: Test playbook
-  hosts: webservers
-  tasks:
-    - name: Test task
-      debug:
-        msg: "Hello"
-"""
-
-result = executor.execute(
-    playbook,
-    inventory='inventory.ini',
-    extra_vars={'var1': 'value1'}
-)
-
-if result['success']:
-    print("Playbook executed successfully!")
-    print(result['stdout'])
-else:
-    print(f"Error: {result['stderr']}")
-```
-
-</details>
-
-### 5. Agent形式での開発の深化とエージェントの統合（10分）
-
-#### 5.1 Agent形式での開発の深化
-
-**実装した機能**:
-- Prompt Engineeringの実践（Ansible Playbook生成用）
-- Context Engineeringの実践（サーバー情報の活用）
-- フィードバックループの実装（承認ワークフロー、エラー修正、反復的改善）
-
-**Agent形式での開発の深化**:
-- Playbook生成から実行までの完全自動化
-- サーバー情報の自動取得とコンテキスト化
-- エラー検出と修正提案の自動化
-- human in the loopの実践
-
-#### 5.2 エージェントクラスの実装
-
-```python
-# agent.py
-from validator import AnsiblePlaybookValidator
-from executor import AnsibleExecutor
-
-class AnsibleAgent:
-    """Ansible Playbook生成・実行自動化エージェント"""
-    
-    def __init__(self, inventory):
-        self.inventory = inventory
-        self.validator = AnsiblePlaybookValidator()
-        self.executor = AnsibleExecutor()
-    
-    def process(self, instruction):
-        """
-        メイン処理フロー
-        
-        Args:
-            instruction: 自然言語の指示
-        
-        Returns:
-            処理結果
-        """
-        # 1. ContinueでPlaybook生成（手動）
-        # Continueを起動して、instructionを入力
-        # 生成されたPlaybookを取得
-        
-        # 2. 検証
-        validation_result = self.validator.validate(playbook)
-        if not validation_result['valid']:
-            # エラーがあれば修正を試みる
-            # Continueに修正を依頼
-            playbook = self.fix_playbook(playbook, validation_result['errors'])
-        
-        # 3. 実行（オプション）
-        if self.should_execute():
-            execution_result = self.executor.execute(playbook, self.inventory)
-            return execution_result
-        
-        return {'playbook': playbook, 'validation': validation_result}
-```
+[サンプルコード](../../sample_code/ansible/basic_playbook/) を参照して、より詳細な例を確認してください。
 
 ## ✅ チェックリスト
 
-- [ ] Prompt Engineeringの実践を行った（Ansible Playbook生成用）
-- [ ] Context Engineeringの実践を行った（サーバー情報の活用）
-- [ ] フィードバックループの実装を行った（承認ワークフロー、エラー修正、反復的改善）
-- [ ] Agent形式での開発の深化を実践した
-- [ ] Continueを活用したPlaybook生成を実践した
-- [ ] Playbook検証機能を実装した
-- [ ] Ansible実行自動化を実装した
+- [ ] Ansibleインベントリファイルを作成した
+- [ ] SSH接続テストが成功した
+- [ ] Ansible接続テストが成功した
+- [ ] サーバー再起動のPlaybookを作成した
+- [ ] Playbookの実行が成功した
+- [ ] 再起動前後の状態確認を行った
 - [ ] エラーハンドリングを実装した
-- [ ] リトライ機能を実装した
-- [ ] 基本的な動作確認を行った
-- [ ] 生成Playbookの品質を確認した
+- [ ] その他の基本タスクを実装した
 
 ## 🆘 トラブルシューティング
 
-### Continueが応答しない
+### SSH接続エラー
 
-- Continueの設定を確認（`.continue/config.json`）
+- セキュリティグループでSSH（ポート22）が許可されているか確認
+- キーペアファイルの権限を確認（chmod 400）
+- ホストキーの確認を無効化（StrictHostKeyChecking=no）
+
+### 権限エラー
+
+- `become: yes`を使用してsudo権限を取得
+- 適切なユーザーで実行しているか確認
+
+### タイムアウトエラー
+
+- `reboot_timeout`を増やす
 - ネットワーク接続を確認
-
-### Ansible実行エラー
-
-- インベントリファイルの設定を確認
-- SSH接続を確認
-- 権限を確認
 
 ## 📚 参考資料
 
-- [Continue公式ドキュメント](https://continue.dev/docs)
 - [Ansible公式ドキュメント](https://docs.ansible.com/)
-- [サンプルコード](../../sample_code/ansible/)
-- [テンプレート](../../templates/ai_agents/ansible_agent_template.py)
+- [サンプルコード](../../sample_code/ansible/basic_playbook/)
 
 ## ➡️ 次のステップ
 
-セッション4が完了したら、[セッション5：統合管理エージェント](session5_guide.md) に進んでください。
+セッション4が完了したら、[セッション5：Ansible自動化エージェント](session5_guide.md) に進んでください。

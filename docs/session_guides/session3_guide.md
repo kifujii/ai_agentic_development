@@ -1,19 +1,19 @@
-# セッション3：Ansible運用基礎 詳細ガイド
+# セッション3：Terraform自動化エージェント 詳細ガイド
 
 ## 📋 目的
 
-このセッションでは、Ansibleを使った基本的な運用タスクの自動化を実践します。
+このセッションでは、Continueを活用して、Terraformコード生成・実行を自動化するエージェントの実装方法を学びます。
 
 ### 学習目標
 
-- Prompt Engineering（Ansible用）の実践（良いプロンプトと悪いプロンプトの比較）
-- Context Engineering（サーバー情報）の実践
-- Agent形式でのPlaybook生成の体験
-- Agent形式での開発の理解（Ansible）
-- Ansibleの基本概念を理解する
-- インベントリファイルの設定方法を習得する
-- Playbookの作成と実行方法を習得する
-- 基本的な運用タスクの自動化を実践する
+- プロンプトテンプレートの作成方法を理解する
+- Context Engineeringの高度化（既存インフラ情報の動的取得、依存関係の自動解決、リソース間の整合性チェック）を実装する
+- フィードバックループの実装（承認ワークフロー、エラー修正、反復的改善）を理解する
+- Agent形式での開発の深化を実践する
+- Continueを活用したTerraformコード生成の実装方法を理解する
+- コード検証とフォーマット機能の実装方法を理解する
+- Terraform実行自動化の実装方法を理解する
+- エラーハンドリングとリトライ機能の実装方法を理解する
 
 ## 🎯 目指すべき構成
 
@@ -21,414 +21,679 @@
 
 ```
 workspace/
-└── ansible/
-    ├── inventory.ini          # インベントリファイル
-    ├── playbooks/
-    │   ├── restart_server.yml # サーバー再起動Playbook
-    │   └── install_packages.yml # パッケージインストールPlaybook
-    └── group_vars/
-        └── webservers.yml     # グループ変数
+└── agents/
+    └── terraform_agent/
+        ├── agent.py           # メインのエージェントコード
+        ├── code_generator.py # コード生成モジュール
+        ├── validator.py      # コード検証モジュール
+        └── executor.py       # Terraform実行モジュール
 ```
 
-**自動化されるタスク**:
-- サーバー再起動
-- パッケージのインストール
-- ファイルのコピー
-- サービスの管理
+**エージェントの機能**:
+- Continueを活用したTerraformコード生成
+- コード検証とフォーマット
+- Terraform実行の自動化
+- エラーハンドリングとリトライ
 
 ## 📚 事前準備
 
-- [セッション1](session1_guide.md) で構築したEC2インスタンスが起動していること
-- Ansibleがインストールされていること
-- EC2インスタンスへのSSH接続が可能なこと
+- [セッション1](session1_guide.md) が完了していること
+- [セッション2](session2_guide.md) で構築したインフラの理解
+- Continueが正しく設定されていること
 
 ## 🚀 手順
 
-### 1. Prompt Engineering（Ansible用）（15分）
+### 1. プロンプトテンプレートの作成（20分）
 
-#### 1.1 悪いプロンプトと良いプロンプトの比較
+#### 1.1 再利用可能なプロンプトテンプレートの設計
 
-**タスク**: サーバー再起動を自動化するAnsible Playbookを生成
+セッション1とセッション2で学んだ良いプロンプトをテンプレート化します。
 
-Continueを起動して、以下のプロンプトを試してみましょう。
-
-**悪いプロンプト例**:
-```
-サーバーを再起動するAnsible Playbookを作成してください
+```bash
+mkdir -p templates/prompts
 ```
 
-**良いプロンプト例**:
+**良いプロンプトテンプレート例** (`templates/prompts/terraform_resource_template.txt`):
+
 ```
-下記条件を満たすサーバー再起動を自動化するAnsible Playbookを生成してください。
+下記条件を満たす{resource_type}を構築するTerraformコードを生成してください。
 
 要件:
-- 対象サーバー: インベントリファイルのwebserversグループ
-- 再起動前: サービス状態の確認、ログのバックアップ
-- 再起動後: サービス状態の確認、ヘルスチェック
-- エラーハンドリング: 失敗時のロールバック
+- リージョン: {region}
+- {specific_requirements}
 
 注意事項:
-- 足りていないパラメータがある場合は、そのまま実行するのではなく一度聞き返してください
-- 冪等性を確保してください
-- ハンドラーを使用してください
+- 足りていないパラメータなどがある場合は、そのまま構築するのではなく一度聞き返してください
+- 既存の{resource_type}と衝突しないように確認してください
+- 変数定義を含めてください
 - コメントを適切に追加してください
+- ベストプラクティスに従ってください
+
+出力形式:
+- HCL形式のTerraformコード
+- 変数定義を含める
+- コメントを適切に追加
 ```
 
-**体験ポイント**:
-- 明確な要件定義で一発で適切なPlaybookが生成される
-- 冪等性、エラーハンドリング、ハンドラーの使用が適切に実装される
-
-### 2. Context Engineering（サーバー情報）（15分）
-
-#### 2.1 既存サーバー情報をコンテキストとして活用
-
-既存のサーバー情報を取得して、コンテキストとして活用します。
-
-以下のAnsibleコマンドを実行します：
-
-```bash
-# サーバー情報を取得（OS情報など）
-ansible all -i workspace/ansible/inventory.ini -m setup -a "filter=ansible_distribution*"
-
-# サービス情報を取得
-ansible all -i workspace/ansible/inventory.ini -m shell -a "systemctl list-units --type=service --state=running"
-```
-
-#### 2.2 コンテキストをAgentに提供
-
-取得したコンテキスト情報をContinueに提供します。
+**悪いプロンプト例集** (`templates/prompts/bad_examples.txt`):
 
 ```
-既存のサーバー情報:
-{上記のAnsibleコマンドで取得した情報を貼り付け}
+# 悪いプロンプト例
 
-上記の情報を考慮して、サーバー再起動を自動化するAnsible Playbookを生成してください。
-既存のサービス状態を確認し、適切に再起動してください。
+例1: EC2を作成して
+例2: VPCとEC2を作成してください
+例3: S3バケットを作成
 ```
 
-### 3. Agent形式でのPlaybook生成（20分）
+**プロンプト改善ガイド** (`templates/prompts/improvement_guide.md`):
 
-#### 3.1 チャット形式とAgent形式の比較体験
+プロンプト改善のステップ:
+1. 不足パラメータを特定
+2. 明確な要件定義を追加
+3. 「足りていないパラメータがある場合は聞き返してください」を追加
+4. 既存リソースとの衝突回避指示を追加
 
-**チャット形式でのPlaybook生成（10分）**:
-- プロンプト入力→Playbook生成→コピー→貼り付け→エラー修正の繰り返し
+#### 1.2 プロンプトテンプレートの活用
 
-**Agent形式でのPlaybook生成（10分）**:
-- Agentに指示→自動生成→検証→実行
-- エラー検出と修正提案の自動化
+エージェントでプロンプトテンプレートを読み込んで使用します。
 
-### 4. Agent形式での開発の理解（Ansible）（10分）
+```python
+def load_prompt_template(template_path, **kwargs):
+    """プロンプトテンプレートを読み込んで変数を置換"""
+    with open(template_path, 'r') as f:
+        template = f.read()
+    return template.format(**kwargs)
+```
 
-#### 4.1 AnsibleでのAgent形式開発の特徴
+### 2. エージェントアーキテクチャの設計とContext Engineeringの高度化（30分）
 
-- Playbook生成から実行までの自動化
-- サーバー情報の自動取得とコンテキスト化
-- エラー検出と修正提案の自動化
-- human in the loopの実践
+#### 1.1 エージェントの基本構造
 
-#### 4.2 フィードバックループの実践
-
-- エラー修正プロセス: AIがエラー検出→修正提案→人間が承認
-- 反復的改善: 人間のフィードバック→AIが改善→再検証
-- 承認ワークフロー: AIが計画提示→人間が承認→実行
-
-### 5. Ansibleインベントリの設定（15分）
-
-#### 1.1 インベントリファイルの作成
-
-`workspace/ansible/inventory.ini`を作成します。
+Continueを活用したエージェントの基本構造を理解します。
 
 <details>
-<summary>📝 インベントリファイル例（クリックで展開）</summary>
+<summary>📝 エージェントアーキテクチャ例（クリックで展開）</summary>
 
-```ini
-[webservers]
-web1 ansible_host=<ec2-public-ip> ansible_user=ec2-user ansible_ssh_private_key_file=training-key.pem
-
-[webservers:vars]
-ansible_ssh_common_args='-o StrictHostKeyChecking=no'
-```
-
-**設定項目の説明**:
-- `ansible_host`: EC2インスタンスのパブリックIP
-- `ansible_user`: SSH接続ユーザー（Amazon Linux 2023の場合は`ec2-user`）
-- `ansible_ssh_private_key_file`: キーペアファイルのパス
-- `ansible_ssh_common_args`: SSH接続オプション
-
-</details>
-
-#### 1.2 SSH鍵の設定
-
-```bash
-# キーペアファイルの権限確認
-chmod 400 training-key.pem
-
-# SSH接続テスト
-ssh -i training-key.pem ec2-user@<ec2-public-ip>
-```
-
-#### 1.3 接続テスト
-
-```bash
-# Ansible接続テスト
-ansible all -i workspace/ansible/inventory.ini -m ping
-
-# システム情報の取得
-ansible all -i workspace/ansible/inventory.ini -m setup
-```
-
-<details>
-<summary>📝 実行結果例（クリックで展開）</summary>
-
-```
-web1 | SUCCESS => {
-    "changed": false,
-    "ping": "pong"
-}
+```python
+# agent.py
+class TerraformAgent:
+    """
+    Terraformコード生成・実行自動化エージェント
+    
+    このエージェントは、Continueを活用してTerraformコードを生成し、
+    検証・実行まで自動化します。
+    """
+    
+    def __init__(self, aws_context=None):
+        self.aws_context = aws_context
+        self.validator = TerraformValidator()
+        self.executor = TerraformExecutor()
+        self.logger = AgentLogger()
+    
+    def process(self, instruction):
+        """
+        メイン処理フロー
+        
+        Args:
+            instruction: 自然言語の指示
+        
+        Returns:
+            処理結果（コード、検証結果、実行結果など）
+        """
+        try:
+            # 1. Continueでコード生成（手動）
+            # Continueを起動して、instructionを入力
+            # 生成されたコードを取得
+            
+            # 2. 検証
+            validation_result = self.validator.validate(code)
+            if not validation_result['valid']:
+                # エラーがあれば修正を試みる
+                # Continueに修正を依頼
+                code = self.fix_code(code, validation_result['errors'])
+            
+            # 3. 実行（オプション）
+            if self.should_execute():
+                execution_result = self.executor.execute(code)
+                return execution_result
+            
+            return {'code': code, 'validation': validation_result}
+        except Exception as e:
+            self.logger.log_error(e)
+            raise
 ```
 
 </details>
 
-### 6. サーバー再起動の自動化（30分）
+#### 2.1 エージェントの基本構造
 
-#### 2.1 Continueを活用したPlaybook作成
+Continueを活用したエージェントの基本構造を理解します。
+
+エージェントを以下のモジュールに分割します：
+
+- **CodeGenerator**: コード生成（Continueを使用）
+- **Validator**: コード検証
+- **Executor**: Terraform実行
+- **Logger**: ログ機能
+- **ContextManager**: コンテキスト管理（高度化）
+
+#### 2.2 Context Engineeringの高度化
+
+**既存インフラ情報の動的取得**:
+
+```python
+class ContextManager:
+    def get_aws_context(self):
+        """既存のAWSリソース情報を動的に取得"""
+        ec2 = boto3.client('ec2', region_name='ap-northeast-1')
+        
+        # 既存のVPC情報
+        vpcs = ec2.describe_vpcs()
+        
+        # 既存のサブネット情報
+        subnets = ec2.describe_subnets()
+        
+        # 既存のセキュリティグループ情報
+        security_groups = ec2.describe_security_groups()
+        
+        return {
+            'existing_vpcs': [vpc['VpcId'] for vpc in vpcs['Vpcs']],
+            'existing_subnets': [subnet['SubnetId'] for subnet in subnets['Subnets']],
+            'existing_security_groups': [sg['GroupId'] for sg in security_groups['SecurityGroups']],
+            'available_azs': self.get_available_availability_zones()
+        }
+    
+    def check_resource_conflicts(self, new_resource, existing_resources):
+        """リソース間の整合性チェック"""
+        # リソース名の重複チェック
+        # CIDRブロックの衝突チェック
+        # 依存関係のチェック
+        pass
+```
+
+**依存関係の自動解決**:
+
+```python
+def resolve_dependencies(resources):
+    """リソースの依存関係を自動解決"""
+    # 依存関係グラフの構築
+    # 実行順序の決定
+    pass
+```
+
+**リソース間の整合性チェック**:
+
+```python
+def check_consistency(code, context):
+    """リソース間の整合性をチェック"""
+    # VPCとサブネットの整合性
+    # セキュリティグループとVPCの整合性
+    # CIDRブロックの衝突チェック
+    pass
+```
+
+### 3. Terraformコード生成機能の強化とフィードバックループの実装（30分）
+
+#### 3.1 Continueを活用したコード生成
 
 Continueを起動（`Ctrl+L` / `Cmd+L`）して、以下のプロンプトを入力します：
 
 ```
-Ansible Playbookを作成してください。
+以下の要件でTerraformコードを生成してください。
 
 要件:
-- サーバーを再起動する
-- 再起動前後の稼働時間を表示する
-- 再起動後にSSHサービスとcronサービスを再起動する
-- エラーハンドリングを含める
+- S3バケットを作成
+- バケット名: training-bucket
+- バージョニングを有効化
+- 暗号化を有効化（AES256）
 
 出力形式:
-- YAML形式のAnsible Playbook
-- 適切なコメントを含める
+- HCL形式のTerraformコード
+- 変数定義を含める
+- コメントを適切に追加
 - ベストプラクティスに従う
 ```
 
 <details>
-<summary>📝 生成Playbook例（クリックで展開）</summary>
+<summary>📝 生成コード例（クリックで展開）</summary>
 
-```yaml
----
-- name: サーバー再起動の自動化
-  hosts: webservers
-  become: yes
-  
-  handlers:
-    - name: restart services
-      systemd:
-        name: "{{ item }}"
-        state: restarted
-      loop:
-        - sshd
-        - crond
-  
-  tasks:
-    - name: 再起動前の状態確認
-      shell: uptime
-      register: uptime_before
-      changed_when: false
-    
-    - name: 再起動前の状態を表示
-      debug:
-        msg: "再起動前の稼働時間: {{ uptime_before.stdout }}"
-    
-    - name: サーバーを再起動
-      reboot:
-        reboot_timeout: 300
-        pre_reboot_delay: 10
-        post_reboot_delay: 30
-      register: reboot_result
-      ignore_errors: yes
-    
-    - name: 再起動結果の確認
-      debug:
-        msg: "再起動結果: {{ reboot_result }}"
-      when: reboot_result.failed
-    
-    - name: 再起動後の状態確認
-      shell: uptime
-      register: uptime_after
-      changed_when: false
-    
-    - name: 再起動後の状態を表示
-      debug:
-        msg: "再起動後の稼働時間: {{ uptime_after.stdout }}"
-    
-    - name: サービスの再起動
-      notify: restart services
-```
-
-</details>
-
-#### 2.2 Playbookの保存
-
-生成されたPlaybookを`workspace/ansible/playbooks/restart_server.yml`に保存します。
-
-#### 2.3 Playbookの実行
-
-```bash
-# ディレクトリに移動
-cd workspace/ansible
-
-# ドライラン（実際には実行しない）
-ansible-playbook -i inventory.ini playbooks/restart_server.yml --check
-
-# 実行
-ansible-playbook -i inventory.ini playbooks/restart_server.yml
-
-# 詳細な出力
-ansible-playbook -i inventory.ini playbooks/restart_server.yml -v
-```
-
-<details>
-<summary>📝 実行結果例（クリックで展開）</summary>
-
-```
-PLAY [サーバー再起動の自動化] **********************************************
-
-TASK [再起動前の状態確認] **********************************************
-ok: [web1]
-
-TASK [再起動前の状態を表示] **********************************************
-ok: [web1] => {
-    "msg": "再起動前の稼働時間:  10:30:00 up 2 days,  3:15,  1 user,  load average: 0.00, 0.01, 0.05"
+```hcl
+# variables.tf
+variable "bucket_name" {
+  description = "S3バケット名"
+  type        = string
+  default     = "training-bucket"
 }
 
-TASK [サーバーを再起動] **********************************************
-changed: [web1]
+# main.tf
+resource "aws_s3_bucket" "training_bucket" {
+  bucket = var.bucket_name
 
-TASK [再起動後の状態確認] **********************************************
-ok: [web1]
-
-TASK [再起動後の状態を表示] **********************************************
-ok: [web1] => {
-    "msg": "再起動後の稼働時間:  10:35:00 up 0 min,  1 user,  load average: 0.00, 0.00, 0.00"
+  tags = {
+    Name = var.bucket_name
+  }
 }
 
-RUNNING HANDLER [restart services] **********************************************
-ok: [web1] => (item=sshd)
-ok: [web1] => (item=crond)
+resource "aws_s3_bucket_versioning" "training_bucket_versioning" {
+  bucket = aws_s3_bucket.training_bucket.id
 
-PLAY RECAP **********************************************
-web1                      : ok=6    changed=1    unreachable=0    failed=0
+  versioning_configuration {
+    status = "Enabled"
+  }
+}
+
+resource "aws_s3_bucket_server_side_encryption_configuration" "training_bucket_encryption" {
+  bucket = aws_s3_bucket.training_bucket.id
+
+  rule {
+    apply_server_side_encryption_by_default {
+      sse_algorithm = "AES256"
+    }
+  }
+}
 ```
 
 </details>
 
-### 3. その他の基本タスク（15分）
+#### 2.2 コード生成の自動化（参考）
 
-#### 3.1 パッケージのインストール
+Continueはエディタ拡張機能なので、完全な自動化は難しいですが、以下のようなワークフローを実装できます：
 
-Continueを活用して、パッケージインストール用のPlaybookを作成します。
+1. Continueでコード生成
+2. 生成されたコードをファイルに保存
+3. 検証とフォーマットを自動実行
+
+#### 3.2 フィードバックループの実装
+
+**承認ワークフロー**:
+
+```python
+def create_plan(self, instruction):
+    """実行計画を作成して人間の承認を求める"""
+    plan = self.generate_plan(instruction)
+    print("実行計画:")
+    print(plan)
+    approval = input("実行しますか？ (y/n): ")
+    if approval.lower() == 'y':
+        return plan
+    else:
+        return None
+```
+
+**エラーハンドリングで自動修正提案機能**:
+
+```python
+def handle_error(self, error, code):
+    """エラーを検出して修正提案を行う"""
+    error_analysis = self.analyze_error(error)
+    fix_proposal = self.propose_fix(error_analysis, code)
+    print(f"エラー: {error}")
+    print(f"修正提案: {fix_proposal}")
+    approval = input("修正を適用しますか？ (y/n): ")
+    if approval.lower() == 'y':
+        return self.apply_fix(fix_proposal, code)
+    return None
+```
+
+**生成コードの品質改善で反復的改善プロセス**:
+
+```python
+def improve_code(self, code, feedback):
+    """人間のフィードバックに基づいてコードを改善"""
+    improved_code = self.generate_improvement(code, feedback)
+    validation_result = self.validator.validate(improved_code)
+    if validation_result['valid']:
+        return improved_code
+    else:
+        # 再改善を試みる
+        return self.improve_code(improved_code, feedback)
+```
+
+### 4. コード検証とフォーマット機能（20分）
+
+#### 3.1 Terraform検証の実装
+
+```python
+# validator.py
+import subprocess
+import tempfile
+import os
+
+class TerraformValidator:
+    """Terraformコードの検証クラス"""
+    
+    def validate(self, code):
+        """
+        コードの検証
+        
+        Args:
+            code: Terraformコード（文字列）
+        
+        Returns:
+            検証結果（valid, errors, warnings）
+        """
+        result = {
+            'valid': True,
+            'errors': [],
+            'warnings': []
+        }
+        
+        # 1. 構文チェック
+        syntax_check = self.check_syntax(code)
+        if not syntax_check['valid']:
+            result['valid'] = False
+            result['errors'].extend(syntax_check['errors'])
+        
+        # 2. terraform fmt
+        formatted_code = self.format(code)
+        
+        # 3. terraform validate（一時ファイルに保存して実行）
+        validation = self.run_terraform_validate(formatted_code)
+        if not validation['valid']:
+            result['valid'] = False
+            result['errors'].extend(validation['errors'])
+        
+        return result
+    
+    def format(self, code):
+        """terraform fmtの実行"""
+        with tempfile.NamedTemporaryFile(mode='w', suffix='.tf', delete=False) as f:
+            f.write(code)
+            temp_file = f.name
+        
+        try:
+            subprocess.run(['terraform', 'fmt', temp_file], check=True, capture_output=True)
+            with open(temp_file, 'r') as f:
+                return f.read()
+        finally:
+            os.unlink(temp_file)
+    
+    def run_terraform_validate(self, code):
+        """terraform validateの実行"""
+        work_dir = tempfile.mkdtemp()
+        
+        try:
+            # コードをファイルに保存
+            with open(os.path.join(work_dir, 'main.tf'), 'w') as f:
+                f.write(code)
+            
+            # terraform init
+            init_result = subprocess.run(
+                ['terraform', 'init'],
+                cwd=work_dir,
+                capture_output=True,
+                text=True
+            )
+            
+            if init_result.returncode != 0:
+                return {
+                    'valid': False,
+                    'errors': [f"terraform init failed: {init_result.stderr}"]
+                }
+            
+            # terraform validate
+            validate_result = subprocess.run(
+                ['terraform', 'validate'],
+                cwd=work_dir,
+                capture_output=True,
+                text=True
+            )
+            
+            if validate_result.returncode != 0:
+                return {
+                    'valid': False,
+                    'errors': [f"terraform validate failed: {validate_result.stderr}"]
+                }
+            
+            return {'valid': True, 'errors': []}
+        finally:
+            import shutil
+            shutil.rmtree(work_dir)
+```
 
 <details>
-<summary>📝 Playbook例（クリックで展開）</summary>
+<summary>📝 使用例（クリックで展開）</summary>
 
-```yaml
----
-- name: パッケージのインストール
-  hosts: webservers
-  become: yes
-  
-  tasks:
-    - name: 必要なパッケージをインストール
-      yum:
-        name:
-          - htop
-          - git
-          - curl
-        state: present
+```python
+from validator import TerraformValidator
+
+validator = TerraformValidator()
+
+code = """
+resource "aws_s3_bucket" "test" {
+  bucket = "test-bucket"
+}
+"""
+
+result = validator.validate(code)
+print(f"Valid: {result['valid']}")
+if result['errors']:
+    print(f"Errors: {result['errors']}")
 ```
 
 </details>
 
-#### 3.2 ファイルのコピー
+### 5. Terraform実行自動化（20分）
+
+#### 4.1 自動実行パイプライン
+
+```python
+# executor.py
+import subprocess
+import tempfile
+import os
+import shutil
+
+class TerraformExecutor:
+    """Terraform実行クラス"""
+    
+    def execute(self, code, auto_approve=False):
+        """
+        Terraformの自動実行
+        
+        Args:
+            code: Terraformコード（文字列）
+            auto_approve: 自動承認するか
+        
+        Returns:
+            実行結果
+        """
+        work_dir = tempfile.mkdtemp()
+        
+        try:
+            # コードをファイルに保存
+            with open(os.path.join(work_dir, 'main.tf'), 'w') as f:
+                f.write(code)
+            
+            # terraform init
+            init_result = subprocess.run(
+                ['terraform', 'init'],
+                cwd=work_dir,
+                capture_output=True,
+                text=True
+            )
+            
+            if init_result.returncode != 0:
+                return {
+                    'success': False,
+                    'error': 'init failed',
+                    'details': init_result.stderr
+                }
+            
+            # terraform plan
+            plan_result = subprocess.run(
+                ['terraform', 'plan', '-out=tfplan'],
+                cwd=work_dir,
+                capture_output=True,
+                text=True
+            )
+            
+            if plan_result.returncode != 0:
+                return {
+                    'success': False,
+                    'error': 'plan failed',
+                    'details': plan_result.stderr
+                }
+            
+            # プレビュー表示
+            print(plan_result.stdout)
+            
+            # terraform apply（承認が必要な場合）
+            if auto_approve:
+                apply_result = subprocess.run(
+                    ['terraform', 'apply', '-auto-approve', 'tfplan'],
+                    cwd=work_dir,
+                    capture_output=True,
+                    text=True
+                )
+                return {
+                    'success': apply_result.returncode == 0,
+                    'output': apply_result.stdout,
+                    'error': apply_result.stderr if apply_result.returncode != 0 else None
+                }
+            else:
+                return {
+                    'success': True,
+                    'pending_approval': True,
+                    'plan': plan_result.stdout
+                }
+        
+        except Exception as e:
+            return {
+                'success': False,
+                'error': str(e)
+            }
+        finally:
+            # クリーンアップ（必要に応じて）
+            # shutil.rmtree(work_dir)  # デバッグ時はコメントアウト
+            pass
+```
 
 <details>
-<summary>📝 Playbook例（クリックで展開）</summary>
+<summary>📝 使用例（クリックで展開）</summary>
 
-```yaml
----
-- name: ファイルのコピー
-  hosts: webservers
-  
-  tasks:
-    - name: 設定ファイルをコピー
-      copy:
-        src: config/app.conf
-        dest: /etc/app/app.conf
-        owner: root
-        group: root
-        mode: '0644'
+```python
+from executor import TerraformExecutor
+
+executor = TerraformExecutor()
+
+code = """
+resource "aws_s3_bucket" "test" {
+  bucket = "test-bucket"
+}
+"""
+
+result = executor.execute(code, auto_approve=False)
+if result['success']:
+    if result.get('pending_approval'):
+        print("Plan created. Review and approve manually.")
+    else:
+        print("Resources created successfully!")
+else:
+    print(f"Error: {result['error']}")
 ```
 
 </details>
 
-#### 3.3 サービスの管理
+#### 4.2 エラーハンドリングとリトライ
+
+```python
+import time
+
+def execute_with_retry(self, code, max_retries=3):
+    """リトライ機能付き実行"""
+    for attempt in range(max_retries):
+        try:
+            result = self.execute(code)
+            if result['success']:
+                return result
+        except Exception as e:
+            if attempt == max_retries - 1:
+                raise
+            time.sleep(2 ** attempt)  # 指数バックオフ
+```
+
+### 6. Agent形式での開発の深化と動作確認（10分）
+
+#### 6.1 より高度なAgent機能の実装と理解
+
+**実装した機能**:
+- プロンプトテンプレートの活用
+- Context Engineeringの高度化（既存インフラ情報の動的取得、依存関係の自動解決、リソース間の整合性チェック）
+- フィードバックループの実装（承認ワークフロー、エラー修正、反復的改善）
+
+**Agent形式での開発の深化**:
+- コード生成から実行までの完全自動化
+- コンテキストの自動管理と更新
+- エラー検出と修正提案の自動化
+- human in the loopの実践
+
+#### 6.2 エージェントの動作確認とテスト
+
+#### 5.1 基本的な動作確認
+
+1. Continueでコード生成
+2. 生成されたコードを検証
+3. 必要に応じて実行
 
 <details>
-<summary>📝 Playbook例（クリックで展開）</summary>
+<summary>📝 テスト例（クリックで展開）</summary>
 
-```yaml
----
-- name: サービスの管理
-  hosts: webservers
-  become: yes
-  
-  tasks:
-    - name: サービスを開始
-      systemd:
-        name: nginx
-        state: started
-        enabled: yes
+```python
+# test_agent.py
+from validator import TerraformValidator
+from executor import TerraformExecutor
+
+# 検証のテスト
+validator = TerraformValidator()
+code = """
+resource "aws_s3_bucket" "test" {
+  bucket = "test-bucket"
+}
+"""
+
+result = validator.validate(code)
+print(f"Validation result: {result}")
+
+# 実行のテスト（実際には実行しない）
+executor = TerraformExecutor()
+# result = executor.execute(code, auto_approve=False)
 ```
 
 </details>
-
-### 4. サンプルコードの参照
-
-[サンプルコード](../../sample_code/ansible/basic_playbook/) を参照して、より詳細な例を確認してください。
 
 ## ✅ チェックリスト
 
-- [ ] Ansibleインベントリファイルを作成した
-- [ ] SSH接続テストが成功した
-- [ ] Ansible接続テストが成功した
-- [ ] サーバー再起動のPlaybookを作成した
-- [ ] Playbookの実行が成功した
-- [ ] 再起動前後の状態確認を行った
+- [ ] エージェントアーキテクチャを設計した
+- [ ] Continueを活用したコード生成を実践した
+- [ ] コード検証機能を実装した
+- [ ] Terraform実行自動化を実装した
 - [ ] エラーハンドリングを実装した
-- [ ] その他の基本タスクを実装した
+- [ ] リトライ機能を実装した
+- [ ] 基本的な動作確認を行った
+- [ ] 生成コードの品質を確認した
 
 ## 🆘 トラブルシューティング
 
-### SSH接続エラー
+### Continueが応答しない
 
-- セキュリティグループでSSH（ポート22）が許可されているか確認
-- キーペアファイルの権限を確認（chmod 400）
-- ホストキーの確認を無効化（StrictHostKeyChecking=no）
-
-### 権限エラー
-
-- `become: yes`を使用してsudo権限を取得
-- 適切なユーザーで実行しているか確認
-
-### タイムアウトエラー
-
-- `reboot_timeout`を増やす
+- Continueの設定を確認（`.continue/config.json`）
 - ネットワーク接続を確認
+- AWS Bedrockのサービス状態を確認（AWSコンソールで確認）
+
+### Terraform実行エラー
+
+- IAM権限を確認
+- リソース制限を確認
+- 状態ファイルの競合を確認
 
 ## 📚 参考資料
 
-- [Ansible公式ドキュメント](https://docs.ansible.com/)
-- [サンプルコード](../../sample_code/ansible/basic_playbook/)
+- [Continue公式ドキュメント](https://continue.dev/docs)
+- [Terraform公式ドキュメント](https://developer.hashicorp.com/terraform/docs)
+- [サンプルコード](../../sample_code/terraform/)
+- [テンプレート](../../templates/ai_agents/terraform_agent_template.py)
 
 ## ➡️ 次のステップ
 
-セッション3が完了したら、[セッション4：Ansible自動化エージェント](session4_guide.md) に進んでください。
+セッション3が完了したら、[セッション4：Ansible運用基礎](session4_guide.md) に進んでください。

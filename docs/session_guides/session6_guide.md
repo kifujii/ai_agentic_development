@@ -1,14 +1,19 @@
-# セッション6：Webシステム構築 詳細ガイド（任意・発展）
+# セッション6：統合管理エージェント 詳細ガイド
 
 ## 📋 目的
 
-このセッションでは、Continueを活用して、実践的なWebアプリケーションインフラの構築を実践します。
+このセッションでは、Continueを活用して、TerraformとAnsibleを統合的に管理するエージェントの実装方法を学びます。
 
 ### 学習目標
 
-- ALB、ECS、RDSを含む複雑なインフラ構成を理解する
-- Continueを活用した複雑なインフラ構築を実践する
-- 統合エージェントを使った自動構築を実践する
+- 複雑なPrompt Engineeringの実践（複数リソースの統合構築用プロンプト）
+- 高度なContext Engineeringの実践（複数のコンテキストソースの統合）
+- 複雑なワークフローでのフィードバックループの実装（複数ステップの承認ワークフロー、エラー発生時のロールバックと再試行、人間の判断が必要な場面での中断と確認）
+- Agent形式での開発の総合理解を実践する
+- タスク分類と優先順位付けの実装方法を理解する
+- TerraformとAnsibleの統合実行方法を理解する
+- タスク分解と依存関係解決の実装方法を理解する
+- ワークフロー自動化の実装方法を理解する
 
 ## 🎯 目指すべき構成
 
@@ -16,386 +21,584 @@
 
 ```
 workspace/
-└── terraform/
-    └── web_app/
-        ├── main.tf          # メインのTerraformコード
-        ├── variables.tf     # 変数定義
-        ├── outputs.tf       # 出力定義
-        └── terraform.tfvars # 変数の値
+└── agents/
+    └── integrated_agent/
+        ├── agent.py           # メインのエージェントコード
+        ├── classifier.py      # タスク分類モジュール
+        ├── prioritizer.py     # 優先順位付けモジュール
+        └── workflow.py        # ワークフロー自動化モジュール
 ```
 
-**構築されるAWSリソース**:
-- ALB（Application Load Balancer）
-- ECSクラスターとサービス
-- ECRリポジトリ
-- RDSデータベース
-- セキュリティグループ
+**エージェントの機能**:
+- タスクの自動分類（Terraform/Ansible/Hybrid）
+- 優先順位付け
+- タスク分解と依存関係解決
+- ワークフロー自動化
 
 ## 📚 事前準備
 
-- [セッション2](session2_guide.md) が完了していること
-- [セッション4](session4_guide.md) が完了していること
-- [セッション5](session5_guide.md) が完了していること（推奨）
-- Dockerの基本理解
+- [セッション3](session3_guide.md) が完了していること
+- [セッション5](session5_guide.md) が完了していること
+- Terraform/Ansibleエージェントの理解
+- Continueが正しく設定されていること
 
 ## 🚀 手順
 
-### 1. ネットワーク設計（20分）
+### 1. 複雑なPrompt Engineering（15分）
 
-#### 1.1 ALBの設計
+#### 1.1 複数リソースの統合構築用プロンプト
 
-Continueを起動（`Ctrl+L` / `Cmd+L`）して、以下のプロンプトを入力します：
+**タスク**: VPC、EC2、RDS、ALBを含むWebアプリケーションインフラを構築
 
+Continueを起動して、以下のプロンプトを試してみましょう。
+
+**悪いプロンプト例**:
 ```
-Application Load Balancerを作成するTerraformコードを生成してください。
+Webアプリケーションのインフラを構築してください
+```
+
+**良いプロンプト例**:
+```
+下記条件を満たすWebアプリケーションインフラを構築するTerraformコードを生成してください。
 
 要件:
-- 名前: training-web-alb
-- タイプ: application
-- パブリックサブネットに配置
-- セキュリティグループを設定
-- 削除保護は無効
+- VPC: 10.0.0.0/16
+- パブリックサブネット: 10.0.1.0/24, 10.0.2.0/24（2つのAZ）
+- プライベートサブネット: 10.0.10.0/24, 10.0.11.0/24（2つのAZ）
+- EC2インスタンス: t3.micro x 2（パブリックサブネット、Auto Scaling Group）
+- RDS: db.t3.micro, MySQL 8.0（プライベートサブネット）
+- ALB: Application Load Balancer（パブリックサブネット）
+- セキュリティグループ: 適切に設定
 
-出力形式:
-- HCL形式のTerraformコード
-- 変数定義を含める
-- コメントを適切に追加
+注意事項:
+- 足りていないパラメータがある場合は、そのまま構築するのではなく一度聞き返してください
+- 既存のリソースと衝突しないように確認してください
+- 依存関係を適切に設定してください
+- 変数定義を含めてください
+- コメントを適切に追加してください
+- ベストプラクティスに従ってください
 ```
 
+**体験ポイント**:
+- 複数リソースの統合構築用プロンプトの設計
+- 依存関係の明確化
+- 複雑な要件の構造化
+
+### 2. 高度なContext Engineering（15分）
+
+#### 2.1 複数のコンテキストソースの統合
+
+既存のAWSリソース情報、サーバー情報、既存コードなどを統合してコンテキストとして活用します。
+
+```python
+class AdvancedContextManager:
+    def get_integrated_context(self):
+        """複数のコンテキストソースを統合"""
+        context = {
+            'aws_resources': self.get_aws_context(),
+            'server_info': self.get_server_context(),
+            'existing_code': self.get_existing_code_context(),
+            'dependencies': self.get_dependency_graph()
+        }
+        return context
+```
+
+#### 2.2 既存インフラ情報の動的取得
+
+コード生成前に最新のAWSリソース情報を取得し、実行前に再度確認します。
+
+### 3. タスク分類と優先順位付け（20分）
+
+#### 1.1 タスク分類の実装
+
+Continueを活用して、タスクを自動的に分類する機能を実装します。
+
 <details>
-<summary>📝 生成コード例（クリックで展開）</summary>
+<summary>📝 タスク分類クラス例（クリックで展開）</summary>
 
-```hcl
-# variables.tf
-variable "alb_name" {
-  description = "ALB名"
-  type        = string
-  default     = "training-web-alb"
-}
-
-variable "public_subnet_ids" {
-  description = "パブリックサブネットID"
-  type        = list(string)
-}
-
-variable "alb_security_group_id" {
-  description = "ALBセキュリティグループID"
-  type        = string
-}
-
-# main.tf
-resource "aws_lb" "web_alb" {
-  name               = var.alb_name
-  internal           = false
-  load_balancer_type = "application"
-  security_groups    = [var.alb_security_group_id]
-  subnets            = var.public_subnet_ids
-
-  enable_deletion_protection = false
-
-  tags = {
-    Name = var.alb_name
-  }
-}
-
-resource "aws_lb_target_group" "web_tg" {
-  name     = "${var.alb_name}-tg"
-  port     = 80
-  protocol = "HTTP"
-  vpc_id   = var.vpc_id
-
-  health_check {
-    enabled             = true
-    healthy_threshold   = 2
-    unhealthy_threshold = 2
-    timeout             = 5
-    interval            = 30
-    path                = "/"
-    matcher             = "200"
-  }
-
-  tags = {
-    Name = "${var.alb_name}-tg"
-  }
-}
-
-resource "aws_lb_listener" "web_listener" {
-  load_balancer_arn = aws_lb.web_alb.arn
-  port              = "80"
-  protocol          = "HTTP"
-
-  default_action {
-    type             = "forward"
-    target_group_arn = aws_lb_target_group.web_tg.arn
-  }
-}
+```python
+# classifier.py
+class TaskClassifier:
+    """タスク分類クラス"""
+    
+    TASK_TYPES = {
+        'terraform': [
+            '作成', '構築', 'デプロイ', 'リソース作成',
+            'VPC', 'EC2', 'S3', 'RDS', 'インフラ'
+        ],
+        'ansible': [
+            '設定', 'インストール', '起動', '停止',
+            '再起動', 'パッケージ', 'サービス', 'ファイル'
+        ],
+        'hybrid': [
+            'セットアップ', '環境構築', 'デプロイ',
+            '監視開始', 'バックアップ'
+        ]
+    }
+    
+    def classify(self, instruction):
+        """
+        タスクタイプの分類
+        
+        Args:
+            instruction: 自然言語の指示
+        
+        Returns:
+            タスクタイプ（terraform/ansible/hybrid）
+        """
+        instruction_lower = instruction.lower()
+        
+        terraform_score = sum(1 for keyword in self.TASK_TYPES['terraform'] 
+                             if keyword in instruction_lower)
+        ansible_score = sum(1 for keyword in self.TASK_TYPES['ansible'] 
+                           if keyword in instruction_lower)
+        
+        if terraform_score > ansible_score:
+            return 'terraform'
+        elif ansible_score > terraform_score:
+            return 'ansible'
+        else:
+            return 'hybrid'
 ```
 
 </details>
 
-### 2. ECS/ECRを使ったコンテナベースアプリケーションのデプロイ（25分）
-
-#### 2.1 ECRリポジトリの作成
-
-Continueを起動して、以下のプロンプトを入力します：
-
-```
-ECRリポジトリを作成するTerraformコードを生成してください。
-
-要件:
-- 名前: training-web-app
-- イメージタグの変更可能性: MUTABLE
-- プッシュ時のスキャンを有効化
-
-出力形式:
-- HCL形式のTerraformコード
-```
+#### 1.2 優先順位付けの実装
 
 <details>
-<summary>📝 生成コード例（クリックで展開）</summary>
+<summary>📝 優先順位付けクラス例（クリックで展開）</summary>
 
-```hcl
-resource "aws_ecr_repository" "web_app" {
-  name                 = "training-web-app"
-  image_tag_mutability = "MUTABLE"
-
-  image_scanning_configuration {
-    scan_on_push = true
-  }
-
-  tags = {
-    Name = "training-web-app"
-  }
-}
+```python
+# prioritizer.py
+class TaskPrioritizer:
+    """タスク優先順位付けクラス"""
+    
+    PRIORITY_MAP = {
+        '削除': 1,  # 最優先（慎重に）
+        '作成': 2,
+        '更新': 3,
+        '確認': 4,
+        '取得': 5
+    }
+    
+    def prioritize(self, tasks):
+        """
+        タスクの優先順位付け
+        
+        Args:
+            tasks: タスクのリスト
+        
+        Returns:
+            優先順位付けされたタスクのリスト
+        """
+        return sorted(tasks, key=lambda t: self.PRIORITY_MAP.get(t.get('type', ''), 99))
 ```
 
 </details>
 
-#### 2.2 ECSクラスターとサービスの作成
+### 4. 統合エージェントの実装と複雑なワークフローでのフィードバックループ（40分）
 
-Continueを起動して、以下のプロンプトを入力します：
+#### 4.1 統合エージェントクラス
 
-```
-ECSクラスターとサービスを作成するTerraformコードを生成してください。
-
-要件:
-- クラスター名: training-web-cluster
-- サービス名: training-web-service
-- 起動タイプ: FARGATE
-- 希望タスク数: 2
-- プライベートサブネットに配置
-- ALBターゲットグループに接続
-
-出力形式:
-- HCL形式のTerraformコード
-- タスク定義を含める
-```
+Continueを活用して、TerraformとAnsibleを統合的に管理するエージェントを実装します。
 
 <details>
-<summary>📝 生成コード例（クリックで展開）</summary>
+<summary>📝 統合エージェントクラス例（クリックで展開）</summary>
 
-```hcl
-resource "aws_ecs_cluster" "web_cluster" {
-  name = "training-web-cluster"
+```python
+# agent.py
+from classifier import TaskClassifier
+from prioritizer import TaskPrioritizer
+# Terraform/Ansibleエージェントはセッション3、5で実装済みと仮定
 
-  tags = {
-    Name = "training-web-cluster"
-  }
-}
-
-resource "aws_ecs_task_definition" "web_app" {
-  family                   = "training-web-app"
-  network_mode             = "awsvpc"
-  requires_compatibilities = ["FARGATE"]
-  cpu                      = "256"
-  memory                   = "512"
-
-  container_definitions = jsonencode([{
-    name  = "web-app"
-    image = "${aws_ecr_repository.web_app.repository_url}:latest"
-    portMappings = [{
-      containerPort = 80
-      protocol      = "tcp"
-    }]
-  }])
-}
-
-resource "aws_ecs_service" "web_service" {
-  name            = "training-web-service"
-  cluster         = aws_ecs_cluster.web_cluster.id
-  task_definition = aws_ecs_task_definition.web_app.arn
-  desired_count   = 2
-  launch_type     = "FARGATE"
-
-  network_configuration {
-    subnets          = var.private_subnet_ids
-    security_groups  = [var.ecs_security_group_id]
-    assign_public_ip = false
-  }
-
-  load_balancer {
-    target_group_arn = aws_lb_target_group.web_tg.arn
-    container_name   = "web-app"
-    container_port   = 80
-  }
-
-  depends_on = [aws_lb_listener.web_listener]
-}
+class IntegratedInfrastructureAgent:
+    """統合インフラ管理エージェント"""
+    
+    def __init__(self, aws_context=None, inventory_file=None):
+        self.aws_context = aws_context
+        self.inventory_file = inventory_file
+        
+        # セッション3、5で実装したエージェントを使用
+        # self.terraform_agent = TerraformAgent(aws_context)
+        # self.ansible_agent = AnsibleAgent(inventory_file)
+        
+        self.classifier = TaskClassifier()
+        self.prioritizer = TaskPrioritizer()
+    
+    def process(self, instruction, execute=False):
+        """
+        統合処理
+        
+        Args:
+            instruction: 自然言語の指示
+            execute: 実際に実行するか
+        
+        Returns:
+            処理結果
+        """
+        # 1. タスクタイプの判定
+        task_type = self.classifier.classify(instruction)
+        
+        # 2. タスクの分解（複合タスクの場合）
+        tasks = self.decompose_task(instruction, task_type)
+        
+        # 3. 優先順位付け
+        tasks = self.prioritizer.prioritize(tasks)
+        
+        # 4. 依存関係の解決
+        execution_plan = self.resolve_dependencies(tasks)
+        
+        # 5. 実行
+        results = []
+        for task in execution_plan:
+            if task['type'] == 'terraform':
+                # ContinueでTerraformコード生成
+                # セッション3の手順を参照
+                result = self.process_terraform_task(task, execute)
+            elif task['type'] == 'ansible':
+                # ContinueでAnsible Playbook生成
+                # セッション5の手順を参照
+                result = self.process_ansible_task(task, execute)
+            else:
+                result = self.process_hybrid_task(task, execute)
+            
+            results.append({
+                'task': task,
+                'result': result
+            })
+        
+        return {
+            'tasks': tasks,
+            'execution_plan': execution_plan,
+            'results': results
+        }
+    
+    def decompose_task(self, instruction, task_type):
+        """複合タスクの分解"""
+        if task_type == 'hybrid':
+            # Continueを使ってタスクを分解
+            # Continueを起動して、以下のプロンプトを入力:
+            """
+            以下のタスクを、TerraformタスクとAnsibleタスクに分解してください。
+            
+            タスク: {instruction}
+            
+            出力形式:
+            - Terraformタスク: [リスト]
+            - Ansibleタスク: [リスト]
+            - 依存関係: [リスト]
+            """
+            # 生成された分解結果をパース
+            # 実際の実装では、Continueの応答をパースする必要がある
+        
+        return [{'type': task_type, 'instruction': instruction}]
+    
+    def resolve_dependencies(self, tasks):
+        """依存関係の解決"""
+        # 依存関係グラフの構築
+        graph = self.build_dependency_graph(tasks)
+        
+        # トポロジカルソート
+        execution_order = self.topological_sort(graph)
+        
+        return execution_order
 ```
 
 </details>
 
-### 3. RDSデータベースの構築と接続設定（10分）
+#### 4.2 複雑なワークフローでのフィードバックループ
 
-#### 3.1 RDSインスタンスの作成
+**複数ステップの承認ワークフロー**:
+
+```python
+def create_multi_step_plan(self, instruction):
+    """複数ステップの実行計画を作成して人間の承認を求める"""
+    execution_plan = self.decompose_and_plan(instruction)
+    
+    print("実行計画（複数ステップ）:")
+    for i, step in enumerate(execution_plan, 1):
+        print(f"\nステップ {i}:")
+        print(f"  タスクタイプ: {step['type']}")
+        print(f"  内容: {step['instruction']}")
+        print(f"  依存関係: {step['dependencies']}")
+    
+    approval = input("\nすべてのステップを実行しますか？ (y/n): ")
+    if approval.lower() == 'y':
+        return execution_plan
+    else:
+        # 個別承認
+        approved_steps = []
+        for step in execution_plan:
+            step_approval = input(f"ステップ '{step['instruction']}' を実行しますか？ (y/n): ")
+            if step_approval.lower() == 'y':
+                approved_steps.append(step)
+        return approved_steps
+```
+
+**エラー発生時のロールバックと再試行**:
+
+```python
+def execute_with_rollback(self, execution_plan):
+    """ロールバック機能付きで実行"""
+    executed_steps = []
+    
+    for step in execution_plan:
+        try:
+            result = self.execute_step(step)
+            executed_steps.append({'step': step, 'result': result})
+        except Exception as e:
+            print(f"エラー発生: {e}")
+            rollback_approval = input("ロールバックしますか？ (y/n): ")
+            if rollback_approval.lower() == 'y':
+                self.rollback(executed_steps)
+            else:
+                retry_approval = input("再試行しますか？ (y/n): ")
+                if retry_approval.lower() == 'y':
+                    result = self.execute_step(step)
+                    executed_steps.append({'step': step, 'result': result})
+            raise
+```
+
+**人間の判断が必要な場面での中断と確認**:
+
+```python
+def execute_with_human_checkpoints(self, execution_plan):
+    """人間の判断が必要な場面で中断"""
+    for step in execution_plan:
+        if self.requires_human_decision(step):
+            print(f"人間の判断が必要なステップ: {step['instruction']}")
+            decision = input("続行しますか？ (y/n): ")
+            if decision.lower() != 'y':
+                print("実行を中断しました")
+                return
+        self.execute_step(step)
+```
+
+### 5. Agent形式での開発の総合理解と実践的なシナリオ演習（20分）
+
+#### 5.1 Agent形式での開発の総合理解
+
+**複雑なワークフローでのAgent形式開発の実践**:
+- 複数リソースの統合構築
+- 複数ステップの承認ワークフロー
+- エラー発生時のロールバックと再試行
+- 人間の判断が必要な場面での中断と確認
+
+**Agent形式での開発の総合理解**:
+- Prompt Engineering、Context Engineering、フィードバックループの統合活用
+- 複雑なワークフローでのAgent形式開発の実践
+- human in the loopの重要性の理解
+
+#### 5.2 実践的なシナリオ演習
+
+#### 3.1 シナリオ1: 監視エージェントのセットアップ
 
 Continueを起動して、以下のプロンプトを入力します：
 
 ```
-RDSインスタンスを作成するTerraformコードを生成してください。
-
-要件:
-- エンジン: MySQL 8.0
-- インスタンスクラス: db.t3.micro
-- ストレージ: 20GB
-- データベース名: webappdb
-- プライベートサブネットに配置
-- ECSセキュリティグループからのみアクセス可能
-
-出力形式:
-- HCL形式のTerraformコード
-- セキュリティグループを含める
+EC2インスタンスにPrometheus node_exporterをインストールして起動してください。
+設定ファイルは/etc/prometheus/node_exporter.confに配置し、
+systemdサービスとして登録してください。
 ```
 
 <details>
-<summary>📝 生成コード例（クリックで展開）</summary>
+<summary>📝 生成されるAnsible Playbook例（クリックで展開）</summary>
 
-```hcl
-resource "aws_db_subnet_group" "web_db_subnet" {
-  name       = "training-web-db-subnet"
-  subnet_ids = var.private_subnet_ids
-
-  tags = {
-    Name = "training-web-db-subnet"
-  }
-}
-
-resource "aws_security_group" "rds_sg" {
-  name        = "training-rds-sg"
-  description = "Security group for RDS"
-  vpc_id      = var.vpc_id
-
-  ingress {
-    from_port       = 3306
-    to_port         = 3306
-    protocol        = "tcp"
-    security_groups = [var.ecs_security_group_id]
-  }
-
-  egress {
-    from_port   = 0
-    to_port     = 0
-    protocol    = "-1"
-    cidr_blocks = ["0.0.0.0/0"]
-  }
-
-  tags = {
-    Name = "training-rds-sg"
-  }
-}
-
-resource "aws_db_instance" "web_db" {
-  identifier             = "training-web-db"
-  engine                 = "mysql"
-  engine_version         = "8.0"
-  instance_class         = "db.t3.micro"
-  allocated_storage      = 20
-  storage_type           = "gp2"
-  db_name                = "webappdb"
-  username               = var.db_username
-  password               = var.db_password
-  vpc_security_group_ids = [aws_security_group.rds_sg.id]
-  db_subnet_group_name   = aws_db_subnet_group.web_db_subnet.name
-  skip_final_snapshot    = true
-
-  tags = {
-    Name = "training-web-db"
-  }
-}
+```yaml
+---
+- name: Prometheus node_exporterのインストールと設定
+  hosts: webservers
+  become: yes
+  
+  tasks:
+    - name: node_exporterユーザーを作成
+      user:
+        name: node_exporter
+        system: yes
+        shell: /bin/false
+        home: /var/lib/node_exporter
+    
+    - name: node_exporterをダウンロード
+      get_url:
+        url: https://github.com/prometheus/node_exporter/releases/download/v1.6.1/node_exporter-1.6.1.linux-amd64.tar.gz
+        dest: /tmp/node_exporter.tar.gz
+    
+    - name: node_exporterを展開
+      unarchive:
+        src: /tmp/node_exporter.tar.gz
+        dest: /opt
+        remote_src: yes
+    
+    - name: node_exporterバイナリをコピー
+      copy:
+        src: /opt/node_exporter-1.6.1.linux-amd64/node_exporter
+        dest: /usr/local/bin/node_exporter
+        owner: root
+        group: root
+        mode: '0755'
+        remote_src: yes
+    
+    - name: 設定ファイルを作成
+      copy:
+        content: |
+          # node_exporter configuration
+        dest: /etc/prometheus/node_exporter.conf
+        owner: node_exporter
+        group: node_exporter
+        mode: '0644'
+    
+    - name: systemdサービスファイルを作成
+      copy:
+        content: |
+          [Unit]
+          Description=Prometheus Node Exporter
+          After=network.target
+          
+          [Service]
+          User=node_exporter
+          Group=node_exporter
+          ExecStart=/usr/local/bin/node_exporter --config.file=/etc/prometheus/node_exporter.conf
+          Restart=always
+          
+          [Install]
+          WantedBy=multi-user.target
+        dest: /etc/systemd/system/node_exporter.service
+        owner: root
+        group: root
+        mode: '0644'
+    
+    - name: systemdをリロード
+      systemd:
+        daemon_reload: yes
+    
+    - name: node_exporterサービスを開始
+      systemd:
+        name: node_exporter
+        state: started
+        enabled: yes
 ```
 
 </details>
 
-### 4. 統合エージェントを活用した自動構築（5分）
-
-#### 4.1 エージェントを使った自動構築
-
-[セッション5](session5_guide.md) で実装した統合エージェントを使用して、Webシステム全体を自動構築します。
+#### 3.2 シナリオ2: 複数リソースの一括管理
 
 Continueを起動して、以下のプロンプトを入力します：
 
 ```
-以下のWebアプリケーションインフラを構築するTerraformコードを生成してください:
-
-1. ALBを作成（パブリックサブネット）
-2. ECSクラスターとサービスを作成（FARGATE、プライベートサブネット）
-3. ECRリポジトリを作成
-4. RDSデータベースを作成（MySQL、プライベートサブネット）
-5. セキュリティグループを適切に設定
-6. すべてのリソースを連携
-
-出力形式:
-- HCL形式のTerraformコード
-- 変数定義を含める
-- 依存関係を適切に記述
-- コメントを追加
+以下のリソースを作成してください:
+1. VPC (10.0.0.0/16)
+2. パブリックサブネット (10.0.1.0/24)
+3. EC2インスタンス (t3.micro)
+4. セキュリティグループ (SSH許可)
+5. EC2インスタンスに監視エージェントをインストール
 ```
 
-生成されたコードを`workspace/terraform/web_app/`に保存し、実行します。
+このシナリオでは、TerraformタスクとAnsibleタスクが組み合わさった複合タスクになります。
+
+### 6. ワークフロー自動化（10分）
+
+#### 4.1 ワークフロー定義
+
+<details>
+<summary>📝 ワークフロー自動化クラス例（クリックで展開）</summary>
+
+```python
+# workflow.py
+class WorkflowAutomator:
+    """ワークフロー自動化クラス"""
+    
+    def automate_workflow(self, workflow_description):
+        """
+        ワークフローの自動化
+        
+        例: 新規サーバ追加→設定→監視開始
+        """
+        steps = [
+            {
+                'name': 'サーバ作成',
+                'type': 'terraform',
+                'instruction': workflow_description['server_creation']
+            },
+            {
+                'name': 'サーバ設定',
+                'type': 'ansible',
+                'instruction': workflow_description['server_config'],
+                'depends_on': ['サーバ作成']
+            },
+            {
+                'name': '監視開始',
+                'type': 'ansible',
+                'instruction': workflow_description['monitoring_setup'],
+                'depends_on': ['サーバ設定']
+            }
+        ]
+        
+        return self.execute_workflow(steps)
+    
+    def execute_workflow(self, steps):
+        """ワークフローの実行"""
+        results = []
+        
+        for step in steps:
+            # 依存関係の確認
+            if step.get('depends_on'):
+                for dep in step['depends_on']:
+                    # 依存タスクが完了しているか確認
+                    if not self.is_task_completed(dep):
+                        raise Exception(f"Dependency {dep} not completed")
+            
+            # タスクの実行
+            if step['type'] == 'terraform':
+                result = self.execute_terraform_task(step)
+            elif step['type'] == 'ansible':
+                result = self.execute_ansible_task(step)
+            
+            results.append({
+                'step': step,
+                'result': result
+            })
+        
+        return results
+```
+
+</details>
 
 ## ✅ チェックリスト
 
-- [ ] ネットワーク設計が完了した
-- [ ] ALBとターゲットグループが作成された
-- [ ] ECRリポジトリが作成された
-- [ ] ECSクラスターとサービスが作成された
-- [ ] タスク定義が作成された
-- [ ] RDSインスタンスが作成された
-- [ ] セキュリティグループが適切に設定された
-- [ ] 統合エージェントを使った自動構築を実践した
-- [ ] 構築結果を検証した
+- [ ] タスク分類機能を実装した
+- [ ] 優先順位付け機能を実装した
+- [ ] 統合エージェントを実装した
+- [ ] Terraform/Ansibleの統合実行を実装した
+- [ ] タスク分解機能を実装した
+- [ ] 依存関係解決機能を実装した
+- [ ] ワークフロー自動化を実装した
+- [ ] 監視エージェントセットアップの自動化を実践した
+- [ ] 複数リソースの一括管理を実践した
+- [ ] 統合テストを実施した
 
 ## 🆘 トラブルシューティング
 
-### ALB接続エラー
+### タスク分類エラー
 
-- セキュリティグループの設定を確認
-- ターゲットグループのヘルスチェックを確認
+- キーワードマッチングの精度を向上
+- Continueを使った分類の導入
 
-### ECSタスク起動エラー
+### 依存関係エラー
 
-- タスク定義の確認
-- ネットワーク設定の確認
-- IAMロールの確認
+- 依存関係グラフの可視化
+- 循環依存の検出
 
-### RDS接続エラー
+### 実行順序エラー
 
-- セキュリティグループの設定を確認
-- サブネットグループの設定を確認
+- 実行前のプレビュー機能
+- ロールバック機能
 
 ## 📚 参考資料
 
-- [Terraform公式ドキュメント](https://developer.hashicorp.com/terraform/docs)
-- [AWS公式ドキュメント](https://docs.aws.amazon.com/)
-- [サンプルコード](../../sample_code/terraform/)
+- [Continue公式ドキュメント](https://continue.dev/docs)
+- [テンプレート](../../templates/ai_agents/integrated_agent_template.py)
+- [サンプルコード](../../sample_code/)
 
-## 🎉 ワークショップ完了
+## ➡️ 次のステップ
 
-セッション6が完了したら、ワークショップは完了です！お疲れ様でした！
-
-作成したリソースは、ワークショップ終了後に必ず削除してください：
-
-```bash
-cd workspace/terraform/web_app
-terraform destroy
-```
+セッション6が完了したら、[セッション7：Webシステム構築（任意）](session7_guide.md) に進むか、ワークショップを完了してください。
