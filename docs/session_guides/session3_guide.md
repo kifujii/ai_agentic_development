@@ -1,59 +1,79 @@
-# セッション3：Terraform自動化エージェント 詳細ガイド
+# セッション3：Terraform自動化エージェント開発 詳細ガイド
 
 ## 📋 目的
 
-このセッションでは、Continueを活用して、Terraformコード生成・実行を自動化するエージェントの実装方法を学びます。
+このセッションでは、ContinueのAgent機能を活用して、Terraformコード生成を効率化するためのプロンプトテンプレートを作成し、再利用可能なプロンプトパターンを確立します。セッション1とセッション2で学んだPrompt EngineeringとContext Engineeringを発展させ、より効率的な開発体験を実現します。
 
 ### 学習目標
 
 - プロンプトテンプレートの作成方法を理解する
-- Context Engineeringの高度化（既存インフラ情報の動的取得、依存関係の自動解決、リソース間の整合性チェック）を実装する
-- フィードバックループの実装（承認ワークフロー、エラー修正、反復的改善）を理解する
+- Context Engineeringの高度化（既存インフラ情報の動的取得、依存関係の考慮）
+- フィードバックループの実践（承認ワークフロー、エラー修正、反復的改善）
 - Agent形式での開発の深化を実践する
-- Continueを活用したTerraformコード生成の実装方法を理解する
-- コード検証とフォーマット機能の実装方法を理解する
-- Terraform実行自動化の実装方法を理解する
-- エラーハンドリングとリトライ機能の実装方法を理解する
+- ContinueのAgent機能を活用した効率的なTerraformコード生成
 
-## 🎯 目指すべき構成
+## 🎯 最終的な目標構成
 
 このセッション終了時点で、以下の構成が完成していることを目指します：
 
-```
-workspace/
-└── agents/
-    └── terraform_agent/
-        ├── agent.py           # メインのエージェントコード
-        ├── code_generator.py # コード生成モジュール
-        ├── validator.py      # コード検証モジュール
-        └── executor.py       # Terraform実行モジュール
+### プロンプトテンプレート構成
+
+```mermaid
+graph TB
+    subgraph Templates["プロンプトテンプレート"]
+        BaseTemplate["基本テンプレート<br/>terraform_resource_template.txt"]
+        BadExamples["悪い例集<br/>bad_examples.txt"]
+        ImprovementGuide["改善ガイド<br/>improvement_guide.md"]
+    end
+    
+    subgraph Usage["使用フロー"]
+        LoadTemplate["テンプレート読み込み"]
+        FillVariables["変数埋め込み"]
+        GeneratePrompt["プロンプト生成"]
+        AgentUse["Agentで使用"]
+    end
+    
+    BaseTemplate --> LoadTemplate
+    LoadTemplate --> FillVariables
+    FillVariables --> GeneratePrompt
+    GeneratePrompt --> AgentUse
 ```
 
-**エージェントの機能**:
-- Continueを活用したTerraformコード生成
-- コード検証とフォーマット
-- Terraform実行の自動化
-- エラーハンドリングとリトライ
+### ファイル構成
+
+```
+workspace/
+└── templates/
+    └── prompts/
+        ├── terraform_resource_template.txt  # 基本テンプレート
+        ├── bad_examples.txt                 # 悪いプロンプト例集
+        └── improvement_guide.md             # プロンプト改善ガイド
+```
+
+### 成果物
+
+- 再利用可能なプロンプトテンプレート
+- プロンプト改善ガイド
+- 様々なリソースタイプに対応したプロンプト例
 
 ## 📚 事前準備
 
 - [セッション1](session1_guide.md) が完了していること
-- [セッション2](session2_guide.md) で構築したインフラの理解
+- [セッション2](session2_guide.md) が完了していること
 - Continueが正しく設定されていること
 
-## 🚀 手順
+## 🚀 Agent開発の進め方
 
-### 1. プロンプトテンプレートの作成（20分）
+### Agent開発のアドバイス
 
-#### 1.1 再利用可能なプロンプトテンプレートの設計
+#### 1. プロンプトテンプレートの作成
 
-セッション1とセッション2で学んだ良いプロンプトをテンプレート化します。
+**テンプレートの設計方針**:
+- セッション1とセッション2で学んだ良いプロンプトのパターンを抽出
+- 変数部分を`{variable_name}`形式で表現
+- 再利用可能な構造にする
 
-```bash
-mkdir -p templates/prompts
-```
-
-**良いプロンプトテンプレート例** (`templates/prompts/terraform_resource_template.txt`):
+**基本テンプレート例**:
 
 ```
 下記条件を満たす{resource_type}を構築するTerraformコードを生成してください。
@@ -75,187 +95,130 @@ mkdir -p templates/prompts
 - コメントを適切に追加
 ```
 
-**悪いプロンプト例集** (`templates/prompts/bad_examples.txt`):
+**テンプレートの活用方法**:
+1. テンプレートファイルを作成
+2. 必要な変数を埋め込む
+3. ContinueのAgent機能で使用
 
-```
-# 悪いプロンプト例
-
-例1: EC2を作成して
-例2: VPCとEC2を作成してください
-例3: S3バケットを作成
-```
-
-**プロンプト改善ガイド** (`templates/prompts/improvement_guide.md`):
-
-プロンプト改善のステップ:
-1. 不足パラメータを特定
-2. 明確な要件定義を追加
-3. 「足りていないパラメータがある場合は聞き返してください」を追加
-4. 既存リソースとの衝突回避指示を追加
-
-#### 1.2 プロンプトテンプレートの活用
-
-エージェントでプロンプトテンプレートを読み込んで使用します。
-
-```python
-def load_prompt_template(template_path, **kwargs):
-    """プロンプトテンプレートを読み込んで変数を置換"""
-    with open(template_path, 'r') as f:
-        template = f.read()
-    return template.format(**kwargs)
-```
-
-### 2. エージェントアーキテクチャの設計とContext Engineeringの高度化（30分）
-
-#### 1.1 エージェントの基本構造
-
-Continueを活用したエージェントの基本構造を理解します。
-
-<details>
-<summary>📝 エージェントアーキテクチャ例（クリックで展開）</summary>
-
-```python
-# agent.py
-class TerraformAgent:
-    """
-    Terraformコード生成・実行自動化エージェント
-    
-    このエージェントは、Continueを活用してTerraformコードを生成し、
-    検証・実行まで自動化します。
-    """
-    
-    def __init__(self, aws_context=None):
-        self.aws_context = aws_context
-        self.validator = TerraformValidator()
-        self.executor = TerraformExecutor()
-        self.logger = AgentLogger()
-    
-    def process(self, instruction):
-        """
-        メイン処理フロー
-        
-        Args:
-            instruction: 自然言語の指示
-        
-        Returns:
-            処理結果（コード、検証結果、実行結果など）
-        """
-        try:
-            # 1. Continueでコード生成（手動）
-            # Continueを起動して、instructionを入力
-            # 生成されたコードを取得
-            
-            # 2. 検証
-            validation_result = self.validator.validate(code)
-            if not validation_result['valid']:
-                # エラーがあれば修正を試みる
-                # Continueに修正を依頼
-                code = self.fix_code(code, validation_result['errors'])
-            
-            # 3. 実行（オプション）
-            if self.should_execute():
-                execution_result = self.executor.execute(code)
-                return execution_result
-            
-            return {'code': code, 'validation': validation_result}
-        except Exception as e:
-            self.logger.log_error(e)
-            raise
-```
-
-</details>
-
-#### 2.1 エージェントの基本構造
-
-Continueを活用したエージェントの基本構造を理解します。
-
-エージェントを以下のモジュールに分割します：
-
-- **CodeGenerator**: コード生成（Continueを使用）
-- **Validator**: コード検証
-- **Executor**: Terraform実行
-- **Logger**: ログ機能
-- **ContextManager**: コンテキスト管理（高度化）
-
-#### 2.2 Context Engineeringの高度化
+#### 2. Context Engineeringの高度化
 
 **既存インフラ情報の動的取得**:
 
-```python
-class ContextManager:
-    def get_aws_context(self):
-        """既存のAWSリソース情報を動的に取得"""
-        ec2 = boto3.client('ec2', region_name='ap-northeast-1')
-        
-        # 既存のVPC情報
-        vpcs = ec2.describe_vpcs()
-        
-        # 既存のサブネット情報
-        subnets = ec2.describe_subnets()
-        
-        # 既存のセキュリティグループ情報
-        security_groups = ec2.describe_security_groups()
-        
-        return {
-            'existing_vpcs': [vpc['VpcId'] for vpc in vpcs['Vpcs']],
-            'existing_subnets': [subnet['SubnetId'] for subnet in subnets['Subnets']],
-            'existing_security_groups': [sg['GroupId'] for sg in security_groups['SecurityGroups']],
-            'available_azs': self.get_available_availability_zones()
-        }
-    
-    def check_resource_conflicts(self, new_resource, existing_resources):
-        """リソース間の整合性チェック"""
-        # リソース名の重複チェック
-        # CIDRブロックの衝突チェック
-        # 依存関係のチェック
-        pass
-```
-
-**依存関係の自動解決**:
-
-```python
-def resolve_dependencies(resources):
-    """リソースの依存関係を自動解決"""
-    # 依存関係グラフの構築
-    # 実行順序の決定
-    pass
-```
-
-**リソース間の整合性チェック**:
-
-```python
-def check_consistency(code, context):
-    """リソース間の整合性をチェック"""
-    # VPCとサブネットの整合性
-    # セキュリティグループとVPCの整合性
-    # CIDRブロックの衝突チェック
-    pass
-```
-
-### 3. Terraformコード生成機能の強化とフィードバックループの実装（30分）
-
-#### 3.1 Continueを活用したコード生成
-
-Continueを起動（`Ctrl+L` / `Cmd+L`）して、以下のプロンプトを入力します：
+Continueのチャット機能を使って、既存のAWSリソース情報を取得できます：
 
 ```
-以下の要件でTerraformコードを生成してください。
+ap-northeast-1リージョンで既存のVPC情報を教えてください。
+既存のサブネット情報、セキュリティグループ情報、利用可能な可用性ゾーンも教えてください。
+```
+
+**依存関係の考慮**:
+
+複数のリソースを構築する場合、依存関係を明確にプロンプトに含めます：
+
+```
+以下の順序でリソースを構築してください：
+1. VPC
+2. サブネット（VPCに依存）
+3. セキュリティグループ（VPCに依存）
+4. EC2インスタンス（サブネットとセキュリティグループに依存）
+```
+
+#### 3. フィードバックループの実践
+
+**承認ワークフロー**:
+- Agentが生成したコードを確認してから承認
+- 特に複雑なリソース構成の場合、段階的に承認
+
+**エラー修正プロセス**:
+- エラーが発生した場合、エラーメッセージをコンテキストとして提供
+- Agentに修正を依頼
+
+**反復的改善**:
+- 生成されたコードを確認し、改善点があればフィードバックを提供
+- プロンプトテンプレート自体も改善
+
+### 考えながら進めるポイント
+
+1. **どのようなテンプレート構造が効果的か**
+   - 汎用性と具体性のバランス
+   - 変数の設計（必須/任意、デフォルト値など）
+
+2. **どのようなコンテキストが必要か**
+   - 既存リソース情報の取得方法
+   - 依存関係の表現方法
+
+3. **プロンプトテンプレートの改善方法**
+   - 実際の使用経験から学んだ改善点
+   - 様々なリソースタイプへの対応
+
+4. **効率的な開発フロー**
+   - テンプレートの使い回し
+   - コンテキスト情報の再利用
+
+## 📝 振り返り
+
+以下の点について振り返り、学んだことをまとめてください：
+
+- **プロンプトテンプレートの効果**: テンプレート化することで、どのような効率化が実現できたか
+- **Context Engineeringの高度化**: 既存インフラ情報の動的取得や依存関係の考慮が、どのようにコード生成の品質向上に寄与したか
+- **フィードバックループの実践**: 承認ワークフロー、エラー修正、反復的改善をどのように実践したか
+- **Agent形式での開発の深化**: セッション1、2と比較して、どのような進化を感じたか
+
+<details>
+<summary>📝 解答例（クリックで展開）</summary>
+
+### プロンプトテンプレート例
+
+#### terraform_resource_template.txt
+
+```
+下記条件を満たす{resource_type}を構築するTerraformコードを生成してください。
 
 要件:
-- S3バケットを作成
-- バケット名: training-bucket
-- バージョニングを有効化
-- 暗号化を有効化（AES256）
+- リージョン: {region}
+- {specific_requirements}
+
+注意事項:
+- 足りていないパラメータなどがある場合は、そのまま構築するのではなく一度聞き返してください
+- 既存の{resource_type}と衝突しないように確認してください
+- 変数定義を含めてください
+- コメントを適切に追加してください
+- ベストプラクティスに従ってください
 
 出力形式:
 - HCL形式のTerraformコード
 - 変数定義を含める
 - コメントを適切に追加
-- ベストプラクティスに従う
 ```
 
-<details>
-<summary>📝 生成コード例（クリックで展開）</summary>
+#### 使用例：S3バケット作成
+
+テンプレートを埋め込んだプロンプト：
+
+```
+下記条件を満たすS3バケットを構築するTerraformコードを生成してください。
+
+要件:
+- リージョン: ap-northeast-1
+- バケット名: training-bucket
+- バージョニングを有効化
+- 暗号化を有効化（AES256）
+- パブリックアクセスをブロック
+
+注意事項:
+- 足りていないパラメータなどがある場合は、そのまま構築するのではなく一度聞き返してください
+- 既存のS3バケットと衝突しないように確認してください
+- 変数定義を含めてください
+- コメントを適切に追加してください
+- ベストプラクティスに従ってください
+
+出力形式:
+- HCL形式のTerraformコード
+- 変数定義を含める
+- コメントを適切に追加
+```
+
+#### 生成コード例
 
 ```hcl
 # variables.tf
@@ -265,15 +228,28 @@ variable "bucket_name" {
   default     = "training-bucket"
 }
 
+variable "region" {
+  description = "AWSリージョン"
+  type        = string
+  default     = "ap-northeast-1"
+}
+
 # main.tf
+provider "aws" {
+  region = var.region
+}
+
+# S3バケット
 resource "aws_s3_bucket" "training_bucket" {
   bucket = var.bucket_name
 
   tags = {
-    Name = var.bucket_name
+    Name        = var.bucket_name
+    Environment = "training"
   }
 }
 
+# バージョニング
 resource "aws_s3_bucket_versioning" "training_bucket_versioning" {
   bucket = aws_s3_bucket.training_bucket.id
 
@@ -282,6 +258,7 @@ resource "aws_s3_bucket_versioning" "training_bucket_versioning" {
   }
 }
 
+# 暗号化
 resource "aws_s3_bucket_server_side_encryption_configuration" "training_bucket_encryption" {
   bucket = aws_s3_bucket.training_bucket.id
 
@@ -291,409 +268,155 @@ resource "aws_s3_bucket_server_side_encryption_configuration" "training_bucket_e
     }
   }
 }
-```
 
-</details>
+# パブリックアクセスブロック
+resource "aws_s3_bucket_public_access_block" "training_bucket_pab" {
+  bucket = aws_s3_bucket.training_bucket.id
 
-#### 2.2 コード生成の自動化（参考）
-
-Continueはエディタ拡張機能なので、完全な自動化は難しいですが、以下のようなワークフローを実装できます：
-
-1. Continueでコード生成
-2. 生成されたコードをファイルに保存
-3. 検証とフォーマットを自動実行
-
-#### 3.2 フィードバックループの実装
-
-**承認ワークフロー**:
-
-```python
-def create_plan(self, instruction):
-    """実行計画を作成して人間の承認を求める"""
-    plan = self.generate_plan(instruction)
-    print("実行計画:")
-    print(plan)
-    approval = input("実行しますか？ (y/n): ")
-    if approval.lower() == 'y':
-        return plan
-    else:
-        return None
-```
-
-**エラーハンドリングで自動修正提案機能**:
-
-```python
-def handle_error(self, error, code):
-    """エラーを検出して修正提案を行う"""
-    error_analysis = self.analyze_error(error)
-    fix_proposal = self.propose_fix(error_analysis, code)
-    print(f"エラー: {error}")
-    print(f"修正提案: {fix_proposal}")
-    approval = input("修正を適用しますか？ (y/n): ")
-    if approval.lower() == 'y':
-        return self.apply_fix(fix_proposal, code)
-    return None
-```
-
-**生成コードの品質改善で反復的改善プロセス**:
-
-```python
-def improve_code(self, code, feedback):
-    """人間のフィードバックに基づいてコードを改善"""
-    improved_code = self.generate_improvement(code, feedback)
-    validation_result = self.validator.validate(improved_code)
-    if validation_result['valid']:
-        return improved_code
-    else:
-        # 再改善を試みる
-        return self.improve_code(improved_code, feedback)
-```
-
-### 4. コード検証とフォーマット機能（20分）
-
-#### 3.1 Terraform検証の実装
-
-```python
-# validator.py
-import subprocess
-import tempfile
-import os
-
-class TerraformValidator:
-    """Terraformコードの検証クラス"""
-    
-    def validate(self, code):
-        """
-        コードの検証
-        
-        Args:
-            code: Terraformコード（文字列）
-        
-        Returns:
-            検証結果（valid, errors, warnings）
-        """
-        result = {
-            'valid': True,
-            'errors': [],
-            'warnings': []
-        }
-        
-        # 1. 構文チェック
-        syntax_check = self.check_syntax(code)
-        if not syntax_check['valid']:
-            result['valid'] = False
-            result['errors'].extend(syntax_check['errors'])
-        
-        # 2. terraform fmt
-        formatted_code = self.format(code)
-        
-        # 3. terraform validate（一時ファイルに保存して実行）
-        validation = self.run_terraform_validate(formatted_code)
-        if not validation['valid']:
-            result['valid'] = False
-            result['errors'].extend(validation['errors'])
-        
-        return result
-    
-    def format(self, code):
-        """terraform fmtの実行"""
-        with tempfile.NamedTemporaryFile(mode='w', suffix='.tf', delete=False) as f:
-            f.write(code)
-            temp_file = f.name
-        
-        try:
-            subprocess.run(['terraform', 'fmt', temp_file], check=True, capture_output=True)
-            with open(temp_file, 'r') as f:
-                return f.read()
-        finally:
-            os.unlink(temp_file)
-    
-    def run_terraform_validate(self, code):
-        """terraform validateの実行"""
-        work_dir = tempfile.mkdtemp()
-        
-        try:
-            # コードをファイルに保存
-            with open(os.path.join(work_dir, 'main.tf'), 'w') as f:
-                f.write(code)
-            
-            # terraform init
-            init_result = subprocess.run(
-                ['terraform', 'init'],
-                cwd=work_dir,
-                capture_output=True,
-                text=True
-            )
-            
-            if init_result.returncode != 0:
-                return {
-                    'valid': False,
-                    'errors': [f"terraform init failed: {init_result.stderr}"]
-                }
-            
-            # terraform validate
-            validate_result = subprocess.run(
-                ['terraform', 'validate'],
-                cwd=work_dir,
-                capture_output=True,
-                text=True
-            )
-            
-            if validate_result.returncode != 0:
-                return {
-                    'valid': False,
-                    'errors': [f"terraform validate failed: {validate_result.stderr}"]
-                }
-            
-            return {'valid': True, 'errors': []}
-        finally:
-            import shutil
-            shutil.rmtree(work_dir)
-```
-
-<details>
-<summary>📝 使用例（クリックで展開）</summary>
-
-```python
-from validator import TerraformValidator
-
-validator = TerraformValidator()
-
-code = """
-resource "aws_s3_bucket" "test" {
-  bucket = "test-bucket"
+  block_public_acls       = true
+  block_public_policy     = true
+  ignore_public_acls      = true
+  restrict_public_buckets = true
 }
-"""
-
-result = validator.validate(code)
-print(f"Valid: {result['valid']}")
-if result['errors']:
-    print(f"Errors: {result['errors']}")
 ```
 
-</details>
+### 悪いプロンプト例集
 
-### 5. Terraform実行自動化（20分）
+#### bad_examples.txt
 
-#### 4.1 自動実行パイプライン
+```
+# 悪いプロンプト例
 
-```python
-# executor.py
-import subprocess
-import tempfile
-import os
-import shutil
+例1: EC2を作成して
+問題点: パラメータが不足、要件が不明確
 
-class TerraformExecutor:
-    """Terraform実行クラス"""
-    
-    def execute(self, code, auto_approve=False):
-        """
-        Terraformの自動実行
-        
-        Args:
-            code: Terraformコード（文字列）
-            auto_approve: 自動承認するか
-        
-        Returns:
-            実行結果
-        """
-        work_dir = tempfile.mkdtemp()
-        
-        try:
-            # コードをファイルに保存
-            with open(os.path.join(work_dir, 'main.tf'), 'w') as f:
-                f.write(code)
-            
-            # terraform init
-            init_result = subprocess.run(
-                ['terraform', 'init'],
-                cwd=work_dir,
-                capture_output=True,
-                text=True
-            )
-            
-            if init_result.returncode != 0:
-                return {
-                    'success': False,
-                    'error': 'init failed',
-                    'details': init_result.stderr
-                }
-            
-            # terraform plan
-            plan_result = subprocess.run(
-                ['terraform', 'plan', '-out=tfplan'],
-                cwd=work_dir,
-                capture_output=True,
-                text=True
-            )
-            
-            if plan_result.returncode != 0:
-                return {
-                    'success': False,
-                    'error': 'plan failed',
-                    'details': plan_result.stderr
-                }
-            
-            # プレビュー表示
-            print(plan_result.stdout)
-            
-            # terraform apply（承認が必要な場合）
-            if auto_approve:
-                apply_result = subprocess.run(
-                    ['terraform', 'apply', '-auto-approve', 'tfplan'],
-                    cwd=work_dir,
-                    capture_output=True,
-                    text=True
-                )
-                return {
-                    'success': apply_result.returncode == 0,
-                    'output': apply_result.stdout,
-                    'error': apply_result.stderr if apply_result.returncode != 0 else None
-                }
-            else:
-                return {
-                    'success': True,
-                    'pending_approval': True,
-                    'plan': plan_result.stdout
-                }
-        
-        except Exception as e:
-            return {
-                'success': False,
-                'error': str(e)
-            }
-        finally:
-            # クリーンアップ（必要に応じて）
-            # shutil.rmtree(work_dir)  # デバッグ時はコメントアウト
-            pass
+例2: VPCとEC2を作成してください
+問題点: CIDRブロック、可用性ゾーン、インスタンスタイプなどが不明確
+
+例3: S3バケットを作成
+問題点: バケット名、リージョン、設定項目が不明確
+
+例4: RDSを作成してください
+問題点: エンジンタイプ、インスタンスクラス、ストレージサイズなどが不明確
 ```
 
-<details>
-<summary>📝 使用例（クリックで展開）</summary>
+### プロンプト改善ガイド
 
-```python
-from executor import TerraformExecutor
+#### improvement_guide.md
 
-executor = TerraformExecutor()
+```
+# プロンプト改善ガイド
 
-code = """
-resource "aws_s3_bucket" "test" {
-  bucket = "test-bucket"
-}
-"""
+## 改善ステップ
 
-result = executor.execute(code, auto_approve=False)
-if result['success']:
-    if result.get('pending_approval'):
-        print("Plan created. Review and approve manually.")
-    else:
-        print("Resources created successfully!")
-else:
-    print(f"Error: {result['error']}")
+1. **不足パラメータを特定**
+   - 生成されたコードを確認
+   - 不足しているパラメータをリストアップ
+
+2. **明確な要件定義を追加**
+   - リソースタイプ
+   - 必須パラメータ（CIDRブロック、インスタンスタイプなど）
+   - オプションパラメータ（タグ、設定項目など）
+
+3. **「足りていないパラメータがある場合は聞き返してください」を追加**
+   - AIが不足パラメータを検出できるようにする
+
+4. **既存リソースとの衝突回避指示を追加**
+   - 既存のリソース情報をコンテキストとして提供
+   - 衝突チェックの指示
+
+5. **ベストプラクティスの要求を追加**
+   - 変数定義の使用
+   - 適切なコメント
+   - タグの設定
+   - セキュリティ設定
+
+## 改善例
+
+### 改善前
+```
+EC2を作成してください
 ```
 
-</details>
+### 改善後
+```
+下記条件を満たすEC2インスタンスを構築するTerraformコードを生成してください。
 
-#### 4.2 エラーハンドリングとリトライ
+要件:
+- リージョン: ap-northeast-1
+- インスタンスタイプ: t3.micro
+- OS: Amazon Linux 2023
+- セキュリティグループ: SSH（ポート22）のみ許可、送信は全許可
+- タグ: Name = "training-ec2", Environment = "training"
 
-```python
-import time
-
-def execute_with_retry(self, code, max_retries=3):
-    """リトライ機能付き実行"""
-    for attempt in range(max_retries):
-        try:
-            result = self.execute(code)
-            if result['success']:
-                return result
-        except Exception as e:
-            if attempt == max_retries - 1:
-                raise
-            time.sleep(2 ** attempt)  # 指数バックオフ
+注意事項:
+- 足りていないパラメータなどがある場合は、そのまま構築するのではなく一度聞き返してください
+- 既存のEC2インスタンスと衝突しないように確認してください
+- 変数定義を含めてください
+- コメントを適切に追加してください
+- ベストプラクティスに従ってください
+```
 ```
 
-### 6. Agent形式での開発の深化と動作確認（10分）
+### Context Engineeringの高度化例
 
-#### 6.1 より高度なAgent機能の実装と理解
+**複数リソースの統合構築**:
 
-**実装した機能**:
-- プロンプトテンプレートの活用
-- Context Engineeringの高度化（既存インフラ情報の動的取得、依存関係の自動解決、リソース間の整合性チェック）
-- フィードバックループの実装（承認ワークフロー、エラー修正、反復的改善）
+```
+既存のインフラ情報:
+- 既存VPC: vpc-xxxxx (10.1.0.0/16)
+- 既存サブネット: 10.1.1.0/24, 10.1.2.0/24
+- 利用可能な可用性ゾーン: ap-northeast-1a, ap-northeast-1c, ap-northeast-1d
 
-**Agent形式での開発の深化**:
-- コード生成から実行までの完全自動化
-- コンテキストの自動管理と更新
-- エラー検出と修正提案の自動化
-- human in the loopの実践
+上記の情報を考慮して、以下の順序でリソースを構築するTerraformコードを生成してください：
+1. 新しいVPC（既存VPCとCIDRが衝突しないように）
+2. パブリックサブネット（2つの可用性ゾーン）
+3. プライベートサブネット（2つの可用性ゾーン）
+4. インターネットゲートウェイ
+5. ルートテーブル
+6. セキュリティグループ
+7. EC2インスタンス（パブリックサブネットに配置）
 
-#### 6.2 エージェントの動作確認とテスト
-
-#### 5.1 基本的な動作確認
-
-1. Continueでコード生成
-2. 生成されたコードを検証
-3. 必要に応じて実行
-
-<details>
-<summary>📝 テスト例（クリックで展開）</summary>
-
-```python
-# test_agent.py
-from validator import TerraformValidator
-from executor import TerraformExecutor
-
-# 検証のテスト
-validator = TerraformValidator()
-code = """
-resource "aws_s3_bucket" "test" {
-  bucket = "test-bucket"
-}
-"""
-
-result = validator.validate(code)
-print(f"Validation result: {result}")
-
-# 実行のテスト（実際には実行しない）
-executor = TerraformExecutor()
-# result = executor.execute(code, auto_approve=False)
+依存関係を適切に設定し、既存リソースと衝突しないように注意してください。
 ```
 
 </details>
 
 ## ✅ チェックリスト
 
-- [ ] エージェントアーキテクチャを設計した
-- [ ] Continueを活用したコード生成を実践した
-- [ ] コード検証機能を実装した
-- [ ] Terraform実行自動化を実装した
-- [ ] エラーハンドリングを実装した
-- [ ] リトライ機能を実装した
-- [ ] 基本的な動作確認を行った
-- [ ] 生成コードの品質を確認した
+- [ ] 最終的な目標構成を理解した
+- [ ] プロンプトテンプレートを作成した
+- [ ] テンプレートを使用してコード生成を実践した
+- [ ] Context Engineeringの高度化を実践した（既存インフラ情報の動的取得、依存関係の考慮）
+- [ ] フィードバックループを実践した（承認ワークフロー、エラー修正、反復的改善）
+- [ ] 様々なリソースタイプに対応したプロンプト例を作成した
+- [ ] Agent形式での開発の振り返りを行った
 
 ## 🆘 トラブルシューティング
 
-### Continueが応答しない
+### テンプレートがうまく機能しない
 
-- Continueの設定を確認（`.continue/config.json`）
-- ネットワーク接続を確認
-- AWS Bedrockのサービス状態を確認（AWSコンソールで確認）
+- 変数の埋め込みが正しいか確認してください
+- テンプレートの構造を見直してください
+- 実際の使用例から改善点を抽出してください
 
-### Terraform実行エラー
+### コンテキスト情報の取得がうまくいかない
 
-- IAM権限を確認
-- リソース制限を確認
-- 状態ファイルの競合を確認
+- Continueのチャット機能を使って、段階的に情報を取得してください
+- 取得した情報を整理してからコンテキストとして提供してください
+
+### 依存関係が正しく反映されない
+
+- プロンプト内で依存関係を明示的に記述してください
+- 段階的な構築アプローチを検討してください
 
 ## 📚 参考資料
 
 - [Continue公式ドキュメント](https://continue.dev/docs)
 - [Terraform公式ドキュメント](https://developer.hashicorp.com/terraform/docs)
-- [サンプルコード](../../sample_code/terraform/)
-- [テンプレート](../../templates/ai_agents/terraform_agent_template.py)
+- [セッション1ガイド](session1_guide.md)
+- [セッション2ガイド](session2_guide.md)
 
 ## ➡️ 次のステップ
 
-セッション3が完了したら、[セッション4：Ansible運用基礎](session4_guide.md) に進んでください。
+セッション3が完了したら、[セッション4：Ansible運用基礎とAgent形式でのPlaybook生成](session4_guide.md) に進んでください。

@@ -1,65 +1,82 @@
-# セッション6：統合管理エージェント 詳細ガイド
+# セッション6：統合管理エージェント開発 詳細ガイド
 
 ## 📋 目的
 
-このセッションでは、Continueを活用して、TerraformとAnsibleを統合的に管理するエージェントの実装方法を学びます。
+このセッションでは、ContinueのAgent機能を活用して、TerraformとAnsibleを統合的に管理する方法を実践します。複雑なワークフローを自動化し、複数のリソースやタスクを効率的に管理する方法を学びます。
 
 ### 学習目標
 
 - 複雑なPrompt Engineeringの実践（複数リソースの統合構築用プロンプト）
 - 高度なContext Engineeringの実践（複数のコンテキストソースの統合）
-- 複雑なワークフローでのフィードバックループの実装（複数ステップの承認ワークフロー、エラー発生時のロールバックと再試行、人間の判断が必要な場面での中断と確認）
+- 複雑なワークフローでのフィードバックループの実践（複数ステップの承認ワークフロー、エラー発生時のロールバックと再試行、人間の判断が必要な場面での中断と確認）
 - Agent形式での開発の総合理解を実践する
-- タスク分類と優先順位付けの実装方法を理解する
-- TerraformとAnsibleの統合実行方法を理解する
-- タスク分解と依存関係解決の実装方法を理解する
-- ワークフロー自動化の実装方法を理解する
+- TerraformとAnsibleの統合的な活用方法を理解する
+- タスク分解と依存関係解決の考え方を理解する
+- ワークフロー自動化の考え方を理解する
 
-## 🎯 目指すべき構成
+## 🎯 最終的な目標構成
 
 このセッション終了時点で、以下の構成が完成していることを目指します：
 
-```
-workspace/
-└── agents/
-    └── integrated_agent/
-        ├── agent.py           # メインのエージェントコード
-        ├── classifier.py      # タスク分類モジュール
-        ├── prioritizer.py     # 優先順位付けモジュール
-        └── workflow.py        # ワークフロー自動化モジュール
+### 統合管理のワークフロー
+
+```mermaid
+graph TB
+    subgraph Workflow["統合ワークフロー"]
+        Task1["1. タスク分析<br/>Terraform/Ansible判定"]
+        Task2["2. タスク分解<br/>依存関係の明確化"]
+        Task3["3. 優先順位付け<br/>実行順序の決定"]
+        Task4["4. Terraform実行<br/>インフラ構築"]
+        Task5["5. Ansible実行<br/>サーバー設定"]
+        Task6["6. 検証・確認"]
+    end
+    
+    Task1 --> Task2
+    Task2 --> Task3
+    Task3 --> Task4
+    Task4 --> Task5
+    Task5 --> Task6
+    
+    Approval["承認ワークフロー"] -.-> Task4
+    Approval -.-> Task5
+    Approval -.-> Task6
 ```
 
-**エージェントの機能**:
-- タスクの自動分類（Terraform/Ansible/Hybrid）
-- 優先順位付け
-- タスク分解と依存関係解決
-- ワークフロー自動化
+### ファイル構成
+
+```
+workspace/
+├── terraform/
+│   └── integrated/
+│       └── (統合構築用のTerraformコード)
+└── ansible/
+    └── playbooks/
+        └── (統合運用用のPlaybook)
+```
+
+### 成果物
+
+- TerraformとAnsibleを統合的に活用したワークフロー
+- 複雑なタスクを分解・実行する実践経験
+- 統合管理の考え方とベストプラクティス
 
 ## 📚 事前準備
 
 - [セッション3](session3_guide.md) が完了していること
 - [セッション5](session5_guide.md) が完了していること
-- Terraform/Ansibleエージェントの理解
+- TerraformとAnsibleの基本理解
 - Continueが正しく設定されていること
 
-## 🚀 手順
+## 🚀 Agent開発の進め方
 
-### 1. 複雑なPrompt Engineering（15分）
+### Agent開発のアドバイス
 
-#### 1.1 複数リソースの統合構築用プロンプト
+#### 1. 複雑なPrompt Engineering
 
-**タスク**: VPC、EC2、RDS、ALBを含むWebアプリケーションインフラを構築
+**複数リソースの統合構築用プロンプト例**:
 
-Continueを起動して、以下のプロンプトを試してみましょう。
-
-**悪いプロンプト例**:
 ```
-Webアプリケーションのインフラを構築してください
-```
-
-**良いプロンプト例**:
-```
-下記条件を満たすWebアプリケーションインフラを構築するTerraformコードを生成してください。
+terraform/integrated/ フォルダに、下記条件を満たすWebアプリケーションインフラを構築するTerraformコードを生成してください。
 
 要件:
 - VPC: 10.0.0.0/16
@@ -70,6 +87,11 @@ Webアプリケーションのインフラを構築してください
 - ALB: Application Load Balancer（パブリックサブネット）
 - セキュリティグループ: 適切に設定
 
+依存関係:
+1. VPC → サブネット → セキュリティグループ
+2. サブネット → EC2インスタンス、RDS、ALB
+3. セキュリティグループ → EC2インスタンス、RDS
+
 注意事項:
 - 足りていないパラメータがある場合は、そのまま構築するのではなく一度聞き返してください
 - 既存のリソースと衝突しないように確認してください
@@ -79,525 +101,268 @@ Webアプリケーションのインフラを構築してください
 - ベストプラクティスに従ってください
 ```
 
-**体験ポイント**:
-- 複数リソースの統合構築用プロンプトの設計
-- 依存関係の明確化
-- 複雑な要件の構造化
+**タスク分解の考え方**:
 
-### 2. 高度なContext Engineering（15分）
+複雑なタスクは、以下のように分解して考えることができます：
 
-#### 2.1 複数のコンテキストソースの統合
+1. **Terraformタスク**: インフラリソースの作成（VPC、サブネット、EC2、RDSなど）
+2. **Ansibleタスク**: サーバー設定（パッケージインストール、サービス設定など）
+3. **依存関係**: Terraformタスク完了後にAnsibleタスクを実行
 
-既存のAWSリソース情報、サーバー情報、既存コードなどを統合してコンテキストとして活用します。
+#### 2. 高度なContext Engineering
 
-```python
-class AdvancedContextManager:
-    def get_integrated_context(self):
-        """複数のコンテキストソースを統合"""
-        context = {
-            'aws_resources': self.get_aws_context(),
-            'server_info': self.get_server_context(),
-            'existing_code': self.get_existing_code_context(),
-            'dependencies': self.get_dependency_graph()
-        }
-        return context
+**複数のコンテキストソースの統合**:
+
+Continueのチャット機能を使って、複数の情報源からコンテキストを取得できます：
+
+```
+以下の情報を統合して、Webアプリケーションインフラの構築と設定を行ってください：
+
+1. 既存のAWSリソース情報:
+   - 既存VPC: vpc-xxxxx (10.1.0.0/16)
+   - 既存サブネット: 10.1.1.0/24, 10.1.2.0/24
+
+2. サーバー情報:
+   - OS: Amazon Linux 2023
+   - 必要なパッケージ: nginx, node.js, pm2
+
+3. 既存コード:
+   - セッション2で作成したVPC/Subnet/EC2のTerraformコードを参考にしてください
+
+上記の情報を考慮して、新しいWebアプリケーションインフラを構築し、サーバー設定も行ってください。
 ```
 
-#### 2.2 既存インフラ情報の動的取得
+**段階的なコンテキスト提供**:
 
-コード生成前に最新のAWSリソース情報を取得し、実行前に再度確認します。
+1. まずAWSリソース情報を取得
+2. 次にサーバー情報を取得
+3. 最後に既存コードを参照
+4. すべてを統合してコンテキストとして提供
 
-### 3. タスク分類と優先順位付け（20分）
-
-#### 1.1 タスク分類の実装
-
-Continueを活用して、タスクを自動的に分類する機能を実装します。
-
-<details>
-<summary>📝 タスク分類クラス例（クリックで展開）</summary>
-
-```python
-# classifier.py
-class TaskClassifier:
-    """タスク分類クラス"""
-    
-    TASK_TYPES = {
-        'terraform': [
-            '作成', '構築', 'デプロイ', 'リソース作成',
-            'VPC', 'EC2', 'S3', 'RDS', 'インフラ'
-        ],
-        'ansible': [
-            '設定', 'インストール', '起動', '停止',
-            '再起動', 'パッケージ', 'サービス', 'ファイル'
-        ],
-        'hybrid': [
-            'セットアップ', '環境構築', 'デプロイ',
-            '監視開始', 'バックアップ'
-        ]
-    }
-    
-    def classify(self, instruction):
-        """
-        タスクタイプの分類
-        
-        Args:
-            instruction: 自然言語の指示
-        
-        Returns:
-            タスクタイプ（terraform/ansible/hybrid）
-        """
-        instruction_lower = instruction.lower()
-        
-        terraform_score = sum(1 for keyword in self.TASK_TYPES['terraform'] 
-                             if keyword in instruction_lower)
-        ansible_score = sum(1 for keyword in self.TASK_TYPES['ansible'] 
-                           if keyword in instruction_lower)
-        
-        if terraform_score > ansible_score:
-            return 'terraform'
-        elif ansible_score > terraform_score:
-            return 'ansible'
-        else:
-            return 'hybrid'
-```
-
-</details>
-
-#### 1.2 優先順位付けの実装
-
-<details>
-<summary>📝 優先順位付けクラス例（クリックで展開）</summary>
-
-```python
-# prioritizer.py
-class TaskPrioritizer:
-    """タスク優先順位付けクラス"""
-    
-    PRIORITY_MAP = {
-        '削除': 1,  # 最優先（慎重に）
-        '作成': 2,
-        '更新': 3,
-        '確認': 4,
-        '取得': 5
-    }
-    
-    def prioritize(self, tasks):
-        """
-        タスクの優先順位付け
-        
-        Args:
-            tasks: タスクのリスト
-        
-        Returns:
-            優先順位付けされたタスクのリスト
-        """
-        return sorted(tasks, key=lambda t: self.PRIORITY_MAP.get(t.get('type', ''), 99))
-```
-
-</details>
-
-### 4. 統合エージェントの実装と複雑なワークフローでのフィードバックループ（40分）
-
-#### 4.1 統合エージェントクラス
-
-Continueを活用して、TerraformとAnsibleを統合的に管理するエージェントを実装します。
-
-<details>
-<summary>📝 統合エージェントクラス例（クリックで展開）</summary>
-
-```python
-# agent.py
-from classifier import TaskClassifier
-from prioritizer import TaskPrioritizer
-# Terraform/Ansibleエージェントはセッション3、5で実装済みと仮定
-
-class IntegratedInfrastructureAgent:
-    """統合インフラ管理エージェント"""
-    
-    def __init__(self, aws_context=None, inventory_file=None):
-        self.aws_context = aws_context
-        self.inventory_file = inventory_file
-        
-        # セッション3、5で実装したエージェントを使用
-        # self.terraform_agent = TerraformAgent(aws_context)
-        # self.ansible_agent = AnsibleAgent(inventory_file)
-        
-        self.classifier = TaskClassifier()
-        self.prioritizer = TaskPrioritizer()
-    
-    def process(self, instruction, execute=False):
-        """
-        統合処理
-        
-        Args:
-            instruction: 自然言語の指示
-            execute: 実際に実行するか
-        
-        Returns:
-            処理結果
-        """
-        # 1. タスクタイプの判定
-        task_type = self.classifier.classify(instruction)
-        
-        # 2. タスクの分解（複合タスクの場合）
-        tasks = self.decompose_task(instruction, task_type)
-        
-        # 3. 優先順位付け
-        tasks = self.prioritizer.prioritize(tasks)
-        
-        # 4. 依存関係の解決
-        execution_plan = self.resolve_dependencies(tasks)
-        
-        # 5. 実行
-        results = []
-        for task in execution_plan:
-            if task['type'] == 'terraform':
-                # ContinueでTerraformコード生成
-                # セッション3の手順を参照
-                result = self.process_terraform_task(task, execute)
-            elif task['type'] == 'ansible':
-                # ContinueでAnsible Playbook生成
-                # セッション5の手順を参照
-                result = self.process_ansible_task(task, execute)
-            else:
-                result = self.process_hybrid_task(task, execute)
-            
-            results.append({
-                'task': task,
-                'result': result
-            })
-        
-        return {
-            'tasks': tasks,
-            'execution_plan': execution_plan,
-            'results': results
-        }
-    
-    def decompose_task(self, instruction, task_type):
-        """複合タスクの分解"""
-        if task_type == 'hybrid':
-            # Continueを使ってタスクを分解
-            # Continueを起動して、以下のプロンプトを入力:
-            """
-            以下のタスクを、TerraformタスクとAnsibleタスクに分解してください。
-            
-            タスク: {instruction}
-            
-            出力形式:
-            - Terraformタスク: [リスト]
-            - Ansibleタスク: [リスト]
-            - 依存関係: [リスト]
-            """
-            # 生成された分解結果をパース
-            # 実際の実装では、Continueの応答をパースする必要がある
-        
-        return [{'type': task_type, 'instruction': instruction}]
-    
-    def resolve_dependencies(self, tasks):
-        """依存関係の解決"""
-        # 依存関係グラフの構築
-        graph = self.build_dependency_graph(tasks)
-        
-        # トポロジカルソート
-        execution_order = self.topological_sort(graph)
-        
-        return execution_order
-```
-
-</details>
-
-#### 4.2 複雑なワークフローでのフィードバックループ
+#### 3. 複雑なワークフローでのフィードバックループ
 
 **複数ステップの承認ワークフロー**:
 
-```python
-def create_multi_step_plan(self, instruction):
-    """複数ステップの実行計画を作成して人間の承認を求める"""
-    execution_plan = self.decompose_and_plan(instruction)
-    
-    print("実行計画（複数ステップ）:")
-    for i, step in enumerate(execution_plan, 1):
-        print(f"\nステップ {i}:")
-        print(f"  タスクタイプ: {step['type']}")
-        print(f"  内容: {step['instruction']}")
-        print(f"  依存関係: {step['dependencies']}")
-    
-    approval = input("\nすべてのステップを実行しますか？ (y/n): ")
-    if approval.lower() == 'y':
-        return execution_plan
-    else:
-        # 個別承認
-        approved_steps = []
-        for step in execution_plan:
-            step_approval = input(f"ステップ '{step['instruction']}' を実行しますか？ (y/n): ")
-            if step_approval.lower() == 'y':
-                approved_steps.append(step)
-        return approved_steps
-```
+複雑なワークフローでは、各ステップごとに承認を求めることが重要です：
+
+1. **ステップ1の承認**: Terraformコード生成後、計画を確認して承認
+2. **ステップ2の承認**: Terraform実行後、結果を確認して承認
+3. **ステップ3の承認**: Ansible Playbook生成後、内容を確認して承認
+4. **ステップ4の承認**: Ansible実行前、最終確認
 
 **エラー発生時のロールバックと再試行**:
 
-```python
-def execute_with_rollback(self, execution_plan):
-    """ロールバック機能付きで実行"""
-    executed_steps = []
-    
-    for step in execution_plan:
-        try:
-            result = self.execute_step(step)
-            executed_steps.append({'step': step, 'result': result})
-        except Exception as e:
-            print(f"エラー発生: {e}")
-            rollback_approval = input("ロールバックしますか？ (y/n): ")
-            if rollback_approval.lower() == 'y':
-                self.rollback(executed_steps)
-            else:
-                retry_approval = input("再試行しますか？ (y/n): ")
-                if retry_approval.lower() == 'y':
-                    result = self.execute_step(step)
-                    executed_steps.append({'step': step, 'result': result})
-            raise
-```
+エラーが発生した場合、以下のような対処が考えられます：
+
+1. エラーメッセージをコンテキストとして提供
+2. Agentに修正を依頼
+3. 修正案を確認して承認
+4. 必要に応じて、前のステップから再実行
 
 **人間の判断が必要な場面での中断と確認**:
 
-```python
-def execute_with_human_checkpoints(self, execution_plan):
-    """人間の判断が必要な場面で中断"""
-    for step in execution_plan:
-        if self.requires_human_decision(step):
-            print(f"人間の判断が必要なステップ: {step['instruction']}")
-            decision = input("続行しますか？ (y/n): ")
-            if decision.lower() != 'y':
-                print("実行を中断しました")
-                return
-        self.execute_step(step)
-```
+以下のような場面では、必ず人間の判断を求めます：
 
-### 5. Agent形式での開発の総合理解と実践的なシナリオ演習（20分）
+- リソースの削除
+- 重要な設定の変更
+- コストがかかる操作
+- 本番環境への影響がある操作
 
-#### 5.1 Agent形式での開発の総合理解
+### 考えながら進めるポイント
 
-**複雑なワークフローでのAgent形式開発の実践**:
-- 複数リソースの統合構築
-- 複数ステップの承認ワークフロー
-- エラー発生時のロールバックと再試行
-- 人間の判断が必要な場面での中断と確認
+1. **タスクの分類方法**
+   - どのタスクがTerraformで、どのタスクがAnsibleで実行すべきか
+   - 複合タスクをどのように分解すべきか
 
-**Agent形式での開発の総合理解**:
-- Prompt Engineering、Context Engineering、フィードバックループの統合活用
-- 複雑なワークフローでのAgent形式開発の実践
-- human in the loopの重要性の理解
+2. **依存関係の明確化**
+   - どのタスクが他のタスクに依存しているか
+   - 実行順序をどのように決定すべきか
 
-#### 5.2 実践的なシナリオ演習
+3. **コンテキストの統合方法**
+   - 複数の情報源から取得した情報をどのように統合すべきか
+   - どの情報が重要か
 
-#### 3.1 シナリオ1: 監視エージェントのセットアップ
+4. **ワークフローの設計**
+   - 複数のステップをどのように組み合わせるべきか
+   - エラーハンドリングをどのように実装すべきか
 
-Continueを起動して、以下のプロンプトを入力します：
+## 📝 振り返り
 
-```
-EC2インスタンスにPrometheus node_exporterをインストールして起動してください。
-設定ファイルは/etc/prometheus/node_exporter.confに配置し、
-systemdサービスとして登録してください。
-```
+以下の点について振り返り、学んだことをまとめてください：
+
+- **複雑なPrompt Engineeringの効果**: 複数リソースの統合構築をどのようにプロンプトに反映したか
+- **高度なContext Engineering**: 複数のコンテキストソースを統合することで、どのような品質向上が実現できたか
+- **複雑なワークフローでのフィードバックループ**: 複数ステップの承認ワークフロー、エラー発生時のロールバック、人間の判断が必要な場面での中断をどのように実践したか
+- **Agent形式での開発の総合理解**: これまでのセッションで学んだことを統合して、どのような開発体験を実現できたか
 
 <details>
-<summary>📝 生成されるAnsible Playbook例（クリックで展開）</summary>
+<summary>📝 解答例（クリックで展開）</summary>
 
-```yaml
----
-- name: Prometheus node_exporterのインストールと設定
-  hosts: webservers
-  become: yes
-  
-  tasks:
-    - name: node_exporterユーザーを作成
-      user:
-        name: node_exporter
-        system: yes
-        shell: /bin/false
-        home: /var/lib/node_exporter
-    
-    - name: node_exporterをダウンロード
-      get_url:
-        url: https://github.com/prometheus/node_exporter/releases/download/v1.6.1/node_exporter-1.6.1.linux-amd64.tar.gz
-        dest: /tmp/node_exporter.tar.gz
-    
-    - name: node_exporterを展開
-      unarchive:
-        src: /tmp/node_exporter.tar.gz
-        dest: /opt
-        remote_src: yes
-    
-    - name: node_exporterバイナリをコピー
-      copy:
-        src: /opt/node_exporter-1.6.1.linux-amd64/node_exporter
-        dest: /usr/local/bin/node_exporter
-        owner: root
-        group: root
-        mode: '0755'
-        remote_src: yes
-    
-    - name: 設定ファイルを作成
-      copy:
-        content: |
-          # node_exporter configuration
-        dest: /etc/prometheus/node_exporter.conf
-        owner: node_exporter
-        group: node_exporter
-        mode: '0644'
-    
-    - name: systemdサービスファイルを作成
-      copy:
-        content: |
-          [Unit]
-          Description=Prometheus Node Exporter
-          After=network.target
-          
-          [Service]
-          User=node_exporter
-          Group=node_exporter
-          ExecStart=/usr/local/bin/node_exporter --config.file=/etc/prometheus/node_exporter.conf
-          Restart=always
-          
-          [Install]
-          WantedBy=multi-user.target
-        dest: /etc/systemd/system/node_exporter.service
-        owner: root
-        group: root
-        mode: '0644'
-    
-    - name: systemdをリロード
-      systemd:
-        daemon_reload: yes
-    
-    - name: node_exporterサービスを開始
-      systemd:
-        name: node_exporter
-        state: started
-        enabled: yes
-```
+### 統合ワークフローの例
 
-</details>
+#### シナリオ1: 新規サーバー追加と設定
 
-#### 3.2 シナリオ2: 複数リソースの一括管理
-
-Continueを起動して、以下のプロンプトを入力します：
+**ステップ1: Terraformでサーバー作成**
 
 ```
-以下のリソースを作成してください:
-1. VPC (10.0.0.0/16)
-2. パブリックサブネット (10.0.1.0/24)
-3. EC2インスタンス (t3.micro)
-4. セキュリティグループ (SSH許可)
-5. EC2インスタンスに監視エージェントをインストール
+terraform/integrated/ フォルダに、下記条件を満たすEC2インスタンスを作成するTerraformコードを生成してください。
+
+要件:
+- インスタンスタイプ: t3.micro
+- OS: Amazon Linux 2023
+- セキュリティグループ: SSH（ポート22）のみ許可
+- タグ: Name = "web-server-new", Environment = "training"
+
+既存のインフラ情報:
+- VPC: vpc-xxxxx (10.0.0.0/16)
+- パブリックサブネット: subnet-xxxxx (10.0.1.0/24)
 ```
 
-このシナリオでは、TerraformタスクとAnsibleタスクが組み合わさった複合タスクになります。
+**ステップ2: Ansibleでサーバー設定**
 
-### 6. ワークフロー自動化（10分）
-
-#### 4.1 ワークフロー定義
-
-<details>
-<summary>📝 ワークフロー自動化クラス例（クリックで展開）</summary>
-
-```python
-# workflow.py
-class WorkflowAutomator:
-    """ワークフロー自動化クラス"""
-    
-    def automate_workflow(self, workflow_description):
-        """
-        ワークフローの自動化
-        
-        例: 新規サーバ追加→設定→監視開始
-        """
-        steps = [
-            {
-                'name': 'サーバ作成',
-                'type': 'terraform',
-                'instruction': workflow_description['server_creation']
-            },
-            {
-                'name': 'サーバ設定',
-                'type': 'ansible',
-                'instruction': workflow_description['server_config'],
-                'depends_on': ['サーバ作成']
-            },
-            {
-                'name': '監視開始',
-                'type': 'ansible',
-                'instruction': workflow_description['monitoring_setup'],
-                'depends_on': ['サーバ設定']
-            }
-        ]
-        
-        return self.execute_workflow(steps)
-    
-    def execute_workflow(self, steps):
-        """ワークフローの実行"""
-        results = []
-        
-        for step in steps:
-            # 依存関係の確認
-            if step.get('depends_on'):
-                for dep in step['depends_on']:
-                    # 依存タスクが完了しているか確認
-                    if not self.is_task_completed(dep):
-                        raise Exception(f"Dependency {dep} not completed")
-            
-            # タスクの実行
-            if step['type'] == 'terraform':
-                result = self.execute_terraform_task(step)
-            elif step['type'] == 'ansible':
-                result = self.execute_ansible_task(step)
-            
-            results.append({
-                'step': step,
-                'result': result
-            })
-        
-        return results
 ```
+ansible/playbooks/ フォルダに、新しく作成したEC2インスタンスに以下の設定を行うAnsible Playbookを生成してください。
+
+要件:
+- nginxをインストール
+- nginx設定ファイルを配置
+- nginxサービスを開始
+- 自動起動を有効化
+
+対象サーバー:
+- 新しく作成したEC2インスタンス（インベントリに追加済み）
+
+注意事項:
+- 冪等性を確保してください
+- エラーハンドリングを含めてください
+```
+
+#### シナリオ2: 監視エージェントのセットアップ
+
+**統合プロンプト例**:
+
+```
+以下のワークフローを実行してください：
+
+1. Terraformタスク:
+   - 既存のEC2インスタンスにCloudWatchエージェントをインストールするためのIAMロールを作成
+   - IAMロールをEC2インスタンスにアタッチ
+
+2. Ansibleタスク:
+   - CloudWatchエージェントをインストール
+   - 設定ファイルを配置
+   - サービスを開始
+
+依存関係:
+- Terraformタスク完了後にAnsibleタスクを実行
+
+既存のインフラ情報:
+- EC2インスタンスID: i-xxxxx
+- 既存のIAMロール: なし
+```
+
+#### シナリオ3: 複数リソースの一括管理
+
+**プロンプト例**:
+
+```
+以下のリソースを順番に作成・設定してください：
+
+1. VPCとサブネットの作成（Terraform）
+2. EC2インスタンスの作成（Terraform）
+3. セキュリティグループの設定（Terraform）
+4. EC2インスタンスへのSSH接続設定（Ansible）
+5. 必要なパッケージのインストール（Ansible）
+6. アプリケーションのデプロイ（Ansible）
+
+各ステップで承認を求めてください。
+エラーが発生した場合は、ロールバックを検討してください。
+```
+
+### タスク分解の考え方
+
+**複合タスクの分解例**:
+
+```
+以下のタスクを、TerraformタスクとAnsibleタスクに分解してください。
+
+タスク: Webアプリケーション環境の構築
+
+分解結果:
+- Terraformタスク:
+  1. VPC、サブネットの作成
+  2. EC2インスタンスの作成
+  3. セキュリティグループの設定
+  4. ALBの作成
+
+- Ansibleタスク:
+  1. パッケージのインストール（nginx, node.js）
+  2. アプリケーションコードのデプロイ
+  3. サービスの起動
+  4. ヘルスチェックの設定
+
+- 依存関係:
+  - AnsibleタスクはTerraformタスク完了後に実行
+  - アプリケーションデプロイはパッケージインストール後に実行
+```
+
+### エラーハンドリングとロールバック
+
+**エラー発生時の対処例**:
+
+```
+エラーが発生しました：
+- Terraform実行時: Resource 'aws_instance.web' already exists
+
+このエラーを解決する方法を教えてください。
+また、既に作成されたリソースがある場合、それを活用する方法も検討してください。
+```
+
+Agentが修正案を提示したら、それを確認して承認します。
 
 </details>
 
 ## ✅ チェックリスト
 
-- [ ] タスク分類機能を実装した
-- [ ] 優先順位付け機能を実装した
-- [ ] 統合エージェントを実装した
-- [ ] Terraform/Ansibleの統合実行を実装した
-- [ ] タスク分解機能を実装した
-- [ ] 依存関係解決機能を実装した
-- [ ] ワークフロー自動化を実装した
-- [ ] 監視エージェントセットアップの自動化を実践した
-- [ ] 複数リソースの一括管理を実践した
-- [ ] 統合テストを実施した
+- [ ] 最終的な目標構成を理解した
+- [ ] 複雑なPrompt Engineeringを実践した（複数リソースの統合構築用プロンプト）
+- [ ] 高度なContext Engineeringを実践した（複数のコンテキストソースの統合）
+- [ ] タスク分解と依存関係解決の考え方を理解した
+- [ ] TerraformとAnsibleを統合的に活用したワークフローを実践した
+- [ ] 複数ステップの承認ワークフローを実践した
+- [ ] エラー発生時のロールバックと再試行を実践した
+- [ ] 人間の判断が必要な場面での中断と確認を実践した
+- [ ] Agent形式での開発の総合理解を深めた
 
 ## 🆘 トラブルシューティング
 
-### タスク分類エラー
+### タスク分類がうまくいかない
 
-- キーワードマッチングの精度を向上
-- Continueを使った分類の導入
+- プロンプト内で明示的にタスクタイプを指定してください
+- 複合タスクの場合は、段階的に分解してください
 
-### 依存関係エラー
+### 依存関係が正しく反映されない
 
-- 依存関係グラフの可視化
-- 循環依存の検出
+- プロンプト内で依存関係を明示的に記述してください
+- 各ステップの実行順序を明確にしてください
 
-### 実行順序エラー
+### エラー発生時の対処がわからない
 
-- 実行前のプレビュー機能
-- ロールバック機能
+- エラーメッセージを詳しく確認してください
+- エラーメッセージをコンテキストとして提供し、Agentに修正を依頼してください
+
+### ワークフローが複雑になりすぎる
+
+- ワークフローを小さなステップに分解してください
+- 各ステップごとに確認・承認を行ってください
 
 ## 📚 参考資料
 
 - [Continue公式ドキュメント](https://continue.dev/docs)
-- [テンプレート](../../templates/ai_agents/integrated_agent_template.py)
-- [サンプルコード](../../sample_code/)
+- [Terraform公式ドキュメント](https://developer.hashicorp.com/terraform/docs)
+- [Ansible公式ドキュメント](https://docs.ansible.com/)
+- [セッション3ガイド](session3_guide.md)
+- [セッション5ガイド](session5_guide.md)
 
 ## ➡️ 次のステップ
 

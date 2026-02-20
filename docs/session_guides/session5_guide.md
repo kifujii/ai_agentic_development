@@ -1,72 +1,123 @@
-# セッション5：Ansible自動化エージェント 詳細ガイド
+# セッション5：Ansible自動化エージェント開発 詳細ガイド
 
 ## 📋 目的
 
-このセッションでは、Continueを活用して、Ansible Playbook生成・実行を自動化するエージェントの実装方法を学びます。
+このセッションでは、ContinueのAgent機能を活用して、より高度なAnsible Playbookを生成し、複雑な運用タスクを自動化します。セッション4で学んだ基礎を発展させ、プロンプトテンプレートの作成やContext Engineeringの高度化を実践します。
 
 ### 学習目標
 
-- Prompt Engineeringの実践（Ansible Playbook生成用）
-- Context Engineeringの実践（サーバー情報の活用）
-- フィードバックループの実装（承認ワークフロー、エラー修正、反復的改善）
+- Prompt Engineeringの実践（高度なAnsible Playbook生成用）
+- Context Engineeringの実践（サーバー情報の動的取得と活用）
+- フィードバックループの実践（承認ワークフロー、エラー修正、反復的改善）
 - Agent形式での開発の深化を実践する
-- Continueを活用したAnsible Playbook生成の実装方法を理解する
-- Playbook検証機能の実装方法を理解する
-- Ansible実行自動化の実装方法を理解する
-- エラーハンドリングとリトライ機能の実装方法を理解する
+- ContinueのAgent機能を活用した効率的なPlaybook生成
+- 複雑なタスクの自動化
 
-## 🎯 目指すべき構成
+## 🎯 最終的な目標構成
 
 このセッション終了時点で、以下の構成が完成していることを目指します：
 
-```
-workspace/
-└── agents/
-    └── ansible_agent/
-        ├── agent.py           # メインのエージェントコード
-        ├── playbook_generator.py # Playbook生成モジュール
-        ├── validator.py       # Playbook検証モジュール
-        └── executor.py        # Ansible実行モジュール
+### プロンプトテンプレート構成
+
+```mermaid
+graph TB
+    subgraph Templates["Ansibleプロンプトテンプレート"]
+        BaseTemplate["基本テンプレート<br/>ansible_playbook_template.txt"]
+        AdvancedTemplate["高度なテンプレート<br/>complex_task_template.txt"]
+        ModuleGuide["モジュールガイド<br/>ansible_modules_guide.md"]
+    end
+    
+    subgraph Usage["使用フロー"]
+        LoadTemplate["テンプレート読み込み"]
+        FillContext["コンテキスト埋め込み"]
+        GeneratePlaybook["Playbook生成"]
+        AgentUse["Agentで使用"]
+    end
+    
+    BaseTemplate --> LoadTemplate
+    AdvancedTemplate --> LoadTemplate
+    LoadTemplate --> FillContext
+    FillContext --> GeneratePlaybook
+    GeneratePlaybook --> AgentUse
 ```
 
-**エージェントの機能**:
-- Continueを活用したAnsible Playbook生成
-- Playbook検証
-- Ansible実行の自動化
-- エラーハンドリングとリトライ
+### ファイル構成
+
+```
+workspace/
+└── templates/
+    └── prompts/
+        ├── ansible_playbook_template.txt  # 基本テンプレート
+        ├── complex_task_template.txt       # 複雑なタスク用テンプレート
+        └── ansible_modules_guide.md         # Ansibleモジュールガイド
+```
+
+### 成果物
+
+- 再利用可能なAnsibleプロンプトテンプレート
+- 複雑なタスクを自動化するPlaybook
+- サーバー情報の動的取得と活用の実践
 
 ## 📚 事前準備
 
 - [セッション4](session4_guide.md) が完了していること
 - Ansibleの基本理解
 - Continueが正しく設定されていること
+- セッション2で構築したEC2インスタンスが起動していること
 
-## 🚀 手順
+## 🚀 Agent開発の進め方
 
-### 1. Prompt EngineeringとContext Engineeringの実践（20分）
+### Agent開発のアドバイス
 
-#### 1.1 Prompt Engineering（Ansible Playbook生成用）
+#### 1. 高度なPrompt Engineering
 
-**悪いプロンプト例**:
+**複雑なタスク用プロンプト例**:
+
 ```
-Ansible Playbookを生成してください。
-パッケージをインストールしてサービスを開始してください。
-```
-
-**良いプロンプト例**:
-```
-下記条件を満たすAnsible Playbookを生成してください。
+ansible/playbooks/ フォルダに、下記条件を満たす複雑な運用タスクを自動化するAnsible Playbookを生成してください。
 
 要件:
-- パッケージ（htop, git, curl）をインストールする
-- 設定ファイルをコピーする
-- サービス（nginx）を開始する
-- 冪等性を確保する
+- パッケージ（htop, git, curl, nginx）をインストール
+- 設定ファイルをテンプレートから生成してコピー
+- サービス（nginx）を開始し、自動起動を有効化
+- ログローテーションの設定
+- ファイアウォールルールの設定（必要に応じて）
+- 冪等性を確保
 - エラーハンドリングを含める
+- ロールバック機能を含める
 
 注意事項:
 - 足りていないパラメータがある場合は、そのまま実行するのではなく一度聞き返してください
+- ハンドラーを適切に使用してください
+- タスクの依存関係を明確にしてください
+- コメントを適切に追加してください
+- ベストプラクティスに従ってください
+
+出力形式:
+- YAML形式のAnsible Playbook
+- 適切なモジュールを使用
+- 変数定義を含める（group_varsまたはvars）
+```
+
+**プロンプトテンプレートの作成**:
+
+セッション3で学んだTerraformのプロンプトテンプレートと同様に、Ansible用のテンプレートも作成できます：
+
+```
+下記条件を満たす{task_type}を自動化するAnsible Playbookを生成してください。
+
+要件:
+- 対象サーバー: {target_hosts}
+- {specific_requirements}
+
+既存のサーバー情報:
+{server_context}
+
+注意事項:
+- 足りていないパラメータがある場合は、そのまま実行するのではなく一度聞き返してください
+- 冪等性を確保してください
 - ハンドラーを使用してください
+- エラーハンドリングを含めてください
 - コメントを適切に追加してください
 - ベストプラクティスに従ってください
 
@@ -75,463 +126,339 @@ Ansible Playbookを生成してください。
 - 適切なモジュールを使用
 ```
 
-#### 1.2 Context Engineering（サーバー情報）
+#### 2. Context Engineeringの高度化
 
-既存のサーバー情報を取得して、コンテキストとして活用します。
+**サーバー情報の動的取得**:
 
-```bash
-# セッション4で使用したAnsibleコマンドを実行
-ansible all -i workspace/ansible/inventory.ini -m setup -a "filter=ansible_distribution*"
+Continueのチャット機能を使って、サーバー情報を段階的に取得できます：
+
+```
+セッション2で構築したEC2インスタンスの詳細情報を教えてください。
+OS情報、インストールされているパッケージ、実行中のサービス、ディスク使用状況などを含めてください。
 ```
 
-コンテキスト情報をContinueに提供します。
+取得した情報をコンテキストとして提供：
 
-### 2. Ansible Playbook生成エージェントの実装（40分）
+```
+既存のサーバー情報:
+- OS: Amazon Linux 2023
+- インストール済みパッケージ: 基本パッケージのみ
+- 実行中サービス: sshd, crond
+- ディスク使用状況: /dev/xvda1 8.0G 1.2G 6.8G 15% /
+- メモリ: 1GB
 
-#### 2.1 Continueを活用したPlaybook生成
+上記の情報を考慮して、以下のタスクを自動化するAnsible Playbookを生成してください：
+1. 必要なパッケージのインストール
+2. 設定ファイルの配置
+3. サービスの設定と起動
+4. ログローテーションの設定
+```
+
+**複数のサーバー情報の統合**:
+
+複数のサーバーがある場合、それぞれの情報を統合してコンテキストとして提供：
+
+```
+サーバー情報:
+- web1: Amazon Linux 2023, nginx未インストール
+- web2: Amazon Linux 2023, nginx未インストール
+
+上記の情報を考慮して、両方のサーバーにnginxをインストール・設定するAnsible Playbookを生成してください。
+```
+
+#### 3. フィードバックループの実践
+
+**承認ワークフロー**:
+- 複雑なタスクの場合、段階的に承認
+- 特にサービス再起動や設定変更など、影響の大きい操作は必ず確認
+
+**エラー修正プロセス**:
+- Playbook実行時のエラーをコンテキストとして提供
+- エラーメッセージと実行環境情報を一緒に提供
+
+**反復的改善**:
+- 生成されたPlaybookを確認し、改善点があれば具体的にフィードバック
+- 例：「エラーハンドリングをより詳細にしてください」「ログ出力を追加してください」「パフォーマンス最適化を行ってください」
+
+### 考えながら進めるポイント
+
+1. **どのようなテンプレート構造が効果的か**
+   - タスクタイプごとのテンプレート（パッケージインストール、サービス管理、ファイル操作など）
+   - 複雑なタスクをどのように分解すべきか
+
+2. **どのようなコンテキストが必要か**
+   - サーバー情報のどの部分が重要か
+   - 複数のサーバー情報をどのように統合すべきか
+
+3. **複雑なタスクの自動化方法**
+   - タスクの依存関係をどのように表現すべきか
+   - エラーハンドリングとロールバックをどのように実装すべきか
+
+4. **効率的な開発フロー**
+   - テンプレートの使い回し
+   - コンテキスト情報の再利用
+   - 段階的な構築アプローチ
+
+## 📝 振り返り
+
+以下の点について振り返り、学んだことをまとめてください：
+
+- **高度なPrompt Engineeringの効果**: 複雑なタスクをどのようにプロンプトに反映したか
+- **Context Engineeringの高度化**: サーバー情報の動的取得と活用が、どのようにPlaybook生成の品質向上に寄与したか
+- **フィードバックループの実践**: 承認ワークフロー、エラー修正、反復的改善をどのように実践したか
+- **Agent形式での開発の深化**: セッション4と比較して、どのような進化を感じたか
 
 <details>
-<summary>📝 生成Playbook例（クリックで展開）</summary>
+<summary>📝 解答例（クリックで展開）</summary>
+
+### プロンプトテンプレート例
+
+#### ansible_playbook_template.txt
+
+```
+下記条件を満たす{task_type}を自動化するAnsible Playbookを生成してください。
+
+要件:
+- 対象サーバー: {target_hosts}
+- {specific_requirements}
+
+既存のサーバー情報:
+{server_context}
+
+注意事項:
+- 足りていないパラメータがある場合は、そのまま実行するのではなく一度聞き返してください
+- 冪等性を確保してください
+- ハンドラーを使用してください
+- エラーハンドリングを含めてください
+- コメントを適切に追加してください
+- ベストプラクティスに従ってください
+
+出力形式:
+- YAML形式のAnsible Playbook
+- 適切なモジュールを使用
+```
+
+### 高度なPlaybook例
+
+#### complex_setup.yml
 
 ```yaml
 ---
-- name: パッケージインストールとサービス設定
+- name: 複雑なサーバーセットアップ
   hosts: webservers
   become: yes
-  
-  tasks:
-    - name: 必要なパッケージをインストール
-      yum:
-        name:
-          - htop
-          - git
-          - curl
-        state: present
-      register: package_result
-      failed_when: false
-    
-    - name: パッケージインストール結果の確認
-      debug:
-        msg: "パッケージインストール結果: {{ package_result }}"
-      when: package_result.failed
-    
-    - name: 設定ファイルをコピー
-      copy:
-        src: config/nginx.conf
-        dest: /etc/nginx/nginx.conf
-        owner: root
-        group: root
-        mode: '0644'
-      notify: restart nginx
-    
-    - name: nginxサービスを開始
-      systemd:
-        name: nginx
-        state: started
-        enabled: yes
+  vars:
+    packages:
+      - htop
+      - git
+      - curl
+      - nginx
+    nginx_config_path: /etc/nginx/nginx.conf
+    log_dir: /var/log/nginx
   
   handlers:
     - name: restart nginx
       systemd:
         name: nginx
         state: restarted
+    
+    - name: reload nginx
+      systemd:
+        name: nginx
+        state: reloaded
+  
+  tasks:
+    - name: パッケージキャッシュの更新
+      yum:
+        update_cache: yes
+        cache_valid_time: 3600
+      changed_when: false
+    
+    - name: 必要なパッケージをインストール
+      yum:
+        name: "{{ packages }}"
+        state: present
+      register: package_result
+      failed_when: package_result.failed and package_result.rc != 0
+    
+    - name: パッケージインストール結果の確認
+      debug:
+        msg: "パッケージインストール結果: {{ package_result }}"
+      when: package_result.failed
+    
+    - name: ログディレクトリの作成
+      file:
+        path: "{{ log_dir }}"
+        state: directory
+        owner: nginx
+        group: nginx
+        mode: '0755'
+    
+    - name: nginx設定ファイルのテンプレート生成
+      template:
+        src: nginx.conf.j2
+        dest: "{{ nginx_config_path }}"
+        owner: root
+        group: root
+        mode: '0644'
+        backup: yes
+      notify: reload nginx
+      register: config_result
+    
+    - name: 設定ファイルの検証
+      command: nginx -t
+      changed_when: false
+      failed_when: false
+      register: nginx_test
+    
+    - name: nginx設定の検証結果
+      debug:
+        msg: "{{ nginx_test.stdout }}"
+      when: nginx_test.rc != 0
+    
+    - name: nginxサービスを開始
+      systemd:
+        name: nginx
+        state: started
+        enabled: yes
+    
+    - name: ログローテーション設定
+      copy:
+        content: |
+          /var/log/nginx/*.log {
+              daily
+              rotate 7
+              compress
+              delaycompress
+              missingok
+              notifempty
+              create 0640 nginx nginx
+              sharedscripts
+              postrotate
+                  /bin/kill -USR1 `cat /run/nginx.pid 2>/dev/null` 2>/dev/null || true
+              endscript
+          }
+        dest: /etc/logrotate.d/nginx
+        owner: root
+        group: root
+        mode: '0644'
+    
+    - name: ファイアウォールルールの設定（firewalld使用時）
+      firewalld:
+        service: http
+        permanent: yes
+        state: enabled
+        immediate: yes
+      when: ansible_os_family == "RedHat" and ansible_distribution_major_version|int >= 7
+      ignore_errors: yes
+    
+    - name: セットアップ完了の確認
+      debug:
+        msg: "セットアップが完了しました"
 ```
 
-</details>
+### エラーハンドリング例
 
-#### 1.2 プロンプトテンプレートの作成
+#### error_handling_example.yml
 
-再利用可能なプロンプトテンプレートを作成します。
+```yaml
+---
+- name: エラーハンドリングを含むPlaybook
+  hosts: webservers
+  become: yes
+  
+  tasks:
+    - name: パッケージのインストール（エラーハンドリング付き）
+      yum:
+        name: "{{ item }}"
+        state: present
+      loop:
+        - htop
+        - git
+        - curl
+      register: package_results
+      rescue:
+        - name: パッケージインストールエラーの処理
+          debug:
+            msg: "パッケージ {{ item.item }} のインストールに失敗しました: {{ item.msg }}"
+          loop: "{{ package_results.results }}"
+          loop_control:
+            label: "{{ item.item }}"
+          when: item.failed
+      
+      always:
+        - name: インストール結果のサマリー
+          debug:
+            msg: "パッケージインストール完了"
+```
 
-<details>
-<summary>📝 プロンプトテンプレート例（クリックで展開）</summary>
+### プロンプト例
 
-```python
-# prompt_templates.py
-class AnsiblePromptBuilder:
-    def build_prompt(self, instruction, context=None):
-        """Ansible Playbook生成用のプロンプト構築"""
-        prompt = f"""
-以下の要件でAnsible Playbookを生成してください。
+**複雑なタスク用プロンプト**:
+
+```
+ansible/playbooks/ フォルダに、下記条件を満たす複雑な運用タスクを自動化するAnsible Playbookを生成してください。
 
 要件:
-{instruction}
+- パッケージ（htop, git, curl, nginx）をインストール
+- nginx設定ファイルをテンプレートから生成して配置
+- nginxサービスを開始し、自動起動を有効化
+- ログローテーションの設定
+- 設定ファイル変更時の自動リロード
+- エラーハンドリングとロールバック機能
 
-既存のインフラ情報:
-{context if context else "なし"}
+既存のサーバー情報:
+- OS: Amazon Linux 2023
+- パッケージマネージャー: yum
+- サービス管理: systemd
 
-出力形式:
-- YAML形式のAnsible Playbook
-- 適切なモジュールを使用
-- 冪等性を確保
-- エラーハンドリングを含める
-- ハンドラーを適切に使用
-- コメントを追加
-- ベストプラクティスに従う
-
-Ansibleの主要モジュール:
-- yum/apt: パッケージ管理
-- systemd: サービス管理
-- copy/template: ファイル操作
-- shell/command: コマンド実行
-- user/group: ユーザー管理
-- file: ファイル・ディレクトリ操作
-"""
-        return prompt
+注意事項:
+- 足りていないパラメータがある場合は、そのまま実行するのではなく一度聞き返してください
+- ハンドラーを適切に使用してください
+- タスクの依存関係を明確にしてください
+- 冪等性を確保してください
+- エラーハンドリングを含めてください
+- コメントを適切に追加してください
+- ベストプラクティスに従ってください
 ```
 
 </details>
-
-### 3. Playbook検証機能とフィードバックループの実装（20分）
-
-#### 3.1 Playbook検証機能
-
-#### 2.1 YAML検証の実装
-
-```python
-# validator.py
-import yaml
-import subprocess
-import tempfile
-import os
-
-class AnsiblePlaybookValidator:
-    """Ansible Playbook検証クラス"""
-    
-    def validate(self, playbook):
-        """
-        Playbookの検証
-        
-        Args:
-            playbook: Ansible Playbook（YAML文字列）
-        
-        Returns:
-            検証結果（valid, errors, warnings）
-        """
-        result = {
-            'valid': True,
-            'errors': [],
-            'warnings': []
-        }
-        
-        # 1. YAML構文チェック
-        yaml_check = self.check_yaml_syntax(playbook)
-        if not yaml_check['valid']:
-            result['valid'] = False
-            result['errors'].extend(yaml_check['errors'])
-        
-        # 2. ansible-lint（利用可能な場合）
-        lint_check = self.run_ansible_lint(playbook)
-        if lint_check['errors']:
-            result['warnings'].extend(lint_check['errors'])
-        
-        return result
-    
-    def check_yaml_syntax(self, playbook):
-        """YAML構文チェック"""
-        try:
-            yaml.safe_load(playbook)
-            return {'valid': True, 'errors': []}
-        except yaml.YAMLError as e:
-            return {
-                'valid': False,
-                'errors': [f"YAML syntax error: {str(e)}"]
-            }
-    
-    def run_ansible_lint(self, playbook):
-        """ansible-lintの実行"""
-        work_dir = tempfile.mkdtemp()
-        
-        try:
-            # Playbookをファイルに保存
-            playbook_file = os.path.join(work_dir, 'playbook.yml')
-            with open(playbook_file, 'w') as f:
-                f.write(playbook)
-            
-            # ansible-lint実行
-            lint_result = subprocess.run(
-                ['ansible-lint', playbook_file],
-                capture_output=True,
-                text=True
-            )
-            
-            if lint_result.returncode != 0:
-                return {'errors': lint_result.stderr.split('\n')}
-            
-            return {'errors': []}
-        except FileNotFoundError:
-            # ansible-lintがインストールされていない場合
-            return {'errors': []}
-        finally:
-            import shutil
-            shutil.rmtree(work_dir)
-```
-
-<details>
-<summary>📝 使用例（クリックで展開）</summary>
-
-```python
-from validator import AnsiblePlaybookValidator
-
-validator = AnsiblePlaybookValidator()
-
-playbook = """
----
-- name: Test playbook
-  hosts: webservers
-  tasks:
-    - name: Test task
-      debug:
-        msg: "Hello"
-"""
-
-result = validator.validate(playbook)
-print(f"Valid: {result['valid']}")
-if result['errors']:
-    print(f"Errors: {result['errors']}")
-```
-
-</details>
-
-#### 3.2 フィードバックループの実装
-
-**承認ワークフロー**:
-
-```python
-def create_plan(self, instruction):
-    """実行計画を作成して人間の承認を求める"""
-    plan = self.generate_plan(instruction)
-    print("実行計画:")
-    print(plan)
-    approval = input("実行しますか？ (y/n): ")
-    if approval.lower() == 'y':
-        return plan
-    else:
-        return None
-```
-
-**エラーハンドリングで自動修正提案機能**:
-
-```python
-def handle_error(self, error, playbook):
-    """エラーを検出して修正提案を行う"""
-    error_analysis = self.analyze_error(error)
-    fix_proposal = self.propose_fix(error_analysis, playbook)
-    print(f"エラー: {error}")
-    print(f"修正提案: {fix_proposal}")
-    approval = input("修正を適用しますか？ (y/n): ")
-    if approval.lower() == 'y':
-        return self.apply_fix(fix_proposal, playbook)
-    return None
-```
-
-**生成Playbookの品質改善で反復的改善プロセス**:
-
-```python
-def improve_playbook(self, playbook, feedback):
-    """人間のフィードバックに基づいてPlaybookを改善"""
-    improved_playbook = self.generate_improvement(playbook, feedback)
-    validation_result = self.validator.validate(improved_playbook)
-    if validation_result['valid']:
-        return improved_playbook
-    else:
-        # 再改善を試みる
-        return self.improve_playbook(improved_playbook, feedback)
-```
-
-### 4. Ansible実行自動化（20分）
-
-#### 4.1 自動実行パイプライン
-
-```python
-# executor.py
-import subprocess
-import tempfile
-import os
-import shutil
-
-class AnsibleExecutor:
-    """Ansible実行クラス"""
-    
-    def execute(self, playbook, inventory, extra_vars=None):
-        """
-        Ansible Playbookの自動実行
-        
-        Args:
-            playbook: Ansible Playbook（YAML文字列）
-            inventory: インベントリファイルのパス
-            extra_vars: 追加変数（辞書）
-        
-        Returns:
-            実行結果
-        """
-        work_dir = tempfile.mkdtemp()
-        
-        try:
-            # Playbookをファイルに保存
-            playbook_file = os.path.join(work_dir, 'playbook.yml')
-            with open(playbook_file, 'w') as f:
-                f.write(playbook)
-            
-            # ansible-playbookコマンドの構築
-            cmd = ['ansible-playbook', '-i', inventory, playbook_file]
-            
-            # 追加変数の設定
-            if extra_vars:
-                vars_str = ' '.join([f"{k}={v}" for k, v in extra_vars.items()])
-                cmd.extend(['--extra-vars', vars_str])
-            
-            # 実行
-            result = subprocess.run(
-                cmd,
-                capture_output=True,
-                text=True
-            )
-            
-            return {
-                'success': result.returncode == 0,
-                'stdout': result.stdout,
-                'stderr': result.stderr,
-                'returncode': result.returncode
-            }
-        
-        except Exception as e:
-            return {
-                'success': False,
-                'error': str(e)
-            }
-        finally:
-            # クリーンアップ（必要に応じて）
-            # shutil.rmtree(work_dir)  # デバッグ時はコメントアウト
-            pass
-```
-
-<details>
-<summary>📝 使用例（クリックで展開）</summary>
-
-```python
-from executor import AnsibleExecutor
-
-executor = AnsibleExecutor()
-
-playbook = """
----
-- name: Test playbook
-  hosts: webservers
-  tasks:
-    - name: Test task
-      debug:
-        msg: "Hello"
-"""
-
-result = executor.execute(
-    playbook,
-    inventory='inventory.ini',
-    extra_vars={'var1': 'value1'}
-)
-
-if result['success']:
-    print("Playbook executed successfully!")
-    print(result['stdout'])
-else:
-    print(f"Error: {result['stderr']}")
-```
-
-</details>
-
-### 5. Agent形式での開発の深化とエージェントの統合（10分）
-
-#### 5.1 Agent形式での開発の深化
-
-**実装した機能**:
-- Prompt Engineeringの実践（Ansible Playbook生成用）
-- Context Engineeringの実践（サーバー情報の活用）
-- フィードバックループの実装（承認ワークフロー、エラー修正、反復的改善）
-
-**Agent形式での開発の深化**:
-- Playbook生成から実行までの完全自動化
-- サーバー情報の自動取得とコンテキスト化
-- エラー検出と修正提案の自動化
-- human in the loopの実践
-
-#### 5.2 エージェントクラスの実装
-
-```python
-# agent.py
-from validator import AnsiblePlaybookValidator
-from executor import AnsibleExecutor
-
-class AnsibleAgent:
-    """Ansible Playbook生成・実行自動化エージェント"""
-    
-    def __init__(self, inventory):
-        self.inventory = inventory
-        self.validator = AnsiblePlaybookValidator()
-        self.executor = AnsibleExecutor()
-    
-    def process(self, instruction):
-        """
-        メイン処理フロー
-        
-        Args:
-            instruction: 自然言語の指示
-        
-        Returns:
-            処理結果
-        """
-        # 1. ContinueでPlaybook生成（手動）
-        # Continueを起動して、instructionを入力
-        # 生成されたPlaybookを取得
-        
-        # 2. 検証
-        validation_result = self.validator.validate(playbook)
-        if not validation_result['valid']:
-            # エラーがあれば修正を試みる
-            # Continueに修正を依頼
-            playbook = self.fix_playbook(playbook, validation_result['errors'])
-        
-        # 3. 実行（オプション）
-        if self.should_execute():
-            execution_result = self.executor.execute(playbook, self.inventory)
-            return execution_result
-        
-        return {'playbook': playbook, 'validation': validation_result}
-```
 
 ## ✅ チェックリスト
 
-- [ ] Prompt Engineeringの実践を行った（Ansible Playbook生成用）
-- [ ] Context Engineeringの実践を行った（サーバー情報の活用）
-- [ ] フィードバックループの実装を行った（承認ワークフロー、エラー修正、反復的改善）
-- [ ] Agent形式での開発の深化を実践した
-- [ ] Continueを活用したPlaybook生成を実践した
-- [ ] Playbook検証機能を実装した
-- [ ] Ansible実行自動化を実装した
-- [ ] エラーハンドリングを実装した
-- [ ] リトライ機能を実装した
-- [ ] 基本的な動作確認を行った
-- [ ] 生成Playbookの品質を確認した
+- [ ] 最終的な目標構成を理解した
+- [ ] プロンプトテンプレートを作成した
+- [ ] 高度なPrompt Engineeringを実践した
+- [ ] Context Engineeringの高度化を実践した（サーバー情報の動的取得）
+- [ ] 複雑なタスクを自動化するPlaybookを生成した
+- [ ] フィードバックループを実践した（承認ワークフロー、エラー修正、反復的改善）
+- [ ] エラーハンドリングを含むPlaybookを作成した
+- [ ] Agent形式での開発の振り返りを行った
 
 ## 🆘 トラブルシューティング
 
-### Continueが応答しない
+### 複雑なPlaybookがうまく生成されない
 
-- Continueの設定を確認（`.continue/config.json`）
-- ネットワーク接続を確認
+- タスクを分解して、段階的に生成してください
+- 各タスクの依存関係を明確にプロンプトに含めてください
 
-### Ansible実行エラー
+### サーバー情報の取得がうまくいかない
 
-- インベントリファイルの設定を確認
-- SSH接続を確認
-- 権限を確認
+- Continueのチャット機能を使って、段階的に情報を取得してください
+- 取得した情報を整理してからコンテキストとして提供してください
+
+### エラーハンドリングが適切に実装されない
+
+- エラーハンドリングの要件を明確にプロンプトに含めてください
+- 具体的なエラーシナリオを提示してください
 
 ## 📚 参考資料
 
-- [Continue公式ドキュメント](https://continue.dev/docs)
 - [Ansible公式ドキュメント](https://docs.ansible.com/)
-- [サンプルコード](../../sample_code/ansible/)
-- [テンプレート](../../templates/ai_agents/ansible_agent_template.py)
+- [Ansibleモジュール一覧](https://docs.ansible.com/ansible/latest/collections/index.html)
+- [セッション3ガイド](session3_guide.md)
+- [セッション4ガイド](session4_guide.md)
 
 ## ➡️ 次のステップ
 
-セッション5が完了したら、[セッション6：統合管理エージェント](session6_guide.md) に進んでください。
+セッション5が完了したら、[セッション6：統合管理エージェント開発](session6_guide.md) に進んでください。
