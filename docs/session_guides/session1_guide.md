@@ -32,41 +32,15 @@ workspace/
 
 ## 🚀 手順
 
-### 1. 環境セットアップ（10分）
+### 1. 環境セットアップの確認
 
-#### 1.1 OpenShift DevSpaces環境の確認
+セッション1を開始する前に、[環境セットアップガイド](../setup/ENVIRONMENT_SETUP.md) に従って環境セットアップが完了していることを確認してください。
 
-```bash
-# 現在のディレクトリ確認
-pwd
-
-# 環境変数の確認
-env | grep -E "AWS"
-```
-
-#### 1.2 AWS CLI/認証情報の設定
-
-```bash
-# AWS CLIのインストール確認
-aws --version
-
-# .envファイルから環境変数を読み込む
-export $(cat .env | grep -v '^#' | xargs)
-
-# 認証情報の確認
-aws sts get-caller-identity
-```
-
-**注意**: `.env`ファイルを環境変数としてエクスポートすれば、AWS CLIとTerraformの両方が認証情報を使用できます。`aws configure`は不要です。
-
-詳細は [環境セットアップガイド](../setup/ENVIRONMENT_SETUP.md) を参照してください。
-
-#### 1.3 必要なツールのインストール確認
-
-```bash
-# Terraformのインストール確認（コード生成時に参照されるため）
-terraform version
-```
+**確認事項**:
+- DevSpacesワークスペースが作成されている
+- セットアップスクリプトが実行されている
+- AWS認証情報が設定されている
+- Continueが正常に動作することを確認済み（Agentモードでファイル作成テストが成功）
 
 **注意**: セッション1では、Terraformコードを生成するだけで実行はしません。環境セットアップガイドでContinueの動作確認まで完了していることを前提とします。
 
