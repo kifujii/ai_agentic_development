@@ -4,7 +4,7 @@
 
 ### 基本情報
 - **期間**: 2日間（合計8時間、1日4時間）
-- **形式**: ハンズオン形式のバイブコーディング
+- **形式**: ハンズオン形式のライブコーディング
 - **環境**: OpenShift DevSpaces + AWS
 - **技術スタック**: Terraform, Ansible, Continue（AWS Bedrock）
 - **前提条件**: 事前勉強会で生成AIとIaC（Terraform/Ansible）の基礎を学習済み

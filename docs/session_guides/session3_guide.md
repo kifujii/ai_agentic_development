@@ -57,10 +57,10 @@ graph TB
 ```
 terraform/
 └── web-app/
-        ├── main.tf          # メインのTerraformコード
-        ├── variables.tf     # 変数定義
-        ├── outputs.tf       # 出力定義
-        └── terraform.tfvars # 変数の値
+    ├── main.tf          # メインのTerraformコード
+    ├── variables.tf     # 変数定義
+    ├── outputs.tf       # 出力定義
+    └── terraform.tfvars # 変数の値
 ```
 
 ### 構築されるAWSリソース

@@ -43,13 +43,13 @@ graph LR
 
 ```
 ansible/
-    ├── inventory.ini                # セッション4で作成済み
-    ├── ansible.cfg                  # セッション4で作成済み
-    ├── playbooks/
-    │   ├── gather_info.yml          # サーバー情報収集Playbook
-    │   └── generate_report.yml     # 運用レポート生成Playbook
-    └── templates/
-        └── server_report.md.j2     # レポートテンプレート（Jinja2）
+├── inventory.ini                # セッション4で作成済み
+├── ansible.cfg                  # セッション4で作成済み
+├── playbooks/
+│   ├── gather_info.yml          # サーバー情報収集Playbook
+│   └── generate_report.yml     # 運用レポート生成Playbook
+└── templates/
+    └── server_report.md.j2     # レポートテンプレート（Jinja2）
 ```
 
 ### 収集される情報

@@ -31,7 +31,7 @@
 ### トレーニング概要
 
 - **期間**: 2日間（合計8時間、1日4時間）
-- **形式**: ハンズオン形式のバイブコーディング
+- **形式**: ハンズオン形式のライブコーディング
 - **環境**: OpenShift DevSpaces + AWS
 - **技術スタック**: Terraform, Ansible, Continue（AWS Bedrock）
 
@@ -193,9 +193,19 @@ EC2を作成して
 
 ## 注意事項
 
-- ワークショップ終了後は作成したAWSリソースを削除してください
+- ワークショップ終了後は作成したAWSリソースを必ず削除してください
   ```bash
-  terraform destroy
+  # セッション1で作成したEC2（Agent実践）
+  cd terraform/agent_practice && terraform destroy
+
+  # セッション2で作成したVPC/EC2
+  cd terraform/vpc-ec2 && terraform destroy
+
+  # セッション3で作成したWebシステム（実施した場合）
+  cd terraform/web-app && terraform destroy
+
+  # セッション5で作成したIAMロール
+  cd terraform/cloudwatch-iam && terraform destroy
   ```
 - AWS認証情報は安全に管理してください
 - 本番環境への適用前に十分なテストを行ってください

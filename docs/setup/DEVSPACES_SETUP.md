@@ -7,8 +7,7 @@
 
 ## 前提条件
 - OpenShift DevSpacesへのアクセス権限
-- AWSアカウント（トレーニング用）
-- AWSアカウント（AWS Bedrock利用可能）
+- AWSアカウント（トレーニング用、AWS Bedrock利用可能）
 
 ## セットアップ手順
 

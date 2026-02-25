@@ -42,9 +42,9 @@ graph TB
 ```
 terraform/
 └── vpc-ec2/
-        ├── main.tf          # メインのTerraformコード
-        ├── variables.tf     # 変数定義
-        └── outputs.tf       # 出力定義
+    ├── main.tf          # メインのTerraformコード
+    ├── variables.tf     # 変数定義
+    └── outputs.tf       # 出力定義
 ```
 
 ### 構築されるAWSリソース

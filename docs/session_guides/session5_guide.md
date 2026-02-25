@@ -44,9 +44,10 @@ graph TB
 ```
 terraform/
 └── cloudwatch-iam/
-│       ├── main.tf          # IAMロール・インスタンスプロファイル
-│       ├── variables.tf     # 変数定義
-│       └── outputs.tf       # 出力定義
+    ├── main.tf          # IAMロール・インスタンスプロファイル
+    ├── variables.tf     # 変数定義
+    └── outputs.tf       # 出力定義
+
 ansible/
 ├── inventory.ini              # セッション4で作成済み
 ├── ansible.cfg                # セッション4で作成済み

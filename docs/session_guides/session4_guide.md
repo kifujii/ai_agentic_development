@@ -42,12 +42,12 @@ graph LR
 
 ```
 ansible/
-    ├── inventory.ini              # インベントリファイル
-    ├── ansible.cfg                # Ansible設定ファイル
-    └── playbooks/
-        ├── restart_server.yml     # サーバー再起動Playbook
-        ├── check_status.yml       # サーバー状態確認Playbook
-        └── manage_services.yml    # サービス管理Playbook
+├── inventory.ini              # インベントリファイル
+├── ansible.cfg                # Ansible設定ファイル
+└── playbooks/
+    ├── restart_server.yml     # サーバー再起動Playbook
+    ├── check_status.yml       # サーバー状態確認Playbook
+    └── manage_services.yml    # サービス管理Playbook
 ```
 
 ### 自動化されるタスク

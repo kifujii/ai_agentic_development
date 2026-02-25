@@ -248,10 +248,11 @@ AWS環境情報:
    ```
    terraform/agent_practice/ フォルダに、ap-northeast-1リージョンに、t3.microインスタンスタイプのEC2インスタンスを作成するTerraformコードを生成してください。
    セキュリティグループはSSH（ポート22）のみ許可し、Nameタグに"training-ec2"を設定してください。
+   コード生成後、terraform init と terraform apply まで実行してください。
    ```
    - Agentが実行計画を提示します
    - **承認ワークフロー**: 計画を確認し、承認してください
-   - Agentがコード生成→検証→実行を自動的に行います
+   - Agentがコード生成→検証→`terraform init`→`terraform apply`を自動的に行います
 
 3. **エラー修正プロセスを体験**（エラーが発生した場合）
    - Agentがエラーを自動検出します
@@ -286,6 +287,14 @@ AWS環境情報:
 - human in the loopの重要性の理解
 - チャット形式との違いを実感
 - 開発体験の改善を実感
+
+6. **リソースの削除**
+   - 実際にAWSリソースが作成された場合は、コスト削減のためにリソースを削除します：
+   ```bash
+   cd terraform/agent_practice
+   terraform destroy
+   ```
+   - `terraform destroy` を実行し、確認プロンプトで `yes` を入力してください
 
 **振り返り**: 
 - Agent形式での開発体験を振り返ってください
