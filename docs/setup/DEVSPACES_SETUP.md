@@ -1,12 +1,14 @@
 # OpenShift DevSpaces環境セットアップ手順書
 
 ## 概要
-このドキュメントでは、OpenShift DevSpaces環境でのトレーニング準備手順を説明します。
+このドキュメントは、OpenShift DevSpaces環境でのトレーニング準備手順の**詳細リファレンス**です。
+
+> **注意**: 通常のセットアップは [環境セットアップガイド](ENVIRONMENT_SETUP.md) に従ってください。本ドキュメントは手動インストールやトラブルシューティングが必要な場合の参考資料です。
 
 ## 前提条件
 - OpenShift DevSpacesへのアクセス権限
 - AWSアカウント（トレーニング用）
-- 生成AI APIキー（Google Gemini）
+- AWSアカウント（AWS Bedrock利用可能）
 
 ## セットアップ手順
 
@@ -32,7 +34,9 @@ ls -la
 # .
 # ├── docs/
 # ├── scripts/
-# └── evaluation/
+# ├── evaluation/
+# ├── terraform/
+# └── ansible/
 ```
 
 ### 3. 必要なツールのインストール
@@ -180,29 +184,26 @@ aws configure
 aws sts get-caller-identity
 ```
 
-#### 4.2 生成AI APIキーの設定
+#### 4.2 .envファイルの作成
 ```bash
-# 環境変数の設定
-export GOOGLE_API_KEY="your-api-key-here"
+# .env.templateから.envファイルを作成
+cp .env.template .env
 
-# .envファイルの作成（推奨）
-cat > .env << EOF
-GOOGLE_API_KEY=your-api-key-here
-AWS_ACCESS_KEY_ID=your-access-key
-AWS_SECRET_ACCESS_KEY=your-secret-key
-AWS_DEFAULT_REGION=ap-northeast-1
-EOF
+# .envファイルを編集してAWS認証情報を設定
+# AWS_ACCESS_KEY_ID=your-access-key-here → 実際のアクセスキーに置き換え
+# AWS_SECRET_ACCESS_KEY=your-secret-key-here → 実際のシークレットキーに置き換え
+# AWS_DEFAULT_REGION=ap-northeast-1
 
 # .envファイルを読み込む（.bashrcに追加）
-echo 'export $(cat .env | xargs)' >> ~/.bashrc
+echo 'export $(cat .env | grep -v "^#" | xargs)' >> ~/.bashrc
 source ~/.bashrc
 ```
 
 ### 5. Python環境のセットアップ
 
-#### 5.1 仮想環境の作成
+#### 5.1 仮想環境の作成（オプション）
 ```bash
-# 仮想環境の作成
+# 仮想環境の作成（必要な場合）
 python3 -m venv venv
 source venv/bin/activate
 ```
@@ -214,7 +215,7 @@ source venv/bin/activate
 python3 -m pip install --user -r scripts/requirements.txt
 
 # または個別にインストール
-python3 -m pip install --user groq python-dotenv boto3 pyyaml jinja2
+python3 -m pip install --user python-dotenv boto3 pyyaml jinja2 requests colorama
 ```
 
 ### 6. プロジェクト構造の確認
@@ -228,7 +229,9 @@ tree -L 2
 # .
 # ├── docs/
 # ├── scripts/
-# └── evaluation/
+# ├── evaluation/
+# ├── terraform/
+# └── ansible/
 ```
 
 #### 6.2 Git設定（オプション）
@@ -261,9 +264,6 @@ pip3 list
 ```bash
 # AWS接続テスト
 aws sts get-caller-identity
-
-# APIキーの確認（環境変数）
-echo $GOOGLE_API_KEY
 ```
 
 ## トラブルシューティング
@@ -288,10 +288,10 @@ python3 -m pip cache purge
 - IAM権限が適切か確認
 - リージョンが正しいか確認
 
-### APIキーエラー
-- 環境変数が正しく設定されているか確認
-- .envファイルが正しく読み込まれているか確認
-- APIキーが有効か確認
+### 環境変数エラー
+- .envファイルが正しく作成されているか確認
+- .envファイルが正しく読み込まれているか確認（`source ~/.bashrc` を実行）
+- AWS認証情報が有効か確認（`aws sts get-caller-identity`）
 
 ## 次のステップ
 セットアップが完了したら、以下のセッションガイドを参照してください：

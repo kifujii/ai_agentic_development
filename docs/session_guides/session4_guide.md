@@ -41,8 +41,7 @@ graph LR
 ### ファイル構成
 
 ```
-workspace/
-└── ansible/
+ansible/
     ├── inventory.ini              # インベントリファイル
     ├── ansible.cfg                # Ansible設定ファイル
     └── playbooks/
@@ -461,4 +460,4 @@ ansible-playbook playbooks/manage_services.yml -e "target_service=crond target_a
 
 ## ➡️ 次のステップ
 
-セッション4が完了したら、[セッション5：エージェントインストール・セットアップ](session5_guide.md) に進んでください。
+セッション4が完了したら、[セッション5：CloudWatch Agentインストール・セットアップ](session5_guide.md) に進んでください。

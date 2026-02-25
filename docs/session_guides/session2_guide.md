@@ -40,9 +40,8 @@ graph TB
 ### ファイル構成
 
 ```
-workspace/
-└── terraform/
-    └── vpc-ec2/
+terraform/
+└── vpc-ec2/
         ├── main.tf          # メインのTerraformコード
         ├── variables.tf     # 変数定義
         └── outputs.tf       # 出力定義
@@ -56,7 +55,7 @@ workspace/
 | パブリックサブネット | 10.0.1.0/24（ap-northeast-1a） |
 | インターネットゲートウェイ | VPCにアタッチ |
 | ルートテーブル | 0.0.0.0/0 → IGW |
-| セキュリティグループ | SSH（ポート22）のみ許可 |
+| セキュリティグループ | SSH（ポート22）のみ許可（⚠️ 本番では送信元IPを制限すること） |
 | キーペア | SSH接続用 |
 | EC2インスタンス | t3.micro, Amazon Linux 2023 |
 
@@ -68,6 +67,20 @@ workspace/
 - AWS認証情報が設定されていること
 - Terraformがインストールされていること
 - Continueが正しく設定されていること
+
+### SSH鍵ペアの準備
+
+このセッションではSSH接続のためのキーペアが必要です。以下のコマンドで事前に生成してください：
+
+```bash
+# SSH鍵ペアの生成（パスフレーズなし）
+ssh-keygen -t rsa -b 4096 -f ~/.ssh/training-key -N ""
+
+# 秘密鍵の権限設定
+chmod 400 ~/.ssh/training-key
+```
+
+> **注意**: `~/.ssh/training-key`（秘密鍵）と `~/.ssh/training-key.pub`（公開鍵）の2ファイルが生成されます。Terraform内では公開鍵（`.pub`）をEC2に登録し、SSH接続時には秘密鍵を使用します。
 
 ## 🚀 Agent開発の進め方
 
@@ -337,7 +350,7 @@ resource "aws_security_group" "ec2_sg" {
     from_port   = 22
     to_port     = 22
     protocol    = "tcp"
-    cidr_blocks = ["0.0.0.0/0"]
+    cidr_blocks = ["0.0.0.0/0"]  # ⚠️ ワークショップ用。本番では自分のIPのみに制限すること
   }
 
   egress {
@@ -448,6 +461,15 @@ terraform state list
 
 - ContinueのAgent機能が正しく設定されているか確認してください
 - 計画を確認してから承認してください
+
+## ⚠️ リソースの削除
+
+> **重要**: セッション4以降でこのEC2を使用するため、ワークショップ期間中は削除しないでください。**ワークショップ終了後**に以下のコマンドで削除してください。
+
+```bash
+cd terraform/vpc-ec2
+terraform destroy
+```
 
 ## 📚 参考資料
 

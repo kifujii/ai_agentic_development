@@ -25,13 +25,13 @@
 | **セッション2** | VPC/EC2の設計・構築・検証 | 1.5時間 | 必須 | [詳細ガイド](docs/session_guides/session2_guide.md) |
 | **セッション3** | Webシステム構築 (ALB/ECS/ECR/RDS) | 1時間 | 任意 | [詳細ガイド](docs/session_guides/session3_guide.md) |
 | **セッション4** | サーバー再起動の自動化 | 1.5時間 | 必須 | [詳細ガイド](docs/session_guides/session4_guide.md) |
-| **セッション5** | エージェントインストール・セットアップ | 1.5時間 | 必須 | [詳細ガイド](docs/session_guides/session5_guide.md) |
+| **セッション5** | CloudWatch Agentインストール・セットアップ | 1.5時間 | 必須 | [詳細ガイド](docs/session_guides/session5_guide.md) |
 | **セッション6** | サーバー情報取得・運用レポート作成 | 1時間 | 任意 | [詳細ガイド](docs/session_guides/session6_guide.md) |
 
 ### トレーニング概要
 
 - **期間**: 2日間（合計8時間、1日4時間）
-- **形式**: ハンズオン形式のライブコーディング
+- **形式**: ハンズオン形式のバイブコーディング
 - **環境**: OpenShift DevSpaces + AWS
 - **技術スタック**: Terraform, Ansible, Continue（AWS Bedrock）
 
@@ -43,7 +43,7 @@ Day 1 (4h): インフラ構築 (Terraform)
 
 Day 2 (4h): システム運用 (Ansible)
 ├── Session 4: サーバー再起動の自動化              [必須]
-├── Session 5: エージェントインストール・セットアップ [必須]
+├── Session 5: CloudWatch Agentインストール・セットアップ [必須]
 └── Session 6: サーバー情報取得・運用レポート作成   [任意]
 ```
 
@@ -85,7 +85,7 @@ ai_agentic/
 │   │   ├── session2_guide.md     # VPC/EC2構築
 │   │   ├── session3_guide.md     # Webシステム構築（任意）
 │   │   ├── session4_guide.md     # サーバー再起動の自動化
-│   │   ├── session5_guide.md     # エージェントインストール
+│   │   ├── session5_guide.md     # CloudWatch Agentインストール
 │   │   └── session6_guide.md     # サーバー情報取得（任意）
 │   └── setup/                     # セットアップ手順
 │       ├── ENVIRONMENT_SETUP.md  # 環境セットアップガイド

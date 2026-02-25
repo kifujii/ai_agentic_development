@@ -27,7 +27,7 @@
 
 ```bash
 # プロジェクトディレクトリに移動
-cd /home/kifujii/Desktop/projects/NIT/ai_agentic
+cd <プロジェクトディレクトリ>
 
 # Gitリポジトリが初期化されているか確認
 git status
@@ -142,9 +142,6 @@ cat > .env.example << EOF
 AWS_ACCESS_KEY_ID=your-access-key-here
 AWS_SECRET_ACCESS_KEY=your-secret-key-here
 AWS_DEFAULT_REGION=ap-northeast-1
-
-# 生成AI APIキー
-GOOGLE_API_KEY=your-google-api-key-here
 EOF
 
 # .env.exampleはコミットに含める

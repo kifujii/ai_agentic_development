@@ -4,6 +4,8 @@
 
 このセッションでは、ContinueのAgent機能を活用して、ALB、ECS/ECR、RDSを含む実践的なWebアプリケーションインフラを構築します。セッション2で構築したVPC/Subnetを活用し、より複雑なインフラ構成をAgent開発で実現します。
 
+> **注意**: このセッションは**任意（発展課題）**です。構築するリソースが多いため、時間内に完了しなくても問題ありません。`terraform apply` でRDSの作成には10分以上かかる場合があります。段階的に構築し、できた範囲で振り返りを行ってください。
+
 ### 学習目標
 
 - 複雑なインフラ構成（ALB、ECS、RDS）をAgent開発で構築する
@@ -53,9 +55,8 @@ graph TB
 ### ファイル構成
 
 ```
-workspace/
-└── terraform/
-    └── web-app/
+terraform/
+└── web-app/
         ├── main.tf          # メインのTerraformコード
         ├── variables.tf     # 変数定義
         ├── outputs.tf       # 出力定義
@@ -645,6 +646,6 @@ output "ecs_cluster_name" {
 **重要**: 作成したリソースは、ワークショップ終了後に必ず削除してください：
 
 ```bash
-cd workspace/terraform/web-app
+cd terraform/web-app
 terraform destroy
 ```

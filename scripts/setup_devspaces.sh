@@ -61,6 +61,8 @@ fi
 # 2. Terraformのインストール（ユーザー権限）
 log_info "Terraformのインストール中..."
 if ! command -v terraform &> /dev/null; then
+    # Terraform 1.6.0: ワークショップで使用する機能（VPC, EC2, ALB, ECS, RDS, IAM）に十分な安定バージョン
+    # バージョン更新時はプロバイダ互換性を確認してください
     TERRAFORM_VERSION="1.6.0"
     TERRAFORM_URL="https://releases.hashicorp.com/terraform/${TERRAFORM_VERSION}/terraform_${TERRAFORM_VERSION}_linux_amd64.zip"
     
@@ -286,9 +288,9 @@ else
     log_info "✓ Continue設定ファイルは既に存在し、正しく設定されています"
 fi
 
-# 6-3. Continue設定ファイルを/home/user/.continueにシンボリックリンクで反映
-log_info "Continue設定ファイルを/home/user/.continueにリンク中..."
-USER_CONTINUE_DIR="/home/user/.continue"
+# 6-3. Continue設定ファイルを$HOME/.continueにシンボリックリンクで反映
+log_info "Continue設定ファイルを$HOME/.continueにリンク中..."
+USER_CONTINUE_DIR="$HOME/.continue"
 USER_CONTINUE_CONFIG="${USER_CONTINUE_DIR}/config.json"
 
 # プロジェクトルートのconfig.jsonが存在することを確認
@@ -296,12 +298,12 @@ if [ ! -f "$PROJECT_CONTINUE_CONFIG" ]; then
     log_warn "プロジェクトルートの設定ファイルが見つかりません: ${PROJECT_CONTINUE_CONFIG}"
     log_warn "シンボリックリンクの作成をスキップします"
 else
-    # /home/user/.continueディレクトリを作成（既に存在する場合は何もしない）
+    # $HOME/.continueディレクトリを作成（既に存在する場合は何もしない）
     if [ ! -d "$USER_CONTINUE_DIR" ]; then
         mkdir -p "$USER_CONTINUE_DIR"
-        log_info "✓ /home/user/.continueディレクトリを作成しました"
+        log_info "✓ $HOME/.continueディレクトリを作成しました"
     else
-        log_info "✓ /home/user/.continueディレクトリは既に存在しています"
+        log_info "✓ $HOME/.continueディレクトリは既に存在しています"
     fi
 
     # シンボリックリンクを作成または更新
@@ -397,12 +399,12 @@ else
     log_info "✓ jqは既にインストールされています: $(jq --version)"
 fi
 
-# 9. 作業ディレクトリの作成
+# 9. 作業ディレクトリの作成（プロジェクトルート配下）
 log_info "作業ディレクトリの作成中..."
-mkdir -p ~/workspace/terraform
-mkdir -p ~/workspace/ansible
-mkdir -p ~/workspace/agents
-log_info "作業ディレクトリの作成完了"
+PROJECT_ROOT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
+mkdir -p "${PROJECT_ROOT_DIR}/terraform"
+mkdir -p "${PROJECT_ROOT_DIR}/ansible"
+log_info "作業ディレクトリの作成完了（${PROJECT_ROOT_DIR}/terraform, ${PROJECT_ROOT_DIR}/ansible）"
 
 # 10. .envファイルの確認
 log_info ".envファイルの確認中..."

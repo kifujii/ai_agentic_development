@@ -1,4 +1,4 @@
-# セッション5：エージェントインストール・セットアップ 詳細ガイド
+# セッション5：CloudWatch Agentインストール・セットアップ 詳細ガイド
 
 ## 📋 目的
 
@@ -42,18 +42,17 @@ graph TB
 ### ファイル構成
 
 ```
-workspace/
-├── terraform/
-│   └── cloudwatch-iam/
+terraform/
+└── cloudwatch-iam/
 │       ├── main.tf          # IAMロール・インスタンスプロファイル
 │       ├── variables.tf     # 変数定義
 │       └── outputs.tf       # 出力定義
-└── ansible/
-    ├── inventory.ini              # セッション4で作成済み
-    ├── ansible.cfg                # セッション4で作成済み
-    └── playbooks/
-        ├── install_cwagent.yml    # CloudWatch Agentインストール
-        └── configure_cwagent.yml  # CloudWatch Agent設定
+ansible/
+├── inventory.ini              # セッション4で作成済み
+├── ansible.cfg                # セッション4で作成済み
+└── playbooks/
+    ├── install_cwagent.yml    # CloudWatch Agentインストール
+    └── configure_cwagent.yml  # CloudWatch Agent設定
 ```
 
 ### 構築されるリソースと設定
@@ -431,7 +430,7 @@ output "instance_profile_arn" {
 
 ```bash
 # 1. Terraform: IAMリソース作成
-cd workspace/terraform/cloudwatch-iam
+cd terraform/cloudwatch-iam
 terraform init
 terraform plan
 terraform apply
@@ -442,7 +441,7 @@ aws ec2 associate-iam-instance-profile \
   --iam-instance-profile Name=training-cloudwatch-agent-profile
 
 # 3. Ansible: CloudWatch Agentインストール
-cd workspace/ansible
+cd ansible
 ansible-playbook playbooks/install_cwagent.yml
 
 # 4. Ansible: CloudWatch Agent設定・起動
@@ -490,6 +489,17 @@ ansible webservers -m command -a "/opt/aws/amazon-cloudwatch-agent/bin/amazon-cl
 - CloudWatch Agentのステータスを確認
 - CloudWatchコンソールで正しい名前空間を確認
 - メトリクスが反映されるまで数分待つ
+
+## ⚠️ リソースの削除
+
+ワークショップ終了後は、作成したIAMリソースを削除してください：
+
+```bash
+cd terraform/cloudwatch-iam
+terraform destroy
+```
+
+> **注意**: CloudWatch AgentはEC2上にインストールされているだけなので、EC2を削除すれば一緒に削除されます。IAMロール・インスタンスプロファイルはTerraformで管理しているため、別途削除が必要です。
 
 ## 📚 参考資料
 

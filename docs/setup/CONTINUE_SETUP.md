@@ -83,7 +83,7 @@ echo $AWS_DEFAULT_REGION
     {
       "title": "Llama 3.1 70B (Bedrock - Agent用)",
       "provider": "bedrock",
-      "model": "meta.llama3-1-70b-instruct-v1:0",
+      "model": "us.meta.llama3-1-70b-instruct-v1:0",
       "region": "us-east-1"
     },
     {
@@ -96,7 +96,7 @@ echo $AWS_DEFAULT_REGION
   "tabAutocompleteModel": {
     "title": "Llama 3.2 1B (Autocomplete)",
     "provider": "bedrock",
-    "model": "meta.llama3-2-1b-instruct-v1:0",
+    "model": "us.meta.llama3-2-1b-instruct-v1:0",
     "region": "us-east-1"
   },
   "allowAnonymousTelemetry": false,
@@ -116,8 +116,8 @@ echo $AWS_DEFAULT_REGION
 - `disableFormatting`: 自動フォーマットを無効化
 
 **利用可能なモデル（on-demand対応）**:
-- `meta.llama3-1-70b-instruct-v1:0` (Meta Llama 3.1 70B Instruct) - 推奨
-- `meta.llama3-2-1b-instruct-v1:0` (Meta Llama 3.2 1B Instruct) - タブ補完用
+- `us.meta.llama3-1-70b-instruct-v1:0` (Meta Llama 3.1 70B Instruct) - 推奨
+- `us.meta.llama3-2-1b-instruct-v1:0` (Meta Llama 3.2 1B Instruct) - タブ補完用
 - `us.anthropic.claude-3-5-sonnet-20241022-v2:0` (Claude 3.5 Sonnet v2) - 要申請
 
 **注意**: 

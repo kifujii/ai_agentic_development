@@ -8,7 +8,7 @@
 - [セッション2チェックリスト](session2_checklist.md) - VPC/EC2の設計・構築・検証
 - [セッション3チェックリスト](session3_checklist.md) - Webシステム構築（任意・発展）
 - [セッション4チェックリスト](session4_checklist.md) - サーバー再起動の自動化
-- [セッション5チェックリスト](session5_checklist.md) - エージェントインストール・セットアップ
+- [セッション5チェックリスト](session5_checklist.md) - CloudWatch Agentインストール・セットアップ
 - [セッション6チェックリスト](session6_checklist.md) - サーバー情報取得・運用レポート作成（任意・発展）
 
 ## 評価方法
