@@ -43,7 +43,19 @@ Step 5: CloudWatchで確認
 
 CloudWatch AgentがメトリクスやログをCloudWatchに送信するためのIAMロールを作成します。
 
-### 手順
+### ゴール
+
+`terraform/cloudwatch-iam/` フォルダに、以下を含むTerraformコードを作成して apply する：
+
+- IAMロール: `training-cloudwatch-agent-role`（EC2からのAssumeRole）
+- アタッチするポリシー: `CloudWatchAgentServerPolicy`, `AmazonSSMManagedInstanceCore`
+- インスタンスプロファイル: `training-cloudwatch-agent-profile`
+- outputs にプロファイル名とARNを出力
+
+> 💡 **ヒント**: IAMロールには「信頼ポリシー（Trust Policy）」が必要です。EC2 サービスがこのロールを引き受ける（AssumeRole）ことを許可します。
+
+<details>
+<summary>📝 プロンプト例</summary>
 
 ```
 terraform/cloudwatch-iam/ フォルダに、以下の要件でIAMリソースを作成するTerraformコードを生成してください。
@@ -57,30 +69,60 @@ terraform/cloudwatch-iam/ フォルダに、以下の要件でIAMリソースを
 terraform init と terraform apply まで実行してください。
 ```
 
+</details>
+
 ---
 
 ## Step 2: EC2にプロファイルを関連付けよう（10分）
 
-### 手順
+### やること
 
-Agentに以下を指示します：
+Step 1 で作ったインスタンスプロファイルを、セッション1のEC2に関連付けます。
+
+### ゴール
+
+AWS CLI コマンド `aws ec2 associate-iam-instance-profile` を使って関連付ける。
+
+必要な情報：
+- **EC2インスタンスID**: `terraform/vpc-ec2/` で `terraform output instance_id` を実行して取得
+- **インスタンスプロファイル名**: `terraform/cloudwatch-iam/` で `terraform output instance_profile_name` を実行して取得
+
+> 💡 **ヒント**: Agentに「まず2つのoutputを取得してから、associate コマンドを実行して」と伝えると、自動的に値を取得して実行してくれます。
+
+<details>
+<summary>📝 プロンプト例</summary>
 
 ```
-以下の AWS CLI コマンドを実行して、EC2にインスタンスプロファイルを関連付けてください。
+以下の手順を実行してください。
 
-EC2インスタンスID は terraform/vpc-ec2/ で terraform output instance_id を実行して取得してください。
-インスタンスプロファイル名は terraform/cloudwatch-iam/ で terraform output instance_profile_name を実行して取得してください。
-
-aws ec2 associate-iam-instance-profile \
-  --instance-id <EC2インスタンスID> \
-  --iam-instance-profile Name=<インスタンスプロファイル名>
+1. terraform/vpc-ec2/ で terraform output instance_id を実行してEC2インスタンスIDを取得
+2. terraform/cloudwatch-iam/ で terraform output instance_profile_name を実行してプロファイル名を取得
+3. 取得した値を使って、以下のコマンドを実行:
+   aws ec2 associate-iam-instance-profile --instance-id <取得したID> --iam-instance-profile Name=<取得したプロファイル名>
 ```
+
+</details>
 
 ---
 
 ## Step 3: CloudWatch Agentをインストールしよう（15分）
 
-### 手順
+### やること
+
+Ansible Playbookで CloudWatch Agent をEC2にインストールします。
+
+### ゴール
+
+`ansible/playbooks/install_cwagent.yml` を作成して、以下を行う：
+
+- `amazon-cloudwatch-agent` パッケージを yum でインストール
+- インストール結果を表示
+- バージョン確認
+
+> 💡 **ヒント**: CloudWatch Agent のコマンドは `/opt/aws/amazon-cloudwatch-agent/bin/amazon-cloudwatch-agent-ctl` にあります。`-a status` でステータスを確認できます。
+
+<details>
+<summary>📝 プロンプト例</summary>
 
 ```
 ansible/playbooks/install_cwagent.yml を作成してください。
@@ -94,13 +136,36 @@ ansible/playbooks/install_cwagent.yml を作成してください。
 作成後、Playbookを実行してください。
 ```
 
+</details>
+
 インストール成功のメッセージが出れば OK ✅
 
 ---
 
 ## Step 4: CloudWatch Agentを設定・起動しよう（20分）
 
-### 手順
+### やること
+
+CloudWatch Agent の設定ファイルを配置し、Agent を起動します。
+
+### ゴール
+
+`ansible/playbooks/configure_cwagent.yml` を作成して、以下を行う：
+
+1. 設定ファイル（JSON）を `/opt/aws/amazon-cloudwatch-agent/etc/` に配置
+2. Agent を起動
+3. ステータス確認
+
+設定内容：
+- メトリクス収集間隔: 60秒
+- 収集するメトリクス: CPU使用率、メモリ使用率、ディスク使用率
+- 収集するログ: `/var/log/messages`, `/var/log/secure`
+- メトリクス名前空間: `Training/EC2`
+
+> 💡 **ヒント**: CloudWatch Agent の設定はJSON形式です。Ansibleの `copy` モジュールで `content` にJSON を書いて配置できます。起動は `-a fetch-config` コマンドを使います。
+
+<details>
+<summary>📝 プロンプト例</summary>
 
 ```
 ansible/playbooks/configure_cwagent.yml を作成してください。
@@ -119,6 +184,8 @@ ansible/playbooks/configure_cwagent.yml を作成してください。
 
 作成後、Playbookを実行してください。
 ```
+
+</details>
 
 Agent が running 状態になれば OK ✅
 

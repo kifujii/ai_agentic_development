@@ -16,6 +16,8 @@
 
 > ⚠️ このセッションは **任意（発展課題）** です。RDS作成に10分以上かかる場合があります。
 
+> 🎓 セッション1でプロンプトの書き方を学びました。このセッション以降は **自分でプロンプトを考えて** 進めましょう。各Stepには要件とヒントだけを示しています。
+
 ---
 
 ## 📚 事前準備
@@ -48,10 +50,25 @@ Step 5: 動作確認
 
 ## Step 1: サブネットを追加しよう（15分）
 
-### 手順
+### ゴール
 
-1. ContinueでAgentを起動
-2. 以下のプロンプトを入力：
+`terraform/web-app/` フォルダに、ALB・ECS・RDS用のサブネットを作成する。
+
+### 要件
+
+- 既存のVPC ID は変数 (`var.vpc_id`) で指定する
+- ALB用パブリックサブネット × 2:
+  - `10.0.2.0/24` (ap-northeast-1a)
+  - `10.0.3.0/24` (ap-northeast-1c)
+- ECS/RDS用プライベートサブネット × 2:
+  - `10.0.10.0/24` (ap-northeast-1a)
+  - `10.0.11.0/24` (ap-northeast-1c)
+- `terraform init` → `terraform apply` まで実行
+
+> 💡 **ヒント**: 新しいフォルダ（`terraform/web-app/`）で始めるので、provider設定と `var.vpc_id` の変数定義も必要です。apply時にVPC IDの入力を求められます。
+
+<details>
+<summary>📝 プロンプト例</summary>
 
 ```
 terraform/web-app/ フォルダに、以下の要件でサブネットを作成するTerraformコードを作成してください。
@@ -67,13 +84,28 @@ terraform init と terraform apply まで実行してください。
 vpc_id の入力を求められたら、セッション1の VPC ID を入力してください。
 ```
 
-3. 確認 → 承認 → apply
+</details>
 
 ---
 
 ## Step 2: ALBを作ろう（15分）
 
-### 手順
+### ゴール
+
+`terraform/web-app/` にALBとその関連リソースを追加する。
+
+### 要件
+
+- ALBセキュリティグループ: HTTP(80) を許可
+- ALB: `training-web-alb`、パブリックサブネットに配置
+- ターゲットグループ: HTTP:80、ヘルスチェック `/ → 200 OK`
+- ALBリスナー: HTTP:80
+- `terraform apply` まで実行
+
+> 💡 **ヒント**: ALBは「外部からのHTTPリクエストを受けてバックエンドに振り分ける」役割です。セキュリティグループ → ALB → ターゲットグループ → リスナー の順で依存関係を意識しましょう。
+
+<details>
+<summary>📝 プロンプト例</summary>
 
 ```
 terraform/web-app/ の既存コードに、以下を追加してください。
@@ -86,11 +118,29 @@ terraform/web-app/ の既存コードに、以下を追加してください。
 terraform apply まで実行してください。
 ```
 
+</details>
+
 ---
 
 ## Step 3: ECS/ECRを作ろう（15分）
 
-### 手順
+### ゴール
+
+`terraform/web-app/` にコンテナ実行環境を追加する。
+
+### 要件
+
+- ECRリポジトリ: `training-web-app`、プッシュ時スキャン有効
+- ECSセキュリティグループ: ALBからの80番ポートのみ許可
+- ECSクラスター: `training-web-cluster`
+- ECSタスク定義: FARGATE、CPU:256、メモリ:512
+- ECSサービス: タスク数2、プライベートサブネット、ALBに接続
+- CloudWatch Logsグループ: `/ecs/training-web-app`
+
+> 💡 **ヒント**: ECSのセキュリティグループは「ALBのSGからのみ」通信を許可するのがベストプラクティスです。`security_groups = [ALBのSG ID]` のように書きます。
+
+<details>
+<summary>📝 プロンプト例</summary>
 
 ```
 terraform/web-app/ の既存コードに、以下を追加してください。
@@ -105,11 +155,30 @@ terraform/web-app/ の既存コードに、以下を追加してください。
 terraform apply まで実行してください。
 ```
 
+</details>
+
 ---
 
 ## Step 4: RDSを作ろう（15分）
 
-### 手順
+### ゴール
+
+`terraform/web-app/` にデータベースを追加する。
+
+### 要件
+
+- RDSセキュリティグループ: ECS SGからの3306番ポートのみ許可
+- RDSサブネットグループ: プライベートサブネットを使用
+- RDSインスタンス: MySQL 8.0、db.t3.micro、20GB、DB名 `webappdb`
+- パスワードは `sensitive = true` の変数で管理
+- `skip_final_snapshot = true`
+
+> 💡 **ヒント**: RDS のセキュリティグループも ECS と同様に「ECS のSGからのみ」に制限しましょう。パスワードを変数にする場合、apply 時に入力を求められます。
+
+> ⏱️ RDSの作成には10分以上かかることがあります。
+
+<details>
+<summary>📝 プロンプト例</summary>
 
 ```
 terraform/web-app/ の既存コードに、以下を追加してください。
@@ -125,7 +194,7 @@ terraform/web-app/ の既存コードに、以下を追加してください。
 terraform apply まで実行してください。
 ```
 
-> ⏱️ RDSの作成には10分以上かかることがあります。
+</details>
 
 ---
 

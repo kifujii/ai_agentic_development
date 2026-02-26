@@ -31,7 +31,27 @@ Step 3: レポートを自動生成
 
 ## Step 1: サーバー情報を収集しよう（20分）
 
-### 手順
+### ゴール
+
+`ansible/playbooks/gather_info.yml` を作成して、以下の情報を収集する：
+
+- OS情報（distribution, version, kernel）
+- CPU情報（コア数）
+- メモリ情報（合計、使用量、使用率）
+- ディスク使用量
+- 稼働時間
+- 実行中のサービス一覧
+- CloudWatch Agentのステータス（セッション4を実施した場合）
+- 最終ログイン情報
+
+追加の要件：
+- 収集した情報をJSON形式で `/tmp/server_info.json` に保存
+- JSONファイルをローカルの `reports/` フォルダに取得
+
+> 💡 **ヒント**: Ansible の `gather_facts: yes` で OS 情報やメモリ情報が自動的に取得されます（`ansible_memtotal_mb` などの変数で参照可能）。`fetch` モジュールでリモートファイルをローカルに取得できます。
+
+<details>
+<summary>📝 プロンプト例</summary>
 
 ```
 ansible/playbooks/gather_info.yml を作成してください。
@@ -56,13 +76,33 @@ ansible/playbooks/gather_info.yml を作成してください。
 作成後、実行してください。
 ```
 
+</details>
+
 情報が収集・表示されれば OK ✅
 
 ---
 
 ## Step 2: レポートテンプレートを作ろう（15分）
 
-### 手順
+### ゴール
+
+`ansible/templates/server_report.md.j2` に Jinja2 テンプレートを作成する。
+
+テンプレートに含める内容：
+- タイトル: サーバー運用レポート
+- 生成日時
+- サーバー概要テーブル（ホスト名、IP、OS、カーネル、稼働時間）
+- リソース使用状況（CPU、メモリ、ディスク）
+- メモリ使用率が80%超の場合のアラート表示
+- ディスク使用率が80%超の場合のアラート表示
+- 実行中サービス一覧（上位20件）
+- CloudWatch Agentの状態
+- サマリー（アラート件数）
+
+> 💡 **ヒント**: Jinja2 では `{% if 条件 %}...{% endif %}` で条件分岐、`{% for item in list %}...{% endfor %}` でループを書けます。Ansible の変数がそのまま使えます。
+
+<details>
+<summary>📝 プロンプト例</summary>
 
 ```
 ansible/templates/server_report.md.j2 を作成してください。
@@ -79,11 +119,22 @@ Jinja2テンプレートの内容:
 - サマリー（アラート件数）
 ```
 
+</details>
+
 ---
 
 ## Step 3: レポートを自動生成しよう（15分）
 
-### 手順
+### ゴール
+
+`ansible/playbooks/generate_report.yml` を作成して、Step 1 の情報収集 + Step 2 のテンプレートを使ってレポートを自動生成する。
+
+- 保存先: `reports/server_report_<ホスト名>_<日付>.md`
+
+> 💡 **ヒント**: Ansible の `template` モジュールでJinja2テンプレートからファイルを生成できます。`delegate_to: localhost` を使えばローカルにファイルを保存できます。
+
+<details>
+<summary>📝 プロンプト例</summary>
 
 ```
 ansible/playbooks/generate_report.yml を作成してください。
@@ -97,6 +148,8 @@ ansible/playbooks/generate_report.yml を作成してください。
 
 作成後、実行してください。
 ```
+
+</details>
 
 ### 確認
 
