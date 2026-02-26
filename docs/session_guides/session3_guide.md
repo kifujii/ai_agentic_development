@@ -1,651 +1,365 @@
-# セッション3：Webシステム構築 詳細ガイド（任意・発展）
+# セッション3：サーバー再起動の自動化（Ansible入門）
 
-## 📋 目的
+## 🎯 このセッションのゴール
 
-このセッションでは、ContinueのAgent機能を活用して、ALB、ECS/ECR、RDSを含む実践的なWebアプリケーションインフラを構築します。セッション2で構築したVPC/Subnetを活用し、より複雑なインフラ構成をAgent開発で実現します。
+セッション1で構築したEC2に対して、Ansibleでサーバー再起動を自動化します。
 
-> **注意**: このセッションは**任意（発展課題）**です。構築するリソースが多いため、時間内に完了しなくても問題ありません。`terraform apply` でRDSの作成には10分以上かかる場合があります。段階的に構築し、できた範囲で振り返りを行ってください。
+<!-- ![目標構成](../images/session3_target.png) -->
 
-### 学習目標
+| 作成するもの | 内容 |
+|-------------|------|
+| inventory.ini | 接続先サーバーの定義 |
+| ansible.cfg | Ansible基本設定 |
+| check_status.yml | サーバー状態確認 |
+| restart_server.yml | サーバー再起動（前後チェック付き） |
+| manage_services.yml | サービスの起動/停止/再起動 |
 
-- 複雑なインフラ構成（ALB、ECS、RDS）をAgent開発で構築する
-- セッション2で構築したリソースを活用した拡張構築を体験する
-- 依存関係を考慮した段階的な構築アプローチを実践する
-- 統合的なワークフローでのAgent開発を実践する
-
-## 🎯 最終的な目標構成
-
-このセッション終了時点で、以下の構成が完成していることを目指します：
-
-### Webアプリケーションインフラ構成図
-
-```mermaid
-graph TB
-    subgraph Internet["Internet"]
-        Users["ユーザー"]
-    end
-    
-    subgraph VPC["VPC (10.0.0.0/16) - セッション2で構築済み"]
-        subgraph PublicSubnets["パブリックサブネット（追加作成）"]
-            PS1["10.0.2.0/24 (1a)"]
-            PS2["10.0.3.0/24 (1c)"]
-            ALB["Application Load Balancer<br/>HTTP: 80"]
-        end
-
-        subgraph ExistingSubnet["既存サブネット (セッション2)"]
-            EC2["EC2 Instance"]
-        end
-        
-        subgraph PrivateSubnets["プライベートサブネット（新規作成）"]
-            PrS1["10.0.10.0/24 (1a)"]
-            PrS2["10.0.11.0/24 (1c)"]
-            ECS["ECS Cluster<br/>Fargate Tasks x 2"]
-            RDS["RDS MySQL 8.0<br/>db.t3.micro"]
-        end
-        
-        ECR["ECR Repository<br/>Docker Images"]
-    end
-    
-    Users --> ALB
-    ALB --> ECS
-    ECS --> RDS
-    ECR -.->|"イメージプル"| ECS
-```
-
-### ファイル構成
+### 構築の流れ
 
 ```
-terraform/
-└── web-app/
-    ├── main.tf          # メインのTerraformコード
-    ├── variables.tf     # 変数定義
-    ├── outputs.tf       # 出力定義
-    └── terraform.tfvars # 変数の値
+Step 1: Ansible の接続設定
+    ↓
+Step 2: 接続テスト（ping）
+    ↓
+Step 3: サーバー状態を確認する Playbook
+    ↓
+Step 4: サーバー再起動の Playbook
+    ↓
+Step 5: サービス管理の Playbook
 ```
 
-### 構築されるAWSリソース
-
-- **追加するサブネット**: パブリック×2（ALB用、マルチAZ）、プライベート×2（ECS/RDS用、マルチAZ）
-- ALB（Application Load Balancer） - パブリックサブネット
-- ターゲットグループ（ALB用、ヘルスチェック設定）
-- ALBリスナー（HTTP: 80）
-- ECRリポジトリ - Dockerイメージの保存
-- ECSクラスターとサービス（Fargate） - プライベートサブネット
-- RDSデータベース（MySQL 8.0, db.t3.micro） - プライベートサブネット
-- セキュリティグループ（ALB用、ECS用、RDS用）
-- CloudWatch Logsグループ
-
-> **ポイント**: セッション2で構築したVPCを再利用します。ALB/ECS/RDSにはマルチAZのサブネットが必要なため、追加のサブネットを作成します。VPC IDをコンテキストとして提供してください。
+---
 
 ## 📚 事前準備
 
-- [セッション2](session2_guide.md) が完了していること（VPC/EC2が構築済み）
-- セッション2で構築したVPC IDを把握していること（`terraform output` で確認）
-- Continueが正しく設定されていること
+- セッション1のEC2が起動していること
+- EC2のパブリックIPを確認：
 
-## 🚀 Agent開発の進め方
+```bash
+cd terraform/vpc-ec2
+terraform output instance_public_ip
+```
 
-### Agent開発のアドバイス
+---
 
-#### 1. 段階的な構築アプローチ
+## Step 1: Ansibleの接続設定を作ろう（15分）
 
-複雑なインフラは、以下の順序で段階的に構築することを推奨します：
+### やること
 
-1. **ネットワーク層**: ALB、ターゲットグループ、セキュリティグループ
-2. **コンテナ層**: ECRリポジトリ、ECSクラスター、タスク定義、サービス
-3. **データ層**: RDSサブネットグループ、セキュリティグループ、RDSインスタンス
-4. **統合**: すべてのリソースを連携
+EC2に接続するための設定ファイルを作成します。
 
-各ステップで承認ワークフローを活用し、確認してから次に進みます。
+### 手順
 
-#### 2. Prompt Engineeringのヒント
-
-<details>
-<summary>💡 統合構築用プロンプト例（まず自分で考えてからクリック）</summary>
+1. ContinueでAgentを起動（`Ctrl+L`→ **Agent** を選択）
+2. 以下のプロンプトを入力：
 
 ```
-terraform/web-app/ フォルダに、下記条件を満たすWebアプリケーションインフラを構築するTerraformコードを生成してください。
+ansible/ フォルダに、以下の設定ファイルを作成してください。
 
-前提条件:
-- セッション2で構築したVPCとサブネットを使用する
-- VPC ID、サブネットIDは変数で指定する
+1. ansible.cfg:
+   - インベントリ: inventory.ini
+   - リモートユーザー: ec2-user
+   - SSH秘密鍵: ~/.ssh/training-key
+   - host_key_checking 無効
 
-要件:
-1. ALB（Application Load Balancer）:
-   - 名前: training-web-alb
-   - タイプ: application
-   - パブリックサブネットに配置
-   - HTTP（ポート80）リスナー
-   - ヘルスチェック: /, 200 OK
+2. inventory.ini:
+   - グループ名: webservers
+   - ホスト: web1 (IPアドレス: <ここにEC2のIPを入力>)
+   - SSH鍵: ~/.ssh/training-key
+   - StrictHostKeyChecking 無効
+```
 
-2. ECSクラスターとサービス:
-   - クラスター名: training-web-cluster
-   - サービス名: training-web-service
-   - 起動タイプ: FARGATE
-   - 希望タスク数: 2
-   - CPU: 256, メモリ: 512
-   - プライベートサブネットに配置
-   - ALBターゲットグループに接続
+> ⚠️ `<ここにEC2のIPを入力>` は事前準備で確認したIPに置き換えてください。
 
-3. ECRリポジトリ:
-   - 名前: training-web-app
-   - プッシュ時のスキャンを有効化
+---
 
-4. RDSデータベース:
-   - エンジン: MySQL 8.0
-   - インスタンスクラス: db.t3.micro
-   - ストレージ: 20GB
-   - データベース名: webappdb
-   - プライベートサブネットに配置
-   - ECSセキュリティグループからのみアクセス可能（ポート3306）
+## Step 2: 接続テスト（5分）
 
-5. セキュリティグループ:
-   - ALB用: HTTP（80）を許可、送信は全許可
-   - ECS用: ALBセキュリティグループからのみ受信（80）
-   - RDS用: ECSセキュリティグループからのみ受信（3306）
+### 手順
 
-注意事項:
-- 足りていないパラメータがある場合は、そのまま構築するのではなく一度聞き返してください
-- 依存関係を適切に設定してください
-- 変数定義を含めてください
-- コメントを適切に追加してください
-- ベストプラクティスに従ってください
+Agentに以下を指示します：
+
+```
+ansible/ フォルダで ansible all -m ping を実行して、接続テストをしてください。
+```
+
+`web1 | SUCCESS` と表示されれば OK ✅
+
+<details>
+<summary>❓ 接続できない場合</summary>
+
+- EC2が起動しているか確認
+- IPアドレスが正しいか確認（`terraform output`）
+- SSH鍵の権限を確認（`chmod 400 ~/.ssh/training-key`）
+- セキュリティグループでSSHが許可されているか確認
+
+</details>
+
+---
+
+## Step 3: サーバー状態を確認しよう（15分）
+
+### やること
+
+OS情報・メモリ・ディスクなどを確認するPlaybookを作成します。
+
+### 手順
+
+```
+ansible/playbooks/check_status.yml を作成してください。
+
+対象: webserversグループ
+確認する情報:
+- OS情報（ディストリビューション、バージョン）
+- 稼働時間（uptime）
+- メモリ使用量（free -m）
+- ディスク使用量（df -h）
+- 実行中のサービス一覧
+
+作成後、Playbookを実行してください。
+```
+
+サーバー情報が表示されれば OK ✅
+
+---
+
+## Step 4: サーバー再起動を自動化しよう（20分）
+
+### やること
+
+再起動前後の状態チェック付きの再起動Playbookを作成します。
+
+### 手順
+
+```
+ansible/playbooks/restart_server.yml を作成してください。
+
+対象: webserversグループ
+処理の流れ:
+1. 再起動前: 稼働時間と重要サービス（sshd, crond）の状態を確認・表示
+2. 再起動: reboot モジュールを使用（タイムアウト300秒）
+3. 再起動後: 稼働時間の確認、サービスの状態確認、ネットワーク接続確認
+
+注意:
+- become: yes を使用してください
+- エラーハンドリングを含めてください
+
+作成後、Playbookを実行してください。
+```
+
+再起動前後のログが表示され、「再起動完了」メッセージが出れば OK ✅
+
+---
+
+## Step 5: サービス管理を自動化しよう（15分）
+
+### やること
+
+任意のサービスを起動/停止/再起動するPlaybookを作成します。
+
+### 手順
+
+```
+ansible/playbooks/manage_services.yml を作成してください。
+
+対象: webserversグループ
+機能:
+- 変数 target_service でサービス名を指定（デフォルト: crond）
+- 変数 target_action でアクション指定（started/stopped/restarted）
+- 変更前後のサービス状態を表示
+
+作成後、crond を再起動するように実行してください。
+```
+
+サービスの状態変更が確認できれば OK ✅
+
+---
+
+## 📝 振り返り（5分）
+
+| Terraform（セッション1） | Ansible（セッション3） |
+|:---:|:---:|
+| リソースの **作成・管理** | サーバーの **設定・運用** |
+| AWSリソースを構築 | 構築済みサーバーを操作 |
+| `terraform apply` | `ansible-playbook` |
+
+---
+
+## ファイル構成
+
+```
+ansible/
+├── inventory.ini
+├── ansible.cfg
+└── playbooks/
+    ├── check_status.yml
+    ├── restart_server.yml
+    └── manage_services.yml
+```
+
+<details>
+<summary>📝 完成形のコード例（クリックで展開）</summary>
+
+### ansible.cfg
+
+```ini
+[defaults]
+inventory = inventory.ini
+remote_user = ec2-user
+private_key_file = ~/.ssh/training-key
+host_key_checking = False
+timeout = 30
+```
+
+### inventory.ini
+
+```ini
+[webservers]
+web1 ansible_host=<EC2のパブリックIP>
+
+[webservers:vars]
+ansible_user=ec2-user
+ansible_ssh_private_key_file=~/.ssh/training-key
+ansible_ssh_common_args='-o StrictHostKeyChecking=no'
+```
+
+### playbooks/check_status.yml
+
+```yaml
+---
+- name: サーバー状態確認
+  hosts: webservers
+  become: yes
+  gather_facts: yes
+
+  tasks:
+    - name: OS情報の表示
+      debug:
+        msg: "{{ ansible_distribution }} {{ ansible_distribution_version }} ({{ ansible_kernel }})"
+
+    - name: 稼働時間の確認
+      command: uptime
+      register: uptime_result
+      changed_when: false
+
+    - name: 稼働時間の表示
+      debug:
+        msg: "{{ uptime_result.stdout }}"
+
+    - name: メモリ使用量
+      command: free -m
+      register: memory_result
+      changed_when: false
+
+    - name: メモリの表示
+      debug:
+        msg: "{{ memory_result.stdout_lines }}"
+
+    - name: ディスク使用量
+      command: df -h
+      register: disk_result
+      changed_when: false
+
+    - name: ディスクの表示
+      debug:
+        msg: "{{ disk_result.stdout_lines }}"
+```
+
+### playbooks/restart_server.yml
+
+```yaml
+---
+- name: サーバー再起動の自動化
+  hosts: webservers
+  become: yes
+
+  vars:
+    important_services:
+      - sshd
+      - crond
+
+  tasks:
+    - name: 再起動前 - 稼働時間
+      command: uptime
+      register: uptime_before
+      changed_when: false
+
+    - name: 再起動前 - 表示
+      debug:
+        msg: "再起動前: {{ uptime_before.stdout }}"
+
+    - name: サーバーを再起動
+      reboot:
+        reboot_timeout: 300
+        pre_reboot_delay: 10
+        post_reboot_delay: 30
+
+    - name: 再起動後 - 稼働時間
+      command: uptime
+      register: uptime_after
+      changed_when: false
+
+    - name: 再起動後 - 表示
+      debug:
+        msg: "再起動後: {{ uptime_after.stdout }}"
+
+    - name: 再起動後 - サービス確認
+      systemd:
+        name: "{{ item }}"
+        state: started
+        enabled: yes
+      loop: "{{ important_services }}"
+
+    - name: 再起動完了
+      debug:
+        msg: "サーバーの再起動が正常に完了しました"
+```
+
+### playbooks/manage_services.yml
+
+```yaml
+---
+- name: サービス管理
+  hosts: webservers
+  become: yes
+
+  vars:
+    target_service: "crond"
+    target_action: "restarted"
+
+  tasks:
+    - name: 変更前の状態確認
+      systemd:
+        name: "{{ target_service }}"
+      register: before
+      changed_when: false
+      ignore_errors: yes
+
+    - name: 変更前の表示
+      debug:
+        msg: "{{ target_service }}: {{ before.status.ActiveState | default('不明') }}"
+
+    - name: サービスの状態変更
+      systemd:
+        name: "{{ target_service }}"
+        state: "{{ target_action }}"
+        enabled: yes
+
+    - name: 変更後の状態確認
+      systemd:
+        name: "{{ target_service }}"
+      register: after
+      changed_when: false
+
+    - name: 変更後の表示
+      debug:
+        msg: "{{ target_service }}: {{ after.status.ActiveState }}"
 ```
 
 </details>
 
-#### 3. Context Engineeringの活用
-
-<details>
-<summary>💡 コンテキスト提供のプロンプト例（まず自分で考えてからクリック）</summary>
-
-```
-既存のインフラ情報（セッション2で構築済み）:
-- VPC ID: vpc-xxxxx (10.0.0.0/16)
-- パブリックサブネット: subnet-xxxxx (10.0.1.0/24, ap-northeast-1a)
-- 使用中のCIDR: 10.0.1.0/24
-
-上記のVPCを利用して、Webアプリケーションインフラを構築してください。
-ALB/ECS/RDSにはマルチAZのサブネットが必要なため、追加のサブネットも作成してください。
-既存のCIDRと衝突しないように注意してください。
-```
-
-</details>
-
-> **ヒント**: セッション2の `terraform output` の結果をコンテキストとして提供すると効率的です。
-
-#### 4. フィードバックループの実践
-
-**複数ステップの承認ワークフロー**:
-
-1. **ステップ1**: ALBとターゲットグループのコード生成 → 確認 → 承認
-2. **ステップ2**: ECSクラスターとサービスのコード生成 → 確認 → 承認
-3. **ステップ3**: RDSのコード生成 → 確認 → 承認
-4. **ステップ4**: 統合後の最終確認
-
-### 考えながら進めるポイント
-
-1. **どのような構築順序が効果的か**
-   - 依存関係を考慮した構築順序
-   - 各リソースの作成タイミング
-
-2. **セッション2のリソースをどのように活用するか**
-   - VPC IDやサブネットIDの取得方法
-   - 既存リソースとの連携
-
-3. **セキュリティ設定の考慮**
-   - セキュリティグループの適切な設定
-   - プライベートサブネットの活用
-   - 最小権限の原則
-
-4. **コスト最適化**
-   - 適切なインスタンスサイズの選択
-   - 不要なリソースの回避
-
-## 📝 振り返り
-
-以下の点について振り返り、学んだことをまとめてください：
-
-- **複雑なインフラ構築の体験**: ALB、ECS、RDSを含む複雑なインフラをどのように構築したか
-- **セッション2からの拡張**: 既存リソースを活用した構築の方法
-- **段階的な構築アプローチ**: 依存関係を考慮した構築順序の効果
-- **Agent形式での統合開発**: 複数のリソースを統合的に管理する方法
-
-<details>
-<summary>📝 解答例（クリックで展開）</summary>
-
-### 完成したTerraformコード例
-
-#### variables.tf
-
-```hcl
-variable "region" {
-  description = "AWSリージョン"
-  type        = string
-  default     = "ap-northeast-1"
-}
-
-variable "vpc_id" {
-  description = "VPC ID（セッション2で構築したVPC）"
-  type        = string
-}
-
-variable "public_subnet_cidrs" {
-  description = "ALB用パブリックサブネットのCIDRブロック（新規作成）"
-  type        = list(string)
-  default     = ["10.0.2.0/24", "10.0.3.0/24"]
-}
-
-variable "private_subnet_cidrs" {
-  description = "ECS/RDS用プライベートサブネットのCIDRブロック（新規作成）"
-  type        = list(string)
-  default     = ["10.0.10.0/24", "10.0.11.0/24"]
-}
-
-variable "availability_zones" {
-  description = "可用性ゾーン"
-  type        = list(string)
-  default     = ["ap-northeast-1a", "ap-northeast-1c"]
-}
-
-variable "db_username" {
-  description = "RDSデータベースユーザー名"
-  type        = string
-  default     = "admin"
-}
-
-variable "db_password" {
-  description = "RDSデータベースパスワード"
-  type        = string
-  sensitive   = true
-}
-```
-
-#### main.tf
-
-```hcl
-provider "aws" {
-  region = var.region
-}
-
-# ALB用パブリックサブネット（マルチAZ）
-resource "aws_subnet" "public" {
-  count                   = length(var.public_subnet_cidrs)
-  vpc_id                  = var.vpc_id
-  cidr_block              = var.public_subnet_cidrs[count.index]
-  availability_zone       = var.availability_zones[count.index]
-  map_public_ip_on_launch = true
-
-  tags = {
-    Name = "training-web-public-${count.index + 1}"
-  }
-}
-
-# ECS/RDS用プライベートサブネット（マルチAZ）
-resource "aws_subnet" "private" {
-  count             = length(var.private_subnet_cidrs)
-  vpc_id            = var.vpc_id
-  cidr_block        = var.private_subnet_cidrs[count.index]
-  availability_zone = var.availability_zones[count.index]
-
-  tags = {
-    Name = "training-web-private-${count.index + 1}"
-  }
-}
-
-# ALBセキュリティグループ
-resource "aws_security_group" "alb_sg" {
-  name        = "training-alb-sg"
-  description = "Security group for ALB"
-  vpc_id      = var.vpc_id
-
-  ingress {
-    description = "HTTP"
-    from_port   = 80
-    to_port     = 80
-    protocol    = "tcp"
-    cidr_blocks = ["0.0.0.0/0"]
-  }
-
-  egress {
-    from_port   = 0
-    to_port     = 0
-    protocol    = "-1"
-    cidr_blocks = ["0.0.0.0/0"]
-  }
-
-  tags = {
-    Name        = "training-alb-sg"
-    Environment = "training"
-  }
-}
-
-# ECSセキュリティグループ
-resource "aws_security_group" "ecs_sg" {
-  name        = "training-ecs-sg"
-  description = "Security group for ECS"
-  vpc_id      = var.vpc_id
-
-  ingress {
-    description     = "HTTP from ALB"
-    from_port       = 80
-    to_port         = 80
-    protocol        = "tcp"
-    security_groups = [aws_security_group.alb_sg.id]
-  }
-
-  egress {
-    from_port   = 0
-    to_port     = 0
-    protocol    = "-1"
-    cidr_blocks = ["0.0.0.0/0"]
-  }
-
-  tags = {
-    Name        = "training-ecs-sg"
-    Environment = "training"
-  }
-}
-
-# RDSセキュリティグループ
-resource "aws_security_group" "rds_sg" {
-  name        = "training-rds-sg"
-  description = "Security group for RDS"
-  vpc_id      = var.vpc_id
-
-  ingress {
-    description     = "MySQL from ECS"
-    from_port       = 3306
-    to_port         = 3306
-    protocol        = "tcp"
-    security_groups = [aws_security_group.ecs_sg.id]
-  }
-
-  egress {
-    from_port   = 0
-    to_port     = 0
-    protocol    = "-1"
-    cidr_blocks = ["0.0.0.0/0"]
-  }
-
-  tags = {
-    Name        = "training-rds-sg"
-    Environment = "training"
-  }
-}
-
-# ALB
-resource "aws_lb" "web_alb" {
-  name               = "training-web-alb"
-  internal           = false
-  load_balancer_type = "application"
-  security_groups    = [aws_security_group.alb_sg.id]
-  subnets            = aws_subnet.public[*].id
-
-  enable_deletion_protection = false
-
-  tags = {
-    Name        = "training-web-alb"
-    Environment = "training"
-  }
-}
-
-# ターゲットグループ
-resource "aws_lb_target_group" "web_tg" {
-  name        = "training-web-tg"
-  port        = 80
-  protocol    = "HTTP"
-  vpc_id      = var.vpc_id
-  target_type = "ip"
-
-  health_check {
-    enabled             = true
-    healthy_threshold   = 2
-    unhealthy_threshold = 2
-    timeout             = 5
-    interval            = 30
-    path                = "/"
-    matcher             = "200"
-  }
-
-  tags = {
-    Name        = "training-web-tg"
-    Environment = "training"
-  }
-}
-
-# ALBリスナー
-resource "aws_lb_listener" "web_listener" {
-  load_balancer_arn = aws_lb.web_alb.arn
-  port              = "80"
-  protocol          = "HTTP"
-
-  default_action {
-    type             = "forward"
-    target_group_arn = aws_lb_target_group.web_tg.arn
-  }
-}
-
-# ECRリポジトリ
-resource "aws_ecr_repository" "web_app" {
-  name                 = "training-web-app"
-  image_tag_mutability = "MUTABLE"
-
-  image_scanning_configuration {
-    scan_on_push = true
-  }
-
-  tags = {
-    Name        = "training-web-app"
-    Environment = "training"
-  }
-}
-
-# ECSクラスター
-resource "aws_ecs_cluster" "web_cluster" {
-  name = "training-web-cluster"
-
-  tags = {
-    Name        = "training-web-cluster"
-    Environment = "training"
-  }
-}
-
-# ECSタスク定義
-resource "aws_ecs_task_definition" "web_app" {
-  family                   = "training-web-app"
-  network_mode             = "awsvpc"
-  requires_compatibilities = ["FARGATE"]
-  cpu                      = "256"
-  memory                   = "512"
-
-  container_definitions = jsonencode([{
-    name  = "web-app"
-    image = "${aws_ecr_repository.web_app.repository_url}:latest"
-    portMappings = [{
-      containerPort = 80
-      protocol      = "tcp"
-    }]
-    environment = [
-      {
-        name  = "DB_HOST"
-        value = aws_db_instance.web_db.endpoint
-      },
-      {
-        name  = "DB_NAME"
-        value = "webappdb"
-      }
-    ]
-    logConfiguration = {
-      logDriver = "awslogs"
-      options = {
-        "awslogs-group"         = "/ecs/training-web-app"
-        "awslogs-region"        = var.region
-        "awslogs-stream-prefix" = "ecs"
-      }
-    }
-  }])
-
-  tags = {
-    Name        = "training-web-app"
-    Environment = "training"
-  }
-}
-
-# ECSサービス
-resource "aws_ecs_service" "web_service" {
-  name            = "training-web-service"
-  cluster         = aws_ecs_cluster.web_cluster.id
-  task_definition = aws_ecs_task_definition.web_app.arn
-  desired_count   = 2
-  launch_type     = "FARGATE"
-
-  network_configuration {
-    subnets          = aws_subnet.private[*].id
-    security_groups  = [aws_security_group.ecs_sg.id]
-    assign_public_ip = false
-  }
-
-  load_balancer {
-    target_group_arn = aws_lb_target_group.web_tg.arn
-    container_name   = "web-app"
-    container_port   = 80
-  }
-
-  depends_on = [aws_lb_listener.web_listener]
-
-  tags = {
-    Name        = "training-web-service"
-    Environment = "training"
-  }
-}
-
-# RDSサブネットグループ
-resource "aws_db_subnet_group" "web_db_subnet" {
-  name       = "training-web-db-subnet"
-  subnet_ids = aws_subnet.private[*].id
-
-  tags = {
-    Name        = "training-web-db-subnet"
-    Environment = "training"
-  }
-}
-
-# RDSインスタンス
-resource "aws_db_instance" "web_db" {
-  identifier              = "training-web-db"
-  engine                  = "mysql"
-  engine_version          = "8.0"
-  instance_class          = "db.t3.micro"
-  allocated_storage       = 20
-  storage_type            = "gp2"
-  db_name                 = "webappdb"
-  username                = var.db_username
-  password                = var.db_password
-  vpc_security_group_ids  = [aws_security_group.rds_sg.id]
-  db_subnet_group_name    = aws_db_subnet_group.web_db_subnet.name
-  skip_final_snapshot     = true
-  backup_retention_period = 7
-
-  tags = {
-    Name        = "training-web-db"
-    Environment = "training"
-  }
-}
-
-# CloudWatch Logsグループ
-resource "aws_cloudwatch_log_group" "ecs_logs" {
-  name              = "/ecs/training-web-app"
-  retention_in_days = 7
-
-  tags = {
-    Name        = "training-ecs-logs"
-    Environment = "training"
-  }
-}
-```
-
-#### outputs.tf
-
-```hcl
-output "alb_dns_name" {
-  description = "ALBのDNS名"
-  value       = aws_lb.web_alb.dns_name
-}
-
-output "ecr_repository_url" {
-  description = "ECRリポジトリURL"
-  value       = aws_ecr_repository.web_app.repository_url
-}
-
-output "rds_endpoint" {
-  description = "RDSエンドポイント"
-  value       = aws_db_instance.web_db.endpoint
-  sensitive   = true
-}
-
-output "ecs_cluster_name" {
-  description = "ECSクラスター名"
-  value       = aws_ecs_cluster.web_cluster.name
-}
-```
-
-</details>
-
-## ✅ チェックリスト
-
-- [ ] 最終的な目標構成を理解した
-- [ ] セッション2で構築したVPC IDを取得した
-- [ ] Agent形式でALBとターゲットグループを構築した
-- [ ] Agent形式でECRリポジトリを作成した
-- [ ] Agent形式でECSクラスターとサービスを構築した
-- [ ] Agent形式でRDSデータベースを構築した
-- [ ] セキュリティグループを適切に設定した
-- [ ] すべてのリソースの連携を確認した
-- [ ] 段階的な構築アプローチを実践した
-- [ ] Agent形式での統合開発の振り返りを行った
-
-## 🆘 トラブルシューティング
-
-### ALB接続エラー
-
-- セキュリティグループの設定を確認（ALB → ECS）
-- ターゲットグループのヘルスチェックを確認
-- ECSタスクが正常に起動しているか確認
-
-### ECSタスク起動エラー
-
-- タスク定義の確認（コンテナイメージ、リソース設定）
-- ネットワーク設定の確認（サブネット、セキュリティグループ）
-- IAMロールの確認（タスク実行ロール、タスクロール）
-- CloudWatch Logsの確認
-
-### RDS接続エラー
-
-- セキュリティグループの設定を確認（ECS → RDS）
-- サブネットグループの設定を確認
-- データベース認証情報の確認
-
-### セッション2のリソースが見つからない
-
-- セッション2のTerraformの状態を確認（`terraform state list`）
-- `terraform output` でVPC IDを取得
-
-## 📚 参考資料
-
-- [Terraform公式ドキュメント](https://developer.hashicorp.com/terraform/docs)
-- [AWS ALB公式ドキュメント](https://docs.aws.amazon.com/elasticloadbalancing/latest/application/)
-- [AWS ECS公式ドキュメント](https://docs.aws.amazon.com/ecs/)
-- [AWS RDS公式ドキュメント](https://docs.aws.amazon.com/rds/)
-- [セッション2ガイド](session2_guide.md)
+---
 
 ## ➡️ 次のステップ
 
-セッション3が完了したら、[セッション4：サーバー再起動の自動化](session4_guide.md) に進んでください。
-
-**重要**: 作成したリソースは、ワークショップ終了後に必ず削除してください：
-
-```bash
-cd terraform/web-app
-terraform destroy
-```
+[セッション4：CloudWatch Agentインストール・セットアップ](session4_guide.md) に進んでください。

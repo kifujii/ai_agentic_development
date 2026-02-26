@@ -1,230 +1,159 @@
-# セッション2：VPC/EC2の設計・構築・検証 詳細ガイド
+# セッション2：Webシステム構築（任意・発展）
 
-## 📋 目的
+## 🎯 このセッションのゴール
 
-このセッションでは、ContinueのAgent機能を使って、VPC、サブネット、EC2インスタンスを設計・構築・検証します。セッション1で学んだPrompt Engineering、Context Engineering、フィードバックループを実践しながら、実際のAWSインフラを構築する体験をします。
+セッション1で構築したVPCを活用し、ALB + ECS + RDS を含むWebアプリケーションインフラを構築します。
 
-### 学習目標
-
-- Agent形式での実際のAWSインフラ構築体験
-- Prompt Engineeringの実践（要件の明確な伝え方）
-- Context Engineeringの実践（既存AWSリソース情報の活用）
-- フィードバックループの実践（エラー修正、反復的改善、承認ワークフロー）
-- 構築結果の検証（terraform plan/apply、SSH接続テスト）
-
-## 🎯 最終的な目標構成
-
-このセッション終了時点で、以下の構成が完成していることを目指します：
-
-### ネットワーク構成図
-
-```mermaid
-graph TB
-    Internet[Internet] --> IGW
-
-    subgraph VPC["VPC (10.0.0.0/16)"]
-        IGW[Internet Gateway]
-        RT[Route Table]
-        SG[Security Group<br/>SSH: 22]
-        
-        subgraph PublicSubnet["パブリックサブネット (10.0.1.0/24)"]
-            EC2["EC2 Instance<br/>t3.micro<br/>Amazon Linux 2023"]
-        end
-
-        IGW --> RT
-        RT --> PublicSubnet
-        EC2 --> SG
-    end
-```
-
-### ファイル構成
-
-```
-terraform/
-└── vpc-ec2/
-    ├── main.tf          # メインのTerraformコード
-    ├── variables.tf     # 変数定義
-    └── outputs.tf       # 出力定義
-```
-
-### 構築されるAWSリソース
+<!-- ![目標構成](../images/session2_target.png) -->
 
 | リソース | 設定値 |
 |---------|-------|
-| VPC | CIDR: 10.0.0.0/16 |
-| パブリックサブネット | 10.0.1.0/24（ap-northeast-1a） |
-| インターネットゲートウェイ | VPCにアタッチ |
-| ルートテーブル | 0.0.0.0/0 → IGW |
-| セキュリティグループ | SSH（ポート22）のみ許可（⚠️ 本番では送信元IPを制限すること） |
-| キーペア | SSH接続用 |
-| EC2インスタンス | t3.micro, Amazon Linux 2023 |
+| ALB | HTTP:80、パブリックサブネット |
+| ECS (Fargate) | CPU:256, メモリ:512, タスク数:2 |
+| ECR | Dockerイメージリポジトリ |
+| RDS (MySQL 8.0) | db.t3.micro, 20GB |
+| サブネット追加 | パブリック×2（ALB用）、プライベート×2（ECS/RDS用） |
 
-> **重要**: このEC2インスタンスはセッション4以降のAnsible操作の対象になります。SSH接続ができる状態にしておいてください。
+> ⚠️ このセッションは **任意（発展課題）** です。RDS作成に10分以上かかる場合があります。
+
+---
 
 ## 📚 事前準備
 
-- [セッション1](session1_guide.md) が完了していること
-- AWS認証情報が設定されていること
-- Terraformがインストールされていること
-- Continueが正しく設定されていること
-
-### SSH鍵ペアの準備
-
-このセッションではSSH接続のためのキーペアが必要です。以下のコマンドで事前に生成してください：
+- セッション1が完了していること（VPC/EC2が構築済み）
+- セッション1の VPC ID を確認しておくこと：
 
 ```bash
-# SSH鍵ペアの生成（パスフレーズなし）
-ssh-keygen -t rsa -b 4096 -f ~/.ssh/training-key -N ""
-
-# 秘密鍵の権限設定
-chmod 400 ~/.ssh/training-key
+cd terraform/vpc-ec2
+terraform output vpc_id
 ```
 
-> **注意**: `~/.ssh/training-key`（秘密鍵）と `~/.ssh/training-key.pub`（公開鍵）の2ファイルが生成されます。Terraform内では公開鍵（`.pub`）をEC2に登録し、SSH接続時には秘密鍵を使用します。
+---
 
-## 🚀 Agent開発の進め方
-
-### Agent開発のアドバイス
-
-#### 1. Prompt Engineeringのヒント
-
-**悪いプロンプト例**:
-```
-VPCとEC2を作成してください
-```
-
-<details>
-<summary>💡 良いプロンプト例（まず自分で考えてからクリック）</summary>
+## 構築の流れ
 
 ```
-terraform/vpc-ec2/ フォルダに、下記条件を満たすVPCとEC2インスタンスを構築するTerraformコードを生成してください。
-
-要件:
-- VPC CIDR: 10.0.0.0/16
-- パブリックサブネット: 10.0.1.0/24 (ap-northeast-1a)
-- インターネットゲートウェイとルートテーブルを設定してインターネットに接続可能にする
-- EC2インスタンス: t3.micro, Amazon Linux 2023, パブリックサブネットに配置
-- キーペア: SSH接続用のキーペアを作成
-- セキュリティグループ: SSH（ポート22）のみ許可、送信は全許可
-
-注意事項:
-- 足りていないパラメータがある場合は、そのまま構築するのではなく一度聞き返してください
-- SSH接続ができるようにキーペアとパブリックIPを設定してください
-- 変数定義を含めてください
-- コメントを適切に追加してください
+Step 1: サブネットを追加（ALB用 × 2, ECS/RDS用 × 2）
+    ↓
+Step 2: ALB + セキュリティグループを作成
+    ↓
+Step 3: ECR + ECS クラスター/サービスを作成
+    ↓
+Step 4: RDS データベースを作成
+    ↓
+Step 5: 動作確認
 ```
 
-</details>
+---
 
-**プロンプト作成のポイント**:
-- 明確な要件定義（CIDRブロック、インスタンスタイプなど）
-- SSH接続のためのキーペア設定の指示
-- 不足パラメータの聞き返し指示
-- 変数やコメントの要求
+## Step 1: サブネットを追加しよう（15分）
 
-#### 2. Context Engineeringのヒント
+### 手順
 
-**既存リソース情報の取得方法**:
-
-Continueのチャット機能を使って、既存のAWSリソース情報を取得できます：
+1. ContinueでAgentを起動
+2. 以下のプロンプトを入力：
 
 ```
-ap-northeast-1リージョンで既存のVPC情報を教えてください。
-既存のサブネット情報とCIDRブロックの使用状況も教えてください。
+terraform/web-app/ フォルダに、以下の要件でサブネットを作成するTerraformコードを作成してください。
+
+前提:
+- 既存のVPC ID は変数 (var.vpc_id) で指定します
+
+作成するサブネット:
+- ALB用パブリックサブネット: 10.0.2.0/24 (ap-northeast-1a), 10.0.3.0/24 (ap-northeast-1c)
+- ECS/RDS用プライベートサブネット: 10.0.10.0/24 (ap-northeast-1a), 10.0.11.0/24 (ap-northeast-1c)
+
+terraform init と terraform apply まで実行してください。
+vpc_id の入力を求められたら、セッション1の VPC ID を入力してください。
 ```
 
-取得した情報をコンテキストとして提供することで、既存リソースとの衝突を回避できます。
+3. 確認 → 承認 → apply
 
-<details>
-<summary>💡 コンテキスト提供のプロンプト例（まず自分で考えてからクリック）</summary>
+---
 
-```
-既存のインフラ情報:
-- 既存VPC: vpc-xxxxx (10.1.0.0/16)
-- 既存サブネット: 10.1.1.0/24, 10.1.2.0/24
+## Step 2: ALBを作ろう（15分）
 
-上記の情報を考慮して、新しいVPC、サブネット、EC2インスタンスを作成するTerraformコードを生成してください。
-既存のリソースと衝突しないように注意してください。
-```
-
-</details>
-
-#### 3. フィードバックループの活用方法
-
-**承認ワークフロー**:
-- Agentが実行計画を提示したら、必ず確認してから承認してください
-- リソースの種類、数、依存関係を確認してください
-
-**エラー修正プロセス**:
-- エラーが発生した場合、Agentが自動的に修正提案を提示します
-- 修正提案を確認し、適切であれば承認してください
-
-**反復的改善**:
-- 構築後、改善したい点があればフィードバックを提供してください
-- 例：「セキュリティグループをより厳格にしてください」「タグを追加してください」
-
-### 構築後の検証
-
-構築が完了したら、以下の手順で検証してください：
-
-#### 1. Terraform出力の確認
-
-Agentに以下を指示してください：
+### 手順
 
 ```
-terraform output コマンドを実行して、構築されたリソースの情報を確認してください。
-特にEC2インスタンスのパブリックIPアドレスを教えてください。
+terraform/web-app/ の既存コードに、以下を追加してください。
+
+- ALBセキュリティグループ: HTTP(80)を許可
+- ALB: training-web-alb, パブリックサブネットに配置
+- ターゲットグループ: HTTP:80, ヘルスチェック / → 200 OK
+- ALBリスナー: HTTP:80
+
+terraform apply まで実行してください。
 ```
 
-#### 2. SSH接続テスト
+---
 
-EC2インスタンスに対してSSH接続を試みてください：
+## Step 3: ECS/ECRを作ろう（15分）
+
+### 手順
+
+```
+terraform/web-app/ の既存コードに、以下を追加してください。
+
+- ECRリポジトリ: training-web-app, プッシュ時スキャン有効
+- ECSセキュリティグループ: ALB SGからの80番ポートのみ許可
+- ECSクラスター: training-web-cluster
+- ECSタスク定義: FARGATE, CPU:256, メモリ:512
+- ECSサービス: タスク数2, プライベートサブネットに配置, ALBターゲットグループに接続
+- CloudWatch Logsグループ: /ecs/training-web-app
+
+terraform apply まで実行してください。
+```
+
+---
+
+## Step 4: RDSを作ろう（15分）
+
+### 手順
+
+```
+terraform/web-app/ の既存コードに、以下を追加してください。
+
+- RDSセキュリティグループ: ECS SGからの3306番ポートのみ許可
+- RDSサブネットグループ: プライベートサブネットを使用
+- RDSインスタンス: MySQL 8.0, db.t3.micro, 20GB, DB名 webappdb
+
+注意:
+- db_password は変数で定義し、sensitive = true にしてください
+- skip_final_snapshot = true にしてください
+
+terraform apply まで実行してください。
+```
+
+> ⏱️ RDSの作成には10分以上かかることがあります。
+
+---
+
+## Step 5: 動作確認（10分）
 
 ```bash
-ssh -i ~/.ssh/training-key.pem ec2-user@<EC2のパブリックIP>
+cd terraform/web-app
+terraform output alb_dns_name
 ```
 
-接続に成功すれば、構築は完了です。
+ALBのDNS名が表示されればインフラ構築完了 ✅
 
-> **ヒント**: SSH接続できることを確認しておくことで、セッション4以降でAnsibleを使ったサーバー操作がスムーズに行えます。
+---
 
-#### 3. リソースの確認
-
-Agentに以下を指示して、構築されたリソースを確認してください：
+## ファイル構成
 
 ```
-terraform state list コマンドを実行して、構築されたリソース一覧を確認してください。
+terraform/
+└── web-app/
+    ├── main.tf          # 全リソース
+    ├── variables.tf     # 変数定義
+    └── outputs.tf       # ALB DNS, ECR URL 等
 ```
-
-### 考えながら進めるポイント
-
-1. **どのようなプロンプトが効果的か**
-   - 必要なリソースの要件をどのように整理すべきか
-   - VPCとEC2の依存関係をどのように表現すべきか
-
-2. **どのようなコンテキストが必要か**
-   - 既存のAWSリソース情報をどのように取得すべきか
-   - どの情報が重要か（CIDRブロック、既存リソース名など）
-
-3. **エラーが発生した場合の対処方法**
-   - エラーメッセージをどのようにAgentに伝えるべきか
-   - Agentの修正提案をどのように評価すべきか
-
-## 📝 振り返り
-
-以下の点について振り返り、学んだことをまとめてください：
-
-- **Prompt Engineeringの効果**: 要件をどのようにプロンプトに反映したか
-- **Context Engineeringの重要性**: 既存リソース情報を活用することで、どのような問題を回避できたか
-- **フィードバックループの体験**: エラー修正、反復的改善、承認ワークフローをどのように体験したか
-- **構築結果の検証**: terraform plan/apply の結果確認、SSH接続テストをどのように行ったか
 
 <details>
-<summary>📝 解答例（クリックで展開）</summary>
+<summary>📝 完成形のコード例（クリックで展開）</summary>
 
-### 完成したTerraformコード例
-
-#### variables.tf
+### variables.tf
 
 ```hcl
 variable "region" {
@@ -233,250 +162,248 @@ variable "region" {
   default     = "ap-northeast-1"
 }
 
-variable "vpc_cidr" {
-  description = "VPC CIDRブロック"
+variable "vpc_id" {
+  description = "VPC ID（セッション1で構築したVPC）"
   type        = string
-  default     = "10.0.0.0/16"
 }
 
-variable "subnet_cidr" {
-  description = "パブリックサブネットのCIDRブロック"
-  type        = string
-  default     = "10.0.1.0/24"
+variable "public_subnet_cidrs" {
+  description = "ALB用パブリックサブネット"
+  type        = list(string)
+  default     = ["10.0.2.0/24", "10.0.3.0/24"]
 }
 
-variable "instance_type" {
-  description = "EC2インスタンスタイプ"
-  type        = string
-  default     = "t3.micro"
+variable "private_subnet_cidrs" {
+  description = "ECS/RDS用プライベートサブネット"
+  type        = list(string)
+  default     = ["10.0.10.0/24", "10.0.11.0/24"]
 }
 
-variable "key_name" {
-  description = "SSH接続用のキーペア名"
+variable "availability_zones" {
+  type    = list(string)
+  default = ["ap-northeast-1a", "ap-northeast-1c"]
+}
+
+variable "db_username" {
+  description = "RDSユーザー名"
   type        = string
-  default     = "training-key"
+  default     = "admin"
+}
+
+variable "db_password" {
+  description = "RDSパスワード"
+  type        = string
+  sensitive   = true
 }
 ```
 
-#### main.tf
+### main.tf（主要部分のみ）
 
 ```hcl
 provider "aws" {
   region = var.region
 }
 
-# 最新のAmazon Linux 2023 AMI
-data "aws_ami" "amazon_linux" {
-  most_recent = true
-  owners      = ["amazon"]
-
-  filter {
-    name   = "name"
-    values = ["al2023-ami-*-x86_64"]
-  }
-
-  filter {
-    name   = "virtualization-type"
-    values = ["hvm"]
-  }
-}
-
-# キーペア
-resource "aws_key_pair" "training_key" {
-  key_name   = var.key_name
-  public_key = file("~/.ssh/training-key.pub")
-}
-
-# VPC
-resource "aws_vpc" "main" {
-  cidr_block           = var.vpc_cidr
-  enable_dns_hostnames = true
-  enable_dns_support   = true
-
-  tags = {
-    Name = "training-vpc"
-  }
-}
-
-# インターネットゲートウェイ
-resource "aws_internet_gateway" "main" {
-  vpc_id = aws_vpc.main.id
-
-  tags = {
-    Name = "training-igw"
-  }
-}
-
-# パブリックサブネット
+# --- サブネット ---
 resource "aws_subnet" "public" {
-  vpc_id                  = aws_vpc.main.id
-  cidr_block              = var.subnet_cidr
-  availability_zone       = "${var.region}a"
+  count                   = length(var.public_subnet_cidrs)
+  vpc_id                  = var.vpc_id
+  cidr_block              = var.public_subnet_cidrs[count.index]
+  availability_zone       = var.availability_zones[count.index]
   map_public_ip_on_launch = true
-
-  tags = {
-    Name = "training-public-subnet"
-  }
+  tags = { Name = "training-web-public-${count.index + 1}" }
 }
 
-# ルートテーブル
-resource "aws_route_table" "public" {
-  vpc_id = aws_vpc.main.id
-
-  route {
-    cidr_block = "0.0.0.0/0"
-    gateway_id = aws_internet_gateway.main.id
-  }
-
-  tags = {
-    Name = "training-public-rt"
-  }
+resource "aws_subnet" "private" {
+  count             = length(var.private_subnet_cidrs)
+  vpc_id            = var.vpc_id
+  cidr_block        = var.private_subnet_cidrs[count.index]
+  availability_zone = var.availability_zones[count.index]
+  tags = { Name = "training-web-private-${count.index + 1}" }
 }
 
-# サブネットとルートテーブルの関連付け
-resource "aws_route_table_association" "public" {
-  subnet_id      = aws_subnet.public.id
-  route_table_id = aws_route_table.public.id
-}
-
-# セキュリティグループ
-resource "aws_security_group" "ec2_sg" {
-  name        = "training-ec2-sg"
-  description = "Security group for training EC2"
-  vpc_id      = aws_vpc.main.id
-
+# --- ALB ---
+resource "aws_security_group" "alb_sg" {
+  name   = "training-alb-sg"
+  vpc_id = var.vpc_id
   ingress {
-    description = "SSH"
-    from_port   = 22
-    to_port     = 22
+    from_port   = 80
+    to_port     = 80
     protocol    = "tcp"
-    cidr_blocks = ["0.0.0.0/0"]  # ⚠️ ワークショップ用。本番では自分のIPのみに制限すること
+    cidr_blocks = ["0.0.0.0/0"]
   }
-
   egress {
     from_port   = 0
     to_port     = 0
     protocol    = "-1"
     cidr_blocks = ["0.0.0.0/0"]
   }
+}
 
-  tags = {
-    Name = "training-ec2-sg"
+resource "aws_lb" "web_alb" {
+  name               = "training-web-alb"
+  internal           = false
+  load_balancer_type = "application"
+  security_groups    = [aws_security_group.alb_sg.id]
+  subnets            = aws_subnet.public[*].id
+}
+
+resource "aws_lb_target_group" "web_tg" {
+  name        = "training-web-tg"
+  port        = 80
+  protocol    = "HTTP"
+  vpc_id      = var.vpc_id
+  target_type = "ip"
+  health_check {
+    path    = "/"
+    matcher = "200"
   }
 }
 
-# EC2インスタンス
-resource "aws_instance" "training_ec2" {
-  ami           = data.aws_ami.amazon_linux.id
-  instance_type = var.instance_type
-  subnet_id     = aws_subnet.public.id
-  key_name      = aws_key_pair.training_key.key_name
-
-  vpc_security_group_ids = [aws_security_group.ec2_sg.id]
-
-  tags = {
-    Name = "training-ec2"
+resource "aws_lb_listener" "web" {
+  load_balancer_arn = aws_lb.web_alb.arn
+  port              = "80"
+  protocol          = "HTTP"
+  default_action {
+    type             = "forward"
+    target_group_arn = aws_lb_target_group.web_tg.arn
   }
+}
+
+# --- ECS ---
+resource "aws_security_group" "ecs_sg" {
+  name   = "training-ecs-sg"
+  vpc_id = var.vpc_id
+  ingress {
+    from_port       = 80
+    to_port         = 80
+    protocol        = "tcp"
+    security_groups = [aws_security_group.alb_sg.id]
+  }
+  egress {
+    from_port   = 0
+    to_port     = 0
+    protocol    = "-1"
+    cidr_blocks = ["0.0.0.0/0"]
+  }
+}
+
+resource "aws_ecr_repository" "web_app" {
+  name = "training-web-app"
+  image_scanning_configuration { scan_on_push = true }
+}
+
+resource "aws_ecs_cluster" "web" {
+  name = "training-web-cluster"
+}
+
+resource "aws_ecs_task_definition" "web" {
+  family                   = "training-web-app"
+  network_mode             = "awsvpc"
+  requires_compatibilities = ["FARGATE"]
+  cpu                      = "256"
+  memory                   = "512"
+  container_definitions = jsonencode([{
+    name  = "web-app"
+    image = "${aws_ecr_repository.web_app.repository_url}:latest"
+    portMappings = [{ containerPort = 80, protocol = "tcp" }]
+  }])
+}
+
+resource "aws_ecs_service" "web" {
+  name            = "training-web-service"
+  cluster         = aws_ecs_cluster.web.id
+  task_definition = aws_ecs_task_definition.web.arn
+  desired_count   = 2
+  launch_type     = "FARGATE"
+  network_configuration {
+    subnets          = aws_subnet.private[*].id
+    security_groups  = [aws_security_group.ecs_sg.id]
+    assign_public_ip = false
+  }
+  load_balancer {
+    target_group_arn = aws_lb_target_group.web_tg.arn
+    container_name   = "web-app"
+    container_port   = 80
+  }
+  depends_on = [aws_lb_listener.web]
+}
+
+# --- RDS ---
+resource "aws_security_group" "rds_sg" {
+  name   = "training-rds-sg"
+  vpc_id = var.vpc_id
+  ingress {
+    from_port       = 3306
+    to_port         = 3306
+    protocol        = "tcp"
+    security_groups = [aws_security_group.ecs_sg.id]
+  }
+  egress {
+    from_port   = 0
+    to_port     = 0
+    protocol    = "-1"
+    cidr_blocks = ["0.0.0.0/0"]
+  }
+}
+
+resource "aws_db_subnet_group" "web" {
+  name       = "training-web-db-subnet"
+  subnet_ids = aws_subnet.private[*].id
+}
+
+resource "aws_db_instance" "web" {
+  identifier             = "training-web-db"
+  engine                 = "mysql"
+  engine_version         = "8.0"
+  instance_class         = "db.t3.micro"
+  allocated_storage      = 20
+  db_name                = "webappdb"
+  username               = var.db_username
+  password               = var.db_password
+  vpc_security_group_ids = [aws_security_group.rds_sg.id]
+  db_subnet_group_name   = aws_db_subnet_group.web.name
+  skip_final_snapshot    = true
+}
+
+resource "aws_cloudwatch_log_group" "ecs" {
+  name              = "/ecs/training-web-app"
+  retention_in_days = 7
 }
 ```
 
-#### outputs.tf
+### outputs.tf
 
 ```hcl
-output "vpc_id" {
-  description = "VPC ID"
-  value       = aws_vpc.main.id
+output "alb_dns_name" {
+  value = aws_lb.web_alb.dns_name
 }
 
-output "subnet_id" {
-  description = "パブリックサブネットID"
-  value       = aws_subnet.public.id
+output "ecr_repository_url" {
+  value = aws_ecr_repository.web_app.repository_url
 }
 
-output "instance_public_ip" {
-  description = "EC2インスタンスのパブリックIP"
-  value       = aws_instance.training_ec2.public_ip
+output "rds_endpoint" {
+  value     = aws_db_instance.web.endpoint
+  sensitive = true
 }
-
-output "instance_id" {
-  description = "EC2インスタンスID"
-  value       = aws_instance.training_ec2.id
-}
-
-output "security_group_id" {
-  description = "セキュリティグループID"
-  value       = aws_security_group.ec2_sg.id
-}
-```
-
-### 検証手順例
-
-```bash
-# 1. 構築されたリソースの確認
-terraform output
-
-# 2. SSH接続テスト
-ssh -i ~/.ssh/training-key.pem ec2-user@$(terraform output -raw instance_public_ip)
-
-# 3. リソース一覧の確認
-terraform state list
 ```
 
 </details>
 
-## ✅ チェックリスト
-
-- [ ] 最終的な目標構成を理解した
-- [ ] Agent形式でVPC、サブネット、EC2インスタンスを構築した
-- [ ] SSH接続用のキーペアを設定した
-- [ ] Prompt Engineeringを実践した（要件の明確な伝え方）
-- [ ] Context Engineeringを実践した（既存AWSリソース情報の活用）
-- [ ] 承認ワークフローを体験した
-- [ ] エラー修正プロセスを体験した
-- [ ] 反復的改善プロセスを体験した
-- [ ] terraform plan/apply で構築結果を確認した
-- [ ] SSH接続テストに成功した
-- [ ] Agent形式での開発の振り返りを行った
-
-## 🆘 トラブルシューティング
-
-### 既存リソースとの衝突エラー
-
-- Continueのチャット機能を使って既存リソース情報を取得し、コンテキストとして提供してください
-- CIDRブロックが既存のVPCと衝突していないか確認してください
-
-### SSH接続エラー
-
-- セキュリティグループでSSH（ポート22）が許可されているか確認
-- キーペアファイルの権限を確認（`chmod 400 ~/.ssh/training-key.pem`）
-- パブリックIPが割り当てられているか確認
-- EC2インスタンスが起動しているか確認
-
-### エラー修正がうまくいかない
-
-- エラーメッセージを詳しく確認してください
-- Agentの修正提案を評価し、必要に応じて手動で修正してください
-
-### 承認ワークフローが機能しない
-
-- ContinueのAgent機能が正しく設定されているか確認してください
-- 計画を確認してから承認してください
+---
 
 ## ⚠️ リソースの削除
 
-> **重要**: セッション4以降でこのEC2を使用するため、ワークショップ期間中は削除しないでください。**ワークショップ終了後**に以下のコマンドで削除してください。
+ワークショップ終了後に必ず削除してください：
 
 ```bash
-cd terraform/vpc-ec2
+cd terraform/web-app
 terraform destroy
 ```
 
-## 📚 参考資料
-
-- [Terraform公式ドキュメント](https://developer.hashicorp.com/terraform/docs)
-- [AWS公式ドキュメント](https://docs.aws.amazon.com/)
-- [セッション1ガイド](session1_guide.md)
+---
 
 ## ➡️ 次のステップ
 
-セッション2が完了したら、[セッション3：Webシステム構築（任意）](session3_guide.md) に進むか、[セッション4：サーバー再起動の自動化](session4_guide.md) に進んでください。
+[セッション3：サーバー再起動の自動化](session3_guide.md) に進んでください。
