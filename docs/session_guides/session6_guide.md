@@ -1,4 +1,4 @@
-# セッション6：サーバー情報取得・運用レポート作成（任意・発展）
+# セッション6：サーバー情報取得・運用レポート作成（任意・1時間）
 
 ## 🎯 このセッションのゴール
 
@@ -381,7 +381,7 @@ ansible/
 |-----------|-----------|-------|
 | 1 | VPC/EC2 段階的構築、Agent開発入門 | Terraform |
 | 2 | Webアプリ公開、デプロイの流れ | Terraform + Agent |
-| 3 | DB連携アプリ構築（任意） | Terraform + PHP |
+| 3 | 動的Webアプリ構築（任意） | PHP + SQLite |
 | 4 | サーバー再起動の自動化 | Ansible |
 | 5 | SSM/CW Agent導入 | Ansible + AWS CLI |
 | 6 | サーバー情報収集・レポート生成（任意） | Ansible |
@@ -400,7 +400,7 @@ ansible/
 # 1. セッション5: IAMリソース（実施した場合のみ）
 # Agentに「training-ec2-agent-role と training-ec2-agent-profile を削除して」と伝えてください
 
-# 2. セッション1〜3: VPC/EC2/RDS（最後に削除 ※RDS削除に数分かかります）
+# 2. セッション1〜2: VPC/EC2
 cd terraform/vpc-ec2
 terraform destroy
 cd ../..

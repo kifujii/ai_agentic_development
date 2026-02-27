@@ -89,7 +89,11 @@ cd ../..
 AWSコンソールまたは以下のコマンドで、HTTP(80)ルールが追加されていることを確認：
 
 ```bash
-aws ec2 describe-security-groups --group-ids <SG ID> --query 'SecurityGroups[0].IpPermissions'
+cd terraform/vpc-ec2
+aws ec2 describe-security-groups \
+  --group-ids "$(terraform output -raw security_group_id)" \
+  --query 'SecurityGroups[0].IpPermissions'
+cd ../..
 ```
 
 HTTP(80) のルールが表示されれば OK ✅
@@ -198,11 +202,16 @@ Continueに、例えば以下のような内容のWebページの作成を依頼
 
 #### 2. EC2にファイルをコピー
 
-作成したHTMLファイルをEC2に転送します（EC2からはログアウトした状態で実行）：
+作成したHTMLファイルをEC2に転送します。
+
+> ⚠️ **重要**: `scp` コマンドはEC2ではなく **ローカル（プロジェクトルート）** で実行します。EC2にログイン中の場合は、先に `exit` でログアウトしてください。
 
 ```bash
-# EC2からログアウトしていない場合は先にログアウト
+# Step 2でSSH接続中の場合、まずログアウト
 exit
+
+# プロジェクトルートに戻ったことを確認
+# （プロンプトがEC2ではなくローカルになっていればOK）
 
 # ファイルをEC2に転送
 scp -i ~/.ssh/training-key web/index.html ec2-user@<EC2のIPアドレス>:/tmp/index.html

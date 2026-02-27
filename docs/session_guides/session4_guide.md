@@ -1,4 +1,4 @@
-# セッション4：サーバー再起動の自動化（Ansible入門・2時間）
+# セッション4：サーバー再起動の自動化（必須・2時間）
 
 ## 🎯 このセッションのゴール
 
@@ -160,6 +160,8 @@ ansible/playbooks/check_status.yml を作成してください。
 </details>
 
 サーバー情報が表示されれば OK ✅
+
+> 💡 **Playbookの実行方法**: Agentに「作成後、Playbookを実行してください」と指示すると自動で実行してくれます。手動で実行する場合は `cd ansible && ansible-playbook playbooks/check_status.yml && cd ..` です。
 
 ---
 
