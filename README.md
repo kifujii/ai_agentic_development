@@ -11,7 +11,8 @@ ContinueのAgent機能を使って、TerraformやAnsibleのコードを自動生
 | セッション | 内容 | 時間 | 必須/任意 | ガイド |
 |-----------|------|------|-----------|--------|
 | **1** | VPC + EC2 を段階的に構築 | 2h | 必須 | [ガイド](docs/session_guides/session1_guide.md) |
-| **2** | EC2 + RDS でデータベース環境構築 | 2h (+1h) | 必須 (+任意) | [ガイド](docs/session_guides/session2_guide.md) |
+| **2** | RDS データベースを追加 | 2h | 必須 | [ガイド](docs/session_guides/session2_guide.md) |
+| **2.5** | ALB を追加 | 1h | 任意 | [ガイド](docs/session_guides/session2_5_guide.md) |
 | **3** | サーバー再起動の自動化 (Ansible) | 1.5h | 必須 | [ガイド](docs/session_guides/session3_guide.md) |
 | **4** | CloudWatch Agentインストール | 1.5h | 必須 | [ガイド](docs/session_guides/session4_guide.md) |
 | **5** | サーバー情報取得・運用レポート | 1h | 任意 | [ガイド](docs/session_guides/session5_guide.md) |
@@ -20,20 +21,20 @@ ContinueのAgent機能を使って、TerraformやAnsibleのコードを自動生
 
 ```
 Day 1 (4h + 任意1h): インフラ構築 (Terraform)
-├── Session 1: VPC + EC2 を段階的に構築 (2h)          [必須]
-├── Session 2: EC2 + RDS でDB環境構築 (2h)             [必須]
-└── Session 2 任意: ALB追加 (+1h)                      [任意]
+├── Session 1  : VPC + EC2 を段階的に構築 (2h)         [必須]
+├── Session 2  : RDS データベースを追加 (2h)            [必須]
+└── Session 2.5: ALB を追加 (1h)                        [任意]
 
 Day 2 (4h): システム運用 (Ansible)
-├── Session 3: サーバー再起動の自動化 (1.5h)           [必須]
-├── Session 4: CloudWatch Agent導入 (1.5h)             [必須]
-└── Session 5: サーバー情報取得・レポート (1h)          [任意]
+├── Session 3: サーバー再起動の自動化 (1.5h)            [必須]
+├── Session 4: CloudWatch Agent導入 (1.5h)              [必須]
+└── Session 5: サーバー情報取得・レポート (1h)           [任意]
 ```
 
 ### セッション間のつながり
 
 ```
-Session 1: VPC + EC2 構築  ──→  Session 2: RDS追加 (+ 任意: ALB)
+Session 1: VPC + EC2 構築  ──→  Session 2: RDS追加  ──→  Session 2.5: ALB追加（任意）
     ↓（EC2をAnsibleの操作対象として使用）
 Session 3: サーバー再起動の自動化
     ↓
@@ -64,7 +65,7 @@ ai_agentic/
 ├── docs/
 │   ├── TRAINING_MENU.md         # トレーニングメニュー
 │   ├── images/                  # アーキテクチャ構成図
-│   ├── session_guides/          # セッションガイド (1〜5)
+│   ├── session_guides/          # セッションガイド (1〜5, 2.5)
 │   └── setup/                   # セットアップ手順
 ├── evaluation/                  # 評価チェックリスト
 ├── scripts/

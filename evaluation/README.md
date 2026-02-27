@@ -5,7 +5,8 @@
 ## チェックリスト一覧
 
 - [セッション1](session1_checklist.md) - VPC + EC2 を段階的に構築
-- [セッション2](session2_checklist.md) - Webシステム構築（任意・発展）
+- [セッション2](session2_checklist.md) - RDS データベースを追加
+- [セッション2.5](session2_5_checklist.md) - ALB を追加（任意・発展）
 - [セッション3](session3_checklist.md) - サーバー再起動の自動化（Ansible）
 - [セッション4](session4_checklist.md) - CloudWatch Agentインストール・セットアップ
 - [セッション5](session5_checklist.md) - サーバー情報取得・運用レポート作成（任意・発展）

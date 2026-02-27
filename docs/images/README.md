@@ -7,7 +7,8 @@
 | ソースファイル (.drawio) | 表示用ファイル (.svg) | 内容 |
 |-------------------------|----------------------|------|
 | `session1_target.drawio` | `session1_target.svg` | Session 1: VPC + EC2 構成 |
-| `session2_target.drawio` | `session2_target.svg` | Session 2: ALB + ECS + RDS 構成 |
+| `session2_target.drawio` | `session2_target.svg` | Session 2: RDS 追加 |
+| `session2_5_target.drawio` | `session2_5_target.svg` | Session 2.5: ALB 追加（任意） |
 | `session3_target.drawio` | `session3_target.svg` | Session 3: Ansible ワークフロー |
 | `session4_target.drawio` | `session4_target.svg` | Session 4: CloudWatch Agent 構成 |
 | `session5_target.drawio` | `session5_target.svg` | Session 5: 情報収集・レポート生成 |

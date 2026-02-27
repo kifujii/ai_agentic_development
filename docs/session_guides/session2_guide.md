@@ -1,12 +1,12 @@
-# セッション2：EC2 + RDS でデータベース環境を構築しよう
+# セッション2：RDS データベースを追加しよう（必須・2時間）
 
 ## 🎯 このセッションのゴール
 
-セッション1で構築したEC2から、RDS（MySQL）データベースに接続できる環境を構築します。
+セッション1のVPCにプライベートサブネットとRDSを追加し、EC2からデータベースに接続できる環境を構築します。
 
 ![目標構成](../images/session2_target.svg)
 
-### 必須パート（2時間）
+### このセッションで作成するリソース
 
 | リソース | 設定値 |
 |---------|-------|
@@ -14,15 +14,6 @@
 | RDS用セキュリティグループ | MySQL(3306) を EC2のSGからのみ許可 |
 | RDSサブネットグループ | プライベートサブネット × 2 |
 | RDS (MySQL 8.0) | db.t3.micro, 20GB, DB名 `trainingdb` |
-
-### 任意パート（+1時間）
-
-| リソース | 設定値 |
-|---------|-------|
-| パブリックサブネット追加 | 10.0.2.0/24（1c） |
-| ALB用セキュリティグループ | HTTP(80) を許可 |
-| ALB | training-web-alb |
-| ターゲットグループ | EC2をターゲットに登録 |
 
 > 🎓 セッション1でプロンプトの書き方を学びました。このセッションでは **自分でプロンプトを考えて** 進めましょう。
 
@@ -47,7 +38,6 @@ cd ../..  # プロジェクトルートに戻る
 ## 構築の流れ
 
 ```
-【必須パート】
 Step 1: プライベートサブネットを追加（25分）
     ↓
 Step 2: RDS用セキュリティグループ作成（20分）
@@ -59,9 +49,6 @@ Step 4: EC2からRDSに接続（25分）
 Step 5: データベース操作で動作確認（15分）
     ↓
 振り返り（5分）
-
-【任意パート】
-Step 6: ALBを追加してHTTPアクセス可能にする（60分）
 ```
 
 ---
@@ -335,99 +322,6 @@ exit
 - セキュリティグループの **参照関係**（EC2のSGからのみ許可）を明示する
 - RDSのようなパラメータが多いリソースは **全ての設定値を列挙** する
 
-> 任意パートのALBに進まない場合は、[セッション3](session3_guide.md) に進んでください。
-
----
-
-## 【任意】Step 6: ALBを追加してHTTPアクセス可能にしよう（60分）
-
-> このStepは **任意（発展課題）** です。EC2にnginxをインストールし、ALB経由でブラウザからアクセスできるようにします。
-
-### やること
-
-1. ALB用の2つ目のパブリックサブネットを追加
-2. ALBとターゲットグループを作成
-3. EC2にnginxをインストール
-4. ブラウザでアクセスして確認
-
-### 構成イメージ
-
-```
-User → ALB (HTTP:80) → EC2 (nginx:80)
-       ↑ パブリックサブネット × 2（ALBには2AZ必要）
-```
-
-### Step 6-1: 2つ目のパブリックサブネット + ALBを追加（30分）
-
-#### ゴール
-
-`terraform/vpc-ec2/` の既存コードに、以下を追加して apply する：
-
-- パブリックサブネット2: `10.0.2.0/24`（ap-northeast-1c）、パブリックIP自動割り当て有効
-- IGWへのルートテーブル関連付け
-- ALBセキュリティグループ: HTTP(80) を許可
-- ALB: `training-web-alb`、パブリックサブネット × 2 に配置
-- ターゲットグループ: HTTP:80、ヘルスチェック `/`
-- ALBリスナー: HTTP:80 → ターゲットグループ
-- **EC2のセキュリティグループ** に HTTP(80) のインバウンドルールを追加（ALB SGからのみ）
-- EC2をターゲットグループに登録
-
-<details>
-<summary>📝 プロンプト例</summary>
-
-```
-terraform/vpc-ec2/ の既存コードに、ALB関連リソースを追加してください。
-
-1. パブリックサブネット2: 10.0.2.0/24 (ap-northeast-1c), パブリックIP自動割り当て有効
-   - 既存のルートテーブルに関連付け
-2. ALBセキュリティグループ: training-alb-sg, HTTP(80)許可
-3. ALB: training-web-alb, パブリックサブネット2つに配置
-4. ターゲットグループ: training-web-tg, HTTP:80, ヘルスチェック /
-5. ALBリスナー: HTTP:80 → ターゲットグループ
-6. 既存のEC2セキュリティグループに HTTP(80) のインバウンドルール追加（ALB SGからのみ）
-7. 既存のEC2をターゲットグループに登録（aws_lb_target_group_attachment）
-8. outputs.tf に ALBのDNS名を追加
-
-terraform apply まで実行してください。
-```
-
-</details>
-
-### Step 6-2: EC2にnginxをインストール（15分）
-
-EC2にSSHログインして nginx をインストールします：
-
-```bash
-ssh -i ~/.ssh/training-key ec2-user@<EC2のIP>
-```
-
-```bash
-sudo dnf install -y nginx
-sudo systemctl start nginx
-sudo systemctl enable nginx
-exit
-```
-
-> 💡 **ヒント**: この作業はセッション3でAnsibleを使って自動化する内容のプレビューでもあります。
-
-### Step 6-3: ブラウザで確認（5分）
-
-```bash
-cd terraform/vpc-ec2
-terraform output alb_dns_name
-cd ../..
-```
-
-表示されたALBのDNS名をブラウザで開き、nginxのデフォルトページが表示されれば **完了** 🎉
-
-> ⚠️ ALBのヘルスチェックが正常になるまで1〜2分かかることがあります。
-
-### 任意パートの振り返り
-
-- ALBは **2つのAZ** にまたがるパブリックサブネットが必要
-- セキュリティグループは **階層的**（ALB → EC2 → RDS）に設計する
-- `aws_lb_target_group_attachment` でEC2をターゲットに登録する
-
 ---
 
 ## ファイル構成
@@ -437,15 +331,13 @@ cd ../..
 ```
 terraform/
 └── vpc-ec2/
-    ├── main.tf          # VPC, Subnet, IGW, RT, SG, KP, EC2, RDS, (ALB)
-    ├── variables.tf     # 変数定義
-    └── outputs.tf       # VPC ID, Subnet ID, SG ID, Public IP, RDS Endpoint, (ALB DNS)
+    ├── main.tf          # VPC, Subnet, IGW, RT, SG, KP, EC2 + Private Subnet, RDS SG, RDS
+    ├── variables.tf     # 変数定義（db_password追加）
+    └── outputs.tf       # VPC ID, Subnet ID, SG ID, Public IP, RDS Endpoint
 ```
 
-> 💡 セッション1と同じフォルダ（`terraform/vpc-ec2/`）にコードを追加していくため、Terraformの状態ファイル（`terraform.tfstate`）で全リソースが一括管理されます。
-
 <details>
-<summary>📝 完成形のコード例 — 必須パート追加分（クリックで展開）</summary>
+<summary>📝 完成形のコード例（クリックで展開）</summary>
 
 ### variables.tf に追加
 
@@ -563,7 +455,7 @@ output "private_subnet_ids" {
 
 ## ⚠️ リソースの削除
 
-> **全セッション終了後**に削除してください。セッション1〜2のリソースは同じフォルダで管理されているため、一括で削除できます。
+> ワークショップ期間中はリソースを削除しないでください。**全セッション終了後**に削除してください。
 
 ```bash
 cd terraform/vpc-ec2
@@ -577,4 +469,5 @@ cd ../..
 
 ## ➡️ 次のステップ
 
-[セッション3：サーバー再起動の自動化](session3_guide.md) に進んでください。
+- **任意課題に挑戦**: [セッション2.5：ALBを追加しよう](session2_5_guide.md)
+- **次のセッションへ**: [セッション3：サーバー再起動の自動化](session3_guide.md)
