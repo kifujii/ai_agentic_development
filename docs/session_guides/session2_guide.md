@@ -80,21 +80,27 @@ terraform apply まで実行してください。
 
 ### 確認
 
+まず `terraform output` で全出力を確認します：
+
 ```bash
 cd terraform/vpc-ec2
-terraform output security_group_id
-cd ../..
+terraform output
 ```
 
 AWSコンソールまたは以下のコマンドで、HTTP(80)ルールが追加されていることを確認：
 
 ```bash
-cd terraform/vpc-ec2
+# セッション1で security_group_id を output に定義している場合
 aws ec2 describe-security-groups \
   --group-ids "$(terraform output -raw security_group_id)" \
   --query 'SecurityGroups[0].IpPermissions'
 cd ../..
 ```
+
+> 💡 `terraform output -raw security_group_id` でエラーが出る場合は、`terraform output` の結果からSG IDを確認し、直接指定してください：
+> ```bash
+> aws ec2 describe-security-groups --group-ids sg-xxxxx --query 'SecurityGroups[0].IpPermissions'
+> ```
 
 HTTP(80) のルールが表示されれば OK ✅
 
