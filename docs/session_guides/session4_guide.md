@@ -4,7 +4,7 @@
 
 Terraform（IAMロール）+ Ansible（Agent設定）を組み合わせて、CloudWatch Agentを導入します。
 
-<!-- ![目標構成](../images/session4_target.png) -->
+![目標構成](../images/session4_target.svg)
 
 | やること | ツール |
 |---------|-------|

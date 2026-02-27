@@ -4,7 +4,7 @@
 
 セッション1で構築したVPCを活用し、ALB + ECS + RDS を含むWebアプリケーションインフラを構築します。
 
-<!-- ![目標構成](../images/session2_target.png) -->
+![目標構成](../images/session2_target.svg)
 
 | リソース | 設定値 |
 |---------|-------|

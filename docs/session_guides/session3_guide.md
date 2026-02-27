@@ -4,7 +4,7 @@
 
 セッション1で構築したEC2に対して、Ansibleでサーバー再起動を自動化します。
 
-<!-- ![目標構成](../images/session3_target.png) -->
+![目標構成](../images/session3_target.svg)
 
 | 作成するもの | 内容 |
 |-------------|------|
