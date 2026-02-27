@@ -401,7 +401,7 @@ cd terraform/cloudwatch-iam
 terraform destroy
 cd ../..
 
-# 2. セッション1+2: VPC/EC2/RDS（最後に削除 ※RDS削除に数分かかります）
+# 2. セッション1+2: VPC/EC2（最後に削除）
 cd terraform/vpc-ec2
 terraform destroy
 cd ../..

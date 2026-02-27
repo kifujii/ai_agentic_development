@@ -11,7 +11,7 @@ ContinueのAgent機能を使って、TerraformやAnsibleのコードを自動生
 | セッション | 内容 | 時間 | 必須/任意 | ガイド |
 |-----------|------|------|-----------|--------|
 | **1** | VPC + EC2 を段階的に構築 | 2h | 必須 | [ガイド](docs/session_guides/session1_guide.md) |
-| **2** | RDS データベースを追加 | 2h | 必須 | [ガイド](docs/session_guides/session2_guide.md) |
+| **2** | Webアプリケーションを公開 | 2h | 必須 | [ガイド](docs/session_guides/session2_guide.md) |
 | **2.5** | ALB を追加 | 1h | 任意 | [ガイド](docs/session_guides/session2_5_guide.md) |
 | **3** | サーバー再起動の自動化 (Ansible) | 1.5h | 必須 | [ガイド](docs/session_guides/session3_guide.md) |
 | **4** | CloudWatch Agentインストール | 1.5h | 必須 | [ガイド](docs/session_guides/session4_guide.md) |
@@ -22,7 +22,7 @@ ContinueのAgent機能を使って、TerraformやAnsibleのコードを自動生
 ```
 Day 1 (4h + 任意1h): インフラ構築 (Terraform)
 ├── Session 1  : VPC + EC2 を段階的に構築 (2h)         [必須]
-├── Session 2  : RDS データベースを追加 (2h)            [必須]
+├── Session 2  : Webアプリケーションを公開 (2h)          [必須]
 └── Session 2.5: ALB を追加 (1h)                        [任意]
 
 Day 2 (4h): システム運用 (Ansible)
@@ -34,7 +34,7 @@ Day 2 (4h): システム運用 (Ansible)
 ### セッション間のつながり
 
 ```
-Session 1: VPC + EC2 構築  ──→  Session 2: RDS追加  ──→  Session 2.5: ALB追加（任意）
+Session 1: VPC + EC2 構築  ──→  Session 2: Webアプリ公開  ──→  Session 2.5: ALB追加（任意）
     ↓（EC2をAnsibleの操作対象として使用）
 Session 3: サーバー再起動の自動化
     ↓
@@ -88,7 +88,7 @@ ai_agentic/
 # 1. セッション4: IAMロール（実施した場合のみ）
 cd terraform/cloudwatch-iam && terraform destroy && cd ../..
 
-# 2. セッション1+2: VPC/EC2/RDS（最後に削除 ※RDS削除に数分かかります）
+# 2. セッション1+2: VPC/EC2（最後に削除）
 cd terraform/vpc-ec2 && terraform destroy && cd ../..
 ```
 

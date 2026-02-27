@@ -1,33 +1,31 @@
-# セッション2：RDS データベースを追加しよう（必須・2時間）
+# セッション2：Webアプリケーションを公開しよう（必須・2時間）
 
 ## 🎯 このセッションのゴール
 
-セッション1のVPCにプライベートサブネットとRDSを追加し、EC2からデータベースに接続できる環境を構築します。
+セッション1で構築したEC2にWebサーバーをインストールし、ブラウザからアクセスできるWebアプリケーションを公開します。
 
 ![目標構成](../images/session2_target.svg)
 
-### このセッションで作成するリソース
+### このセッションで変更・追加するリソース
 
-| リソース | 設定値 |
-|---------|-------|
-| プライベートサブネット × 2 | 10.0.20.0/24（1a）, 10.0.21.0/24（1c） |
-| RDS用セキュリティグループ | MySQL(3306) を EC2のSGからのみ許可 |
-| RDSサブネットグループ | プライベートサブネット × 2 |
-| RDS (MySQL 8.0) | db.t3.micro, 20GB, DB名 `trainingdb` |
+| リソース | 変更内容 |
+|---------|---------|
+| セキュリティグループ | HTTP(80) のインバウンドルールを追加 |
+| EC2 上のソフトウェア | nginx（Webサーバー）をインストール |
+| Webコンテンツ | カスタムHTMLページをデプロイ |
 
-> 🎓 セッション1でプロンプトの書き方を学びました。このセッションでは **自分でプロンプトを考えて** 進めましょう。
+> 🎓 このセッションでは「Terraform でインフラを変更 → EC2 にソフトウェアを導入 → アプリをデプロイ」という **一連の流れ** を体験します。
 
 ---
 
 ## 📚 事前準備
 
 - セッション1が完了していること（VPC/EC2が構築済み）
-- セッション1の **VPC ID** と **EC2セキュリティグループID** を確認してメモ：
+- EC2のIPアドレスを確認してメモ：
 
 ```bash
 cd terraform/vpc-ec2
-terraform output vpc_id
-terraform output security_group_id
+terraform output instance_public_ip
 cd ../..  # プロジェクトルートに戻る
 ```
 
@@ -38,48 +36,42 @@ cd ../..  # プロジェクトルートに戻る
 ## 構築の流れ
 
 ```
-Step 1: プライベートサブネットを追加（25分）
+Step 1: セキュリティグループに HTTP(80) を追加（25分）
     ↓
-Step 2: RDS用セキュリティグループ作成（20分）
+Step 2: EC2 に nginx をインストール（25分）
     ↓
-Step 3: RDSインスタンスを作成（30分 ※作成待ち含む）
+Step 3: ブラウザでアクセス確認（10分）
     ↓
-Step 4: EC2からRDSに接続（25分）
+Step 4: カスタム Web ページを作成・デプロイ（30分）
     ↓
-Step 5: データベース操作で動作確認（15分）
+Step 5: Web ページを改善してみよう（25分）
     ↓
 振り返り（5分）
 ```
 
 ---
 
-## Step 1: プライベートサブネットを追加しよう（25分）
+## Step 1: セキュリティグループに HTTP を追加しよう（25分）
 
 ### やること
 
-RDSを配置するためのプライベートサブネットを2つ作成します。
-
-> 💡 **なぜ2つ？** RDSのサブネットグループは、異なるアベイラビリティゾーン（AZ）に最低2つのサブネットが必要です。これはRDSの高可用性を確保するためのAWSの仕様です。
+現在のEC2セキュリティグループはSSH(22)のみ許可していますが、Webアプリを公開するためにHTTP(80)のアクセスも許可する必要があります。
 
 ### ゴール
 
-`terraform/vpc-ec2/` の既存コードに、以下を追加して apply する：
+`terraform/vpc-ec2/` の既存コードを修正して apply する：
 
-- プライベートサブネット1: `10.0.20.0/24`（ap-northeast-1a）
-- プライベートサブネット2: `10.0.21.0/24`（ap-northeast-1c）
-- 各サブネットに適切なNameタグ
+- 既存のセキュリティグループに **HTTP(80)** のインバウンドルールを追加
+- ソース: `0.0.0.0/0`（全体に公開）
 
-> 💡 **ヒント**: プライベートサブネットはパブリックサブネットと異なり、`map_public_ip_on_launch = false`（デフォルト値なので省略可）で、インターネットゲートウェイへのルートは不要です。
+> 💡 **ヒント**: `aws_security_group` リソースの `ingress` ブロックを追加します。SSH のルールはそのまま残し、HTTP 用のルールを新たに追加してください。
 
 <details>
 <summary>📝 プロンプト例</summary>
 
 ```
-terraform/vpc-ec2/ の既存コードに、RDS用のプライベートサブネットを2つ追加してください。
-
-- プライベートサブネット1: 10.0.20.0/24 (ap-northeast-1a), Name = "training-private-subnet-1a"
-- プライベートサブネット2: 10.0.21.0/24 (ap-northeast-1c), Name = "training-private-subnet-1c"
-- outputs.tf にサブネットIDリストを追加
+terraform/vpc-ec2/ の既存コードで、EC2のセキュリティグループに HTTP(80) のインバウンドルールを追加してください。
+ソースは 0.0.0.0/0 で、既存の SSH ルールはそのまま残してください。
 
 terraform apply まで実行してください。
 ```
@@ -90,237 +82,210 @@ terraform apply まで実行してください。
 
 ```bash
 cd terraform/vpc-ec2
-terraform output
+terraform output security_group_id
 cd ../..
 ```
 
-プライベートサブネットIDが表示されれば OK ✅
-
----
-
-## Step 2: RDS用セキュリティグループを作ろう（20分）
-
-### やること
-
-EC2からのMySQL接続（3306番ポート）のみを許可するセキュリティグループを作成します。
-
-### ゴール
-
-`terraform/vpc-ec2/` の既存コードに、以下を追加して apply する：
-
-- RDS用セキュリティグループ: `training-rds-sg`
-- インバウンド: MySQL(3306) を **EC2のセキュリティグループからのみ** 許可
-- アウトバウンド: 全許可
-
-> 💡 **ヒント**: セキュリティグループのインバウンドルールで、CIDRブロックではなく **別のセキュリティグループのID** を指定できます。これにより「EC2からのアクセスだけ」に制限できます。Terraformでは `security_groups = [aws_security_group.ec2_sg.id]` のように書きます。
-
-<details>
-<summary>📝 プロンプト例</summary>
-
-```
-terraform/vpc-ec2/ の既存コードに、RDS用のセキュリティグループを追加してください。
-
-- 名前: training-rds-sg
-- VPC: 既存のVPC
-- インバウンド: MySQL(3306) を既存のEC2セキュリティグループ(training-ec2-sg)からのみ許可
-- アウトバウンド: 全許可
-- outputs.tf にRDSセキュリティグループIDを追加
-
-terraform apply まで実行してください。
-```
-
-</details>
-
-### 確認
+AWSコンソールまたは以下のコマンドで、HTTP(80)ルールが追加されていることを確認：
 
 ```bash
-cd terraform/vpc-ec2
-terraform output
-cd ../..
+aws ec2 describe-security-groups --group-ids <SG ID> --query 'SecurityGroups[0].IpPermissions'
 ```
 
-RDSセキュリティグループID（`sg-xxxxx`）が表示されれば OK ✅
+HTTP(80) のルールが表示されれば OK ✅
 
 ---
 
-## Step 3: RDSインスタンスを作ろう（30分）
+## Step 2: EC2 に nginx をインストールしよう（25分）
 
 ### やること
 
-MySQLデータベースインスタンスを作成します。
+EC2にSSHログインして、Webサーバー（nginx）をインストール・起動します。
 
-> ⏱️ **RDSの作成には10〜15分かかります**。apply実行後は待ち時間になるので、その間に次のStep 4の準備を読んでおきましょう。
-
-### ゴール
-
-`terraform/vpc-ec2/` の既存コードに、以下を追加して apply する：
-
-- RDSサブネットグループ: `training-db-subnet-group`（プライベートサブネット × 2）
-- RDSインスタンス:
-  - 識別子: `training-db`
-  - エンジン: MySQL 8.0
-  - インスタンスクラス: `db.t3.micro`
-  - ストレージ: 20GB
-  - データベース名: `trainingdb`
-  - ユーザー名: `admin`
-  - パスワード: 変数で管理（`sensitive = true`）
-  - `skip_final_snapshot = true`
-  - マルチAZ: 無効（ワークショップ用）
-  - パブリックアクセス: 無効
-
-> 💡 **ヒント**: パスワードは `variable` で定義し `sensitive = true` にすると、terraform outputで非表示になります。apply時にパスワードの入力を求められるので、覚えやすいものを入力してください（例: `Training2024!`）。
-
-<details>
-<summary>📝 プロンプト例</summary>
-
-```
-terraform/vpc-ec2/ の既存コードに、RDSインスタンスを追加してください。
-
-- RDSサブネットグループ: training-db-subnet-group（既存のプライベートサブネット2つを使用）
-- RDSインスタンス:
-  - identifier: training-db
-  - engine: mysql 8.0
-  - instance_class: db.t3.micro
-  - allocated_storage: 20
-  - db_name: trainingdb
-  - username: admin
-  - password: 変数で管理 (sensitive = true)
-  - skip_final_snapshot: true
-  - multi_az: false
-  - publicly_accessible: false
-  - RDS用セキュリティグループを使用
-- outputs.tf に RDS エンドポイントを追加
-
-terraform apply まで実行してください。
-```
-
-</details>
-
-### 確認
-
-apply が完了したら（10〜15分待ち）：
-
-```bash
-cd terraform/vpc-ec2
-terraform output rds_endpoint
-cd ../..
-```
-
-RDSエンドポイント（`training-db.xxxxx.ap-northeast-1.rds.amazonaws.com:3306`）が表示されれば OK ✅
-
----
-
-## Step 4: EC2からRDSに接続しよう（25分）
-
-### やること
-
-セッション1のEC2にSSHログインし、mysqlクライアントをインストールしてRDSに接続します。
+> 💡 この手動操作は、セッション3でAnsibleを使って自動化する内容のプレビューでもあります。「手動だと面倒だな」と感じてもらうのがポイントです。
 
 ### 手順
 
-1. **EC2のIPアドレスを確認**:
-
-```bash
-cd terraform/vpc-ec2
-terraform output instance_public_ip
-cd ../..
-```
-
-2. **EC2にSSHログイン**:
+1. **EC2にSSHログイン**:
 
 ```bash
 ssh -i ~/.ssh/training-key ec2-user@<EC2のIPアドレス>
 ```
 
-3. **EC2内でmysqlクライアントをインストール**:
+2. **nginxをインストール・起動**:
 
 ```bash
-sudo dnf install -y mariadb105
+sudo dnf install -y nginx
+sudo systemctl start nginx
+sudo systemctl enable nginx
 ```
 
-4. **RDSに接続**（エンドポイントはStep 3で確認した値）:
+3. **nginxが動作しているか確認**:
 
 ```bash
-mysql -h <RDSエンドポイント（:3306は除く）> -u admin -p trainingdb
+sudo systemctl status nginx
 ```
 
-パスワードを聞かれたら、Step 3で設定したパスワードを入力します。
+`active (running)` と表示されれば OK ✅
 
-5. 接続成功すると `mysql>` プロンプトが表示されます ✅
+> ⚠️ まだEC2からログアウトしないでください。Step 3の確認後にStep 4で使います。
 
-> 💡 **Agentを使う場合**: SSH先のEC2内での操作は、Agentの「ターミナル操作」として依頼することもできます。ただし、SSHセッション内でのコマンド実行はAgentの苦手分野の一つです。ここは手動操作が確実です。
+---
+
+## Step 3: ブラウザでアクセスしてみよう（10分）
+
+### やること
+
+ブラウザで `http://<EC2のIPアドレス>` にアクセスします。
+
+**nginxのデフォルトページ（Welcome to nginx）** が表示されれば成功 🎉
 
 <details>
-<summary>❓ RDSに接続できない場合</summary>
+<summary>❓ ページが表示されない場合</summary>
 
-- **RDSのステータスが `available` か確認**: RDS作成に10〜15分かかります
-- **セキュリティグループの確認**: RDS SGのインバウンドルールでEC2 SGからの3306が許可されているか
-- **エンドポイントが正しいか確認**: `terraform output rds_endpoint` で取得した値の `:3306` 部分を除いたホスト名を使用
-- **サブネットの確認**: EC2とRDSが同じVPC内にあることを確認
+- **セキュリティグループの確認**: HTTP(80)が `0.0.0.0/0` で許可されているか
+- **nginxの状態確認**: EC2内で `sudo systemctl status nginx` を実行
+- **IPアドレスの確認**: `http://` で始まるURL（`https://`ではない）を使用しているか
+- **ファイアウォール**: EC2のOS側でポート80がブロックされていないか（Amazon Linux 2023はデフォルトで許可）
 
 </details>
 
 ---
 
-## Step 5: データベース操作で動作確認（15分）
+## Step 4: カスタムWebページを作成・デプロイしよう（30分）
 
 ### やること
 
-RDSに接続した状態で、簡単なデータベース操作を行い、正しく動作していることを確認します。
+ContinueのAgentにカスタムHTMLページを作成してもらい、EC2にデプロイします。
 
-### 手順（mysql> プロンプトで実行）
+### ゴール
 
-```sql
--- テーブル作成
-CREATE TABLE users (
-  id INT AUTO_INCREMENT PRIMARY KEY,
-  name VARCHAR(100),
-  email VARCHAR(100),
-  created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
-);
+- Agentにトレーニング用のWebページ（HTML）を作成させる
+- 作成したファイルをEC2にコピーしてnginxで公開する
+- ブラウザでカスタムページが表示されることを確認する
 
--- データ挿入
-INSERT INTO users (name, email) VALUES ('田中太郎', 'tanaka@example.com');
-INSERT INTO users (name, email) VALUES ('佐藤花子', 'sato@example.com');
+> 💡 **ポイント**: ここでは「Agent にどう伝えればイメージ通りのページが作れるか」を考えてみましょう。デザインの指示も含めてプロンプトを工夫してみてください。
 
--- データ確認
-SELECT * FROM users;
+### 手順
 
--- テーブル一覧
-SHOW TABLES;
+#### 1. AgentにHTMLページを作成させる
+
+Continueに、例えば以下のような内容のWebページの作成を依頼します：
+
+- トレーニング参加者向けのダッシュボードページ
+- 参加者の名前（自分の名前）を表示
+- 今日の日付を表示
+- セッション1〜5の一覧と進捗状況
+- 見た目が良いデザイン（CSSも含む）
+
+> どんなページにするかは自由です。自分で考えてプロンプトを書いてみましょう。
+
+<details>
+<summary>📝 プロンプト例</summary>
+
+```
+以下の要件でHTMLファイルを1つ作成してください。ファイルは web/index.html に保存してください。
+
+- タイトル: 「AI駆動IaCワークショップ ダッシュボード」
+- ヘッダーに研修名と参加者名（あなたの名前）を表示
+- セッション1〜5の一覧をカード形式で表示（セッション名、概要、所要時間）
+- レスポンシブデザイン（スマホでも見やすい）
+- CSSはHTMLファイル内にインラインで記述
+- モダンなデザイン（グラデーション背景、影付きカード等）
 ```
 
-`users` テーブルにデータが表示されれば OK ✅
+</details>
 
-```sql
--- 接続を終了
-EXIT;
-```
+#### 2. EC2にファイルをコピー
 
-EC2からもログアウト：
+作成したHTMLファイルをEC2に転送します（EC2からはログアウトした状態で実行）：
 
 ```bash
+# EC2からログアウトしていない場合は先にログアウト
+exit
+
+# ファイルをEC2に転送
+scp -i ~/.ssh/training-key web/index.html ec2-user@<EC2のIPアドレス>:/tmp/index.html
+```
+
+EC2にSSHログインしてファイルを配置：
+
+```bash
+ssh -i ~/.ssh/training-key ec2-user@<EC2のIPアドレス>
+sudo cp /tmp/index.html /usr/share/nginx/html/index.html
 exit
 ```
+
+#### 3. ブラウザで確認
+
+`http://<EC2のIPアドレス>` にアクセスして、カスタムページが表示されることを確認 ✅
+
+---
+
+## Step 5: Webページを改善してみよう（25分）
+
+### やること
+
+Step 4で作成したページに機能を追加して、もう一度デプロイします。
+
+### ゴール
+
+ページを改善して、再デプロイする一連の流れを体験する。
+
+> 💡 **ポイント**: 「既存のファイルを改善して」とAgentに伝えるとき、**何を変えたいのか具体的に** 伝えることが重要です。
+
+### 改善のアイデア（好きなものを選んでください）
+
+- 現在の時刻をリアルタイム表示するJavaScriptを追加
+- ダークモード切り替えボタンを追加
+- セッションの進捗を更新できるチェックボックスを追加
+- アニメーション効果を追加
+- AWS構成の簡易図を表示
+
+<details>
+<summary>📝 プロンプト例</summary>
+
+```
+web/index.html を改善してください。
+
+- 現在の日時をリアルタイムで表示するセクションを追加（JavaScriptで毎秒更新）
+- ダークモード/ライトモードを切り替えるトグルボタンを追加
+- 各セッションにチェックボックスを追加し、完了したセッションをマークできるようにする
+```
+
+</details>
+
+### 再デプロイ
+
+Step 4と同じ手順で再デプロイします：
+
+```bash
+scp -i ~/.ssh/training-key web/index.html ec2-user@<EC2のIPアドレス>:/tmp/index.html
+ssh -i ~/.ssh/training-key ec2-user@<EC2のIPアドレス>
+sudo cp /tmp/index.html /usr/share/nginx/html/index.html
+exit
+```
+
+ブラウザで `http://<EC2のIPアドレス>` をリロードして、改善が反映されていることを確認 ✅
 
 ---
 
 ## 📝 振り返り（5分）
 
-### Session 1 → Session 2 で追加された要素
+### このセッションで体験したこと
 
-| 概念 | Session 1 | Session 2 |
-|------|-----------|-----------|
-| **サブネットの種類** | パブリックのみ | パブリック + プライベート |
-| **セキュリティグループ** | CIDRで許可 | SG間参照で許可 |
-| **AWSサービス** | EC2のみ | EC2 + RDS |
-| **データの永続化** | なし | RDS（データベース） |
+| 作業 | ツール | 学び |
+|------|--------|------|
+| SG にHTTPルール追加 | Terraform + Agent | 既存インフラの変更もAgentで |
+| nginx インストール | SSH（手動） | 手動運用の手間を実感 → Session 3で自動化 |
+| HTML ページ作成 | Agent | デザイン含めたコード生成 |
+| ファイル転送・デプロイ | scp + SSH | 手動デプロイの流れ |
 
 ### プロンプトで意識したこと
 
-- 「既存コードに追加」という文脈を常に伝える
-- セキュリティグループの **参照関係**（EC2のSGからのみ許可）を明示する
-- RDSのようなパラメータが多いリソースは **全ての設定値を列挙** する
+- **既存コードの変更**は「何を変えて、何を残すか」を明確にする
+- **デザイン要件**はできるだけ具体的に伝える（色、レイアウト、機能）
+- **改善依頼**は「現状の何が不満で、どうしたいか」を伝える
 
 ---
 
@@ -331,125 +296,13 @@ exit
 ```
 terraform/
 └── vpc-ec2/
-    ├── main.tf          # VPC, Subnet, IGW, RT, SG, KP, EC2 + Private Subnet, RDS SG, RDS
-    ├── variables.tf     # 変数定義（db_password追加）
-    └── outputs.tf       # VPC ID, Subnet ID, SG ID, Public IP, RDS Endpoint
+    ├── main.tf          # VPC, Subnet, IGW, RT, SG(SSH+HTTP), KP, EC2
+    ├── variables.tf     # 変数定義
+    └── outputs.tf       # VPC ID, Subnet ID, SG ID, Public IP
+
+web/
+└── index.html           # カスタムWebページ
 ```
-
-<details>
-<summary>📝 完成形のコード例（クリックで展開）</summary>
-
-### variables.tf に追加
-
-```hcl
-variable "db_password" {
-  description = "RDSパスワード"
-  type        = string
-  sensitive   = true
-}
-```
-
-### main.tf に追加
-
-```hcl
-# --- プライベートサブネット（Step 1） ---
-resource "aws_subnet" "private_1a" {
-  vpc_id            = aws_vpc.main.id
-  cidr_block        = "10.0.20.0/24"
-  availability_zone = "${var.region}a"
-
-  tags = {
-    Name = "training-private-subnet-1a"
-  }
-}
-
-resource "aws_subnet" "private_1c" {
-  vpc_id            = aws_vpc.main.id
-  cidr_block        = "10.0.21.0/24"
-  availability_zone = "${var.region}c"
-
-  tags = {
-    Name = "training-private-subnet-1c"
-  }
-}
-
-# --- RDSセキュリティグループ（Step 2） ---
-resource "aws_security_group" "rds_sg" {
-  name        = "training-rds-sg"
-  description = "Security group for training RDS"
-  vpc_id      = aws_vpc.main.id
-
-  ingress {
-    description     = "MySQL from EC2"
-    from_port       = 3306
-    to_port         = 3306
-    protocol        = "tcp"
-    security_groups = [aws_security_group.ec2_sg.id]
-  }
-
-  egress {
-    from_port   = 0
-    to_port     = 0
-    protocol    = "-1"
-    cidr_blocks = ["0.0.0.0/0"]
-  }
-
-  tags = {
-    Name = "training-rds-sg"
-  }
-}
-
-# --- RDS（Step 3） ---
-resource "aws_db_subnet_group" "training" {
-  name       = "training-db-subnet-group"
-  subnet_ids = [aws_subnet.private_1a.id, aws_subnet.private_1c.id]
-
-  tags = {
-    Name = "training-db-subnet-group"
-  }
-}
-
-resource "aws_db_instance" "training" {
-  identifier             = "training-db"
-  engine                 = "mysql"
-  engine_version         = "8.0"
-  instance_class         = "db.t3.micro"
-  allocated_storage      = 20
-  db_name                = "trainingdb"
-  username               = "admin"
-  password               = var.db_password
-  vpc_security_group_ids = [aws_security_group.rds_sg.id]
-  db_subnet_group_name   = aws_db_subnet_group.training.name
-  skip_final_snapshot    = true
-  multi_az               = false
-  publicly_accessible    = false
-
-  tags = {
-    Name = "training-db"
-  }
-}
-```
-
-### outputs.tf に追加
-
-```hcl
-output "rds_endpoint" {
-  description = "RDSエンドポイント"
-  value       = aws_db_instance.training.endpoint
-}
-
-output "rds_database_name" {
-  description = "データベース名"
-  value       = aws_db_instance.training.db_name
-}
-
-output "private_subnet_ids" {
-  description = "プライベートサブネットID"
-  value       = [aws_subnet.private_1a.id, aws_subnet.private_1c.id]
-}
-```
-
-</details>
 
 ---
 
@@ -462,8 +315,6 @@ cd terraform/vpc-ec2
 terraform destroy
 cd ../..
 ```
-
-> ⚠️ RDSの削除には数分かかります。`terraform destroy` がすべてのリソースの削除を完了するまで待ってください。
 
 ---
 
