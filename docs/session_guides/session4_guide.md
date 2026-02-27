@@ -1,30 +1,31 @@
-# セッション4：CloudWatch Agentインストール・セットアップ
+# セッション4：サーバー再起動の自動化（Ansible入門）
 
 ## 🎯 このセッションのゴール
 
-Terraform（IAMロール）+ Ansible（Agent設定）を組み合わせて、CloudWatch Agentを導入します。
+セッション1で構築したEC2に対して、Ansibleでサーバー再起動を自動化します。
 
 ![目標構成](../images/session4_target.svg)
 
-| やること | ツール |
-|---------|-------|
-| IAMロール・インスタンスプロファイル作成 | Terraform |
-| EC2にプロファイル関連付け | AWS CLI |
-| CloudWatch Agentインストール | Ansible |
-| CloudWatch Agent設定・起動 | Ansible |
+| 作成するもの | 内容 |
+|-------------|------|
+| inventory.ini | 接続先サーバーの定義 |
+| ansible.cfg | Ansible基本設定 |
+| check_status.yml | サーバー状態確認 |
+| restart_server.yml | サーバー再起動（前後チェック付き） |
+| manage_services.yml | サービスの起動/停止/再起動 |
 
 ### 構築の流れ
 
 ```
-Step 1: IAMロールを作る（Terraform）
+Step 1: Ansible の接続設定
     ↓
-Step 2: EC2にプロファイルを関連付け
+Step 2: 接続テスト（ping）
     ↓
-Step 3: CloudWatch Agentをインストール（Ansible）
+Step 3: サーバー状態を確認する Playbook
     ↓
-Step 4: 設定ファイルを配置して起動（Ansible）
+Step 4: サーバー再起動の Playbook
     ↓
-Step 5: CloudWatchで確認
+Step 5: サービス管理の Playbook
 ```
 
 ---
@@ -32,385 +33,393 @@ Step 5: CloudWatchで確認
 ## 📚 事前準備
 
 - セッション1のEC2が起動していること
-- セッション3のAnsible環境が構築済みであること（`cd ansible && ansible all -m ping && cd ..` で確認）
+- EC2のパブリックIPを確認して **メモしておく**：
 
-> ⚠️ **作業ディレクトリについて**: Continueへのプロンプトは **プロジェクトルート** から実行してください。
-
----
-
-## Step 1: IAMロールを作ろう（15分）
-
-### やること
-
-CloudWatch AgentがメトリクスやログをCloudWatchに送信するためのIAMロールを作成します。
-
-### ゴール
-
-`terraform/cloudwatch-iam/` フォルダに、以下を含むTerraformコードを作成して apply する：
-
-- IAMロール: `training-cloudwatch-agent-role`（EC2からのAssumeRole）
-- アタッチするポリシー: `CloudWatchAgentServerPolicy`, `AmazonSSMManagedInstanceCore`
-- インスタンスプロファイル: `training-cloudwatch-agent-profile`
-- outputs にプロファイル名とARNを出力
-
-> 💡 **ヒント**: IAMロールには「信頼ポリシー（Trust Policy）」が必要です。EC2 サービスがこのロールを引き受ける（AssumeRole）ことを許可します。
-
-<details>
-<summary>📝 プロンプト例</summary>
-
-```
-terraform/cloudwatch-iam/ フォルダに、以下の要件でIAMリソースを作成するTerraformコードを生成してください。
-
-- IAMロール: training-cloudwatch-agent-role
-  - 信頼ポリシー: EC2からのAssumeRole
-  - アタッチするポリシー: CloudWatchAgentServerPolicy, AmazonSSMManagedInstanceCore
-- インスタンスプロファイル: training-cloudwatch-agent-profile
-- outputs.tf にプロファイル名とARNを出力
-
-terraform init と terraform apply まで実行してください。
-```
-
-</details>
-
----
-
-## Step 2: EC2にプロファイルを関連付けよう（10分）
-
-### やること
-
-Step 1 で作ったインスタンスプロファイルを、セッション1のEC2に関連付けます。
-
-### ゴール
-
-AWS CLI コマンド `aws ec2 associate-iam-instance-profile` を使って関連付ける。
-
-必要な情報：
-- **EC2インスタンスID**: `terraform/vpc-ec2/` で `terraform output instance_id` を実行して取得
-- **インスタンスプロファイル名**: `terraform/cloudwatch-iam/` で `terraform output instance_profile_name` を実行して取得
-
-> 💡 **ヒント**: Agentに「まず2つのoutputを取得してから、associate コマンドを実行して」と伝えると、自動的に値を取得して実行してくれます。
-
-<details>
-<summary>📝 プロンプト例</summary>
-
-```
-以下の手順を実行してください。
-
-1. terraform/vpc-ec2/ で terraform output instance_id を実行してEC2インスタンスIDを取得
-2. terraform/cloudwatch-iam/ で terraform output instance_profile_name を実行してプロファイル名を取得
-3. 取得した値を使って、以下のコマンドを実行:
-   aws ec2 associate-iam-instance-profile --instance-id <取得したID> --iam-instance-profile Name=<取得したプロファイル名>
-```
-
-</details>
-
-<details>
-<summary>❓ 「There is an existing association」エラーが出た場合</summary>
-
-すでにプロファイルが関連付けられている場合、以下のエラーが出ます：
-
-```
-An error occurred (IncorrectState): There is an existing association for instance i-xxxxx
-```
-
-この場合は、既に関連付け済みなので **このStepはスキップしてOK** です。
-
-もし関連付けを変更したい場合は、まず現在の関連付けを解除してから再実行します：
 ```bash
-# 現在の関連付けIDを確認
-aws ec2 describe-iam-instance-profile-associations --filters "Name=instance-id,Values=<インスタンスID>"
-# 関連付けを解除（association-idは上のコマンドで表示される値）
-aws ec2 disassociate-iam-instance-profile --association-id <association-id>
-# 再度関連付け
-aws ec2 associate-iam-instance-profile ...
+cd terraform/vpc-ec2
+terraform output instance_public_ip
+cd ../..  # プロジェクトルートに戻る
+```
+
+> 💡 IPアドレスは `13.xxx.xxx.xxx` のような形式です。このセッションで何度も使うのでコピーしておきましょう。
+
+> ⚠️ **作業ディレクトリについて**: Continueへのプロンプトは **プロジェクトルート** から実行してください。Ansible コマンドの手動実行時は `ansible/` ディレクトリに移動してください。
+
+---
+
+## Step 1: Ansibleの接続設定を作ろう（15分）
+
+### やること
+
+EC2に接続するための設定ファイル（`ansible.cfg` と `inventory.ini`）を作成します。
+
+### ゴール
+
+`ansible/` フォルダに以下の2ファイルを作成する：
+
+- **ansible.cfg**: インベントリファイルのパス、リモートユーザー（`ec2-user`）、SSH鍵のパス、host_key_checking無効
+- **inventory.ini**: `webservers` グループに EC2 のIPを登録
+
+> 💡 **ヒント**: Agentに「どの設定項目が必要か」を伝えましょう。
+
+> ⚠️ **重要**: プロンプトの中のIPアドレスは、**事前準備でメモした実際のIPアドレス**に置き換えてからAgentに渡してください。`<EC2のIP>` のままだとファイルにプレースホルダーがそのまま書き込まれてしまいます。
+
+<details>
+<summary>📝 プロンプト例</summary>
+
+```
+ansible/ フォルダに、以下の設定ファイルを作成してください。
+
+1. ansible.cfg:
+   - インベントリ: inventory.ini
+   - リモートユーザー: ec2-user
+   - SSH秘密鍵: ~/.ssh/training-key
+   - host_key_checking 無効
+
+2. inventory.ini:
+   - グループ名: webservers
+   - ホスト: web1 (IPアドレス: 13.xxx.xxx.xxx)  ← 実際のIPに書き換えること！
+   - SSH鍵: ~/.ssh/training-key
+   - StrictHostKeyChecking 無効
 ```
 
 </details>
 
 ---
 
-## Step 3: CloudWatch Agentをインストールしよう（15分）
+## Step 2: 接続テスト（5分）
 
 ### やること
 
-Ansible Playbookで CloudWatch Agent をEC2にインストールします。
+Ansible の `ping` モジュールで EC2 への接続を確認します。
+
+Agentに `ansible/ フォルダで接続テスト（ansible all -m ping）を実行して` と指示しましょう。
+
+`web1 | SUCCESS` と表示されれば OK ✅
+
+> 💡 手動で実行する場合は `ansible/` ディレクトリに移動してからコマンドを実行してください：
+> ```bash
+> cd ansible
+> ansible all -m ping
+> cd ..  # プロジェクトルートに戻る
+> ```
+
+<details>
+<summary>❓ 接続できない場合</summary>
+
+- `inventory.ini` のIPアドレスが正しいか確認（プレースホルダー `<EC2のIP>` のままになっていませんか？）
+- EC2が起動しているか確認
+- IPアドレスが正しいか確認（`cd terraform/vpc-ec2 && terraform output instance_public_ip && cd ../..`）
+- SSH鍵の権限を確認（`chmod 400 ~/.ssh/training-key`）
+- セキュリティグループでSSHが許可されているか確認
+
+</details>
+
+---
+
+## Step 3: サーバー状態を確認しよう（15分）
+
+### やること
+
+OS情報・メモリ・ディスクなどを確認するPlaybookを作成します。
 
 ### ゴール
 
-`ansible/playbooks/install_cwagent.yml` を作成して、以下を行う：
+`ansible/playbooks/check_status.yml` を作成して、以下の情報を確認・表示する：
 
-- `amazon-cloudwatch-agent` パッケージを yum でインストール
-- インストール結果を表示
-- バージョン確認
+- OS情報（ディストリビューション、バージョン）
+- 稼働時間
+- メモリ使用量
+- ディスク使用量
+- 実行中のサービス一覧
 
-> 💡 **ヒント**: CloudWatch Agent のコマンドは `/opt/aws/amazon-cloudwatch-agent/bin/amazon-cloudwatch-agent-ctl` にあります。`-a status` でステータスを確認できます。
+> 💡 **ヒント**: Ansibleの `gather_facts: yes` を使うとOS情報が自動収集されます。コマンド実行は `command` モジュール、結果表示は `debug` モジュールを使います。
 
 <details>
 <summary>📝 プロンプト例</summary>
 
 ```
-ansible/playbooks/install_cwagent.yml を作成してください。
+ansible/playbooks/check_status.yml を作成してください。
 
 対象: webserversグループ
-タスク:
-- amazon-cloudwatch-agent パッケージをyumでインストール
-- インストール結果を表示
-- バージョン確認（/opt/aws/amazon-cloudwatch-agent/bin/amazon-cloudwatch-agent-ctl -a status）
+確認する情報:
+- OS情報（ディストリビューション、バージョン）
+- 稼働時間（uptime）
+- メモリ使用量（free -m）
+- ディスク使用量（df -h）
+- 実行中のサービス一覧
 
 作成後、Playbookを実行してください。
 ```
 
 </details>
 
-インストール成功のメッセージが出れば OK ✅
+サーバー情報が表示されれば OK ✅
 
 ---
 
-## Step 4: CloudWatch Agentを設定・起動しよう（20分）
+## Step 4: サーバー再起動を自動化しよう（20分）
 
 ### やること
 
-CloudWatch Agent の設定ファイルを配置し、Agent を起動します。
+再起動前後の状態チェック付きの再起動Playbookを作成します。
 
 ### ゴール
 
-`ansible/playbooks/configure_cwagent.yml` を作成して、以下を行う：
+`ansible/playbooks/restart_server.yml` を作成する。以下の処理を含めること：
 
-1. 設定ファイル（JSON）を `/opt/aws/amazon-cloudwatch-agent/etc/` に配置
-2. Agent を起動
-3. ステータス確認
+1. **再起動前**: 稼働時間と重要サービス（sshd, crond）の状態を確認
+2. **再起動**: サーバーを再起動（タイムアウト300秒）
+3. **再起動後**: 稼働時間とサービスの正常性を再確認
 
-設定内容：
-- メトリクス収集間隔: 60秒
-- 収集するメトリクス: CPU使用率、メモリ使用率、ディスク使用率
-- 収集するログ: `/var/log/messages`, `/var/log/secure`
-- メトリクス名前空間: `Training/EC2`
-
-> 💡 **ヒント**: CloudWatch Agent の設定はJSON形式です。Ansibleの `copy` モジュールで `content` にJSON を書いて配置できます。起動は `-a fetch-config` コマンドを使います。
+> 💡 **ヒント**: 再起動には `reboot` モジュールが使えます。`become: yes` が必要です。再起動前後で同じ情報を取得・比較すると、運用で役立つPlaybookになります。
 
 <details>
 <summary>📝 プロンプト例</summary>
 
 ```
-ansible/playbooks/configure_cwagent.yml を作成してください。
+ansible/playbooks/restart_server.yml を作成してください。
 
 対象: webserversグループ
-タスク:
-1. CloudWatch Agent設定ファイル（JSON）を /opt/aws/amazon-cloudwatch-agent/etc/ に配置
-2. CloudWatch Agentを起動
-3. ステータス確認
+処理の流れ:
+1. 再起動前: 稼働時間と重要サービス（sshd, crond）の状態を確認・表示
+2. 再起動: reboot モジュールを使用（タイムアウト300秒）
+3. 再起動後: 稼働時間の確認、サービスの状態確認、ネットワーク接続確認
 
-設定内容:
-- メトリクス収集間隔: 60秒
-- 収集するメトリクス: CPU使用率、メモリ使用率、ディスク使用率
-- 収集するログ: /var/log/messages, /var/log/secure
-- メトリクス名前空間: Training/EC2
+注意:
+- become: yes を使用してください
+- エラーハンドリングを含めてください
 
 作成後、Playbookを実行してください。
 ```
 
 </details>
 
-Agent が running 状態になれば OK ✅
+再起動前後のログが表示され、「再起動完了」メッセージが出れば OK ✅
 
 ---
 
-## Step 5: CloudWatchで確認しよう（10分）
+## Step 5: サービス管理を自動化しよう（15分）
 
-AWSコンソールで確認：
+### やること
 
-1. **CloudWatch → メトリクス → カスタム名前空間 → Training/EC2** でメトリクスを確認
-2. **CloudWatch → ロググループ → /training/ec2/** でログを確認
+任意のサービスを起動/停止/再起動するPlaybookを作成します。
 
-> 💡 メトリクスとログが反映されるまで数分かかることがあります。
+### ゴール
+
+`ansible/playbooks/manage_services.yml` を作成する。
+
+- 変数でサービス名とアクション（started / stopped / restarted）を指定できるようにする
+- 変更前後のサービス状態を表示する
+
+> 💡 **ヒント**: Ansible の変数機能（`vars` セクション）を使うと、Playbookの再利用性が上がります。`systemd` モジュールでサービスの状態を管理できます。
+
+<details>
+<summary>📝 プロンプト例</summary>
+
+```
+ansible/playbooks/manage_services.yml を作成してください。
+
+対象: webserversグループ
+機能:
+- 変数 target_service でサービス名を指定（デフォルト: crond）
+- 変数 target_action でアクション指定（started/stopped/restarted）
+- 変更前後のサービス状態を表示
+
+作成後、crond を再起動するように実行してください。
+```
+
+</details>
+
+サービスの状態変更が確認できれば OK ✅
+
+---
+
+## 📝 振り返り（5分）
+
+| Terraform（セッション1-3） | Ansible（セッション4） |
+|:---:|:---:|
+| リソースの **作成・管理** | サーバーの **設定・運用** |
+| AWSリソースを構築 | 構築済みサーバーを操作 |
+| `terraform apply` | `ansible-playbook` |
 
 ---
 
 ## ファイル構成
 
 ```
-terraform/
-└── cloudwatch-iam/
-    ├── main.tf
-    └── outputs.tf
-
 ansible/
-├── inventory.ini          # セッション3で作成済み
-├── ansible.cfg            # セッション3で作成済み
+├── inventory.ini
+├── ansible.cfg
 └── playbooks/
-    ├── install_cwagent.yml
-    └── configure_cwagent.yml
+    ├── check_status.yml
+    ├── restart_server.yml
+    └── manage_services.yml
 ```
 
 <details>
 <summary>📝 完成形のコード例（クリックで展開）</summary>
 
-### terraform/cloudwatch-iam/main.tf
+### ansible.cfg
 
-```hcl
-provider "aws" {
-  region = "ap-northeast-1"
-}
-
-data "aws_iam_policy_document" "ec2_assume_role" {
-  statement {
-    actions = ["sts:AssumeRole"]
-    principals {
-      type        = "Service"
-      identifiers = ["ec2.amazonaws.com"]
-    }
-  }
-}
-
-resource "aws_iam_role" "cw_agent" {
-  name               = "training-cloudwatch-agent-role"
-  assume_role_policy = data.aws_iam_policy_document.ec2_assume_role.json
-}
-
-resource "aws_iam_role_policy_attachment" "cw_policy" {
-  role       = aws_iam_role.cw_agent.name
-  policy_arn = "arn:aws:iam::aws:policy/CloudWatchAgentServerPolicy"
-}
-
-resource "aws_iam_role_policy_attachment" "ssm_policy" {
-  role       = aws_iam_role.cw_agent.name
-  policy_arn = "arn:aws:iam::aws:policy/AmazonSSMManagedInstanceCore"
-}
-
-resource "aws_iam_instance_profile" "cw_agent" {
-  name = "training-cloudwatch-agent-profile"
-  role = aws_iam_role.cw_agent.name
-}
+```ini
+[defaults]
+inventory = inventory.ini
+remote_user = ec2-user
+private_key_file = ~/.ssh/training-key
+host_key_checking = False
+timeout = 30
 ```
 
-### terraform/cloudwatch-iam/outputs.tf
+### inventory.ini
 
-```hcl
-output "instance_profile_name" {
-  value = aws_iam_instance_profile.cw_agent.name
-}
+```ini
+[webservers]
+web1 ansible_host=13.xxx.xxx.xxx  # ← 実際のEC2パブリックIPに置き換えてください
 
-output "instance_profile_arn" {
-  value = aws_iam_instance_profile.cw_agent.arn
-}
-
-output "iam_role_arn" {
-  value = aws_iam_role.cw_agent.arn
-}
+[webservers:vars]
+ansible_user=ec2-user
+ansible_ssh_private_key_file=~/.ssh/training-key
+ansible_ssh_common_args='-o StrictHostKeyChecking=no'
 ```
 
-### ansible/playbooks/install_cwagent.yml
+### playbooks/check_status.yml
 
 ```yaml
 ---
-- name: CloudWatch Agentのインストール
+- name: サーバー状態確認
   hosts: webservers
   become: yes
+  gather_facts: yes
 
   tasks:
-    - name: CloudWatch Agentインストール
-      yum:
-        name: amazon-cloudwatch-agent
-        state: present
-      register: install_result
-
-    - name: インストール結果
+    - name: OS情報の表示
       debug:
-        msg: "{{ '新規インストール' if install_result.changed else '既にインストール済み' }}"
+        msg: "{{ ansible_distribution }} {{ ansible_distribution_version }} ({{ ansible_kernel }})"
 
-    - name: バージョン確認
-      command: /opt/aws/amazon-cloudwatch-agent/bin/amazon-cloudwatch-agent-ctl -a status
-      register: status
+    - name: 稼働時間の確認
+      command: uptime
+      register: uptime_result
       changed_when: false
-      ignore_errors: yes
 
-    - name: ステータス表示
+    - name: 稼働時間の表示
       debug:
-        msg: "{{ status.stdout_lines }}"
-      when: status.rc == 0
+        msg: "{{ uptime_result.stdout }}"
+
+    - name: メモリ使用量
+      command: free -m
+      register: memory_result
+      changed_when: false
+
+    - name: メモリの表示
+      debug:
+        msg: "{{ memory_result.stdout_lines }}"
+
+    - name: ディスク使用量
+      command: df -h
+      register: disk_result
+      changed_when: false
+
+    - name: ディスクの表示
+      debug:
+        msg: "{{ disk_result.stdout_lines }}"
 ```
 
-### ansible/playbooks/configure_cwagent.yml
+### playbooks/restart_server.yml
 
 ```yaml
 ---
-- name: CloudWatch Agent設定・起動
+- name: サーバー再起動の自動化
   hosts: webservers
   become: yes
 
   vars:
-    cwagent_config:
-      agent:
-        metrics_collection_interval: 60
-        run_as_user: root
-      metrics:
-        namespace: Training/EC2
-        metrics_collected:
-          cpu:
-            measurement: [cpu_usage_idle, cpu_usage_user, cpu_usage_system]
-            totalcpu: true
-          mem:
-            measurement: [mem_used_percent, mem_available_percent]
-          disk:
-            measurement: [disk_used_percent]
-            resources: ["/"]
-      logs:
-        logs_collected:
-          files:
-            collect_list:
-              - file_path: /var/log/messages
-                log_group_name: /training/ec2/messages
-                log_stream_name: "{instance_id}"
-                retention_in_days: 7
-              - file_path: /var/log/secure
-                log_group_name: /training/ec2/secure
-                log_stream_name: "{instance_id}"
-                retention_in_days: 7
+    important_services:
+      - sshd
+      - crond
 
   tasks:
-    - name: 設定ファイル配置
-      copy:
-        content: "{{ cwagent_config | to_nice_json }}"
-        dest: /opt/aws/amazon-cloudwatch-agent/etc/amazon-cloudwatch-agent.json
-        mode: '0644'
-
-    - name: CloudWatch Agent起動
-      command: >
-        /opt/aws/amazon-cloudwatch-agent/bin/amazon-cloudwatch-agent-ctl
-        -a fetch-config -m ec2
-        -c file:/opt/aws/amazon-cloudwatch-agent/etc/amazon-cloudwatch-agent.json
-        -s
-
-    - name: ステータス確認
-      command: /opt/aws/amazon-cloudwatch-agent/bin/amazon-cloudwatch-agent-ctl -a status
-      register: status
+    - name: 再起動前 - 稼働時間
+      command: uptime
+      register: uptime_before
       changed_when: false
 
-    - name: ステータス表示
+    - name: 再起動前 - 表示
       debug:
-        msg: "{{ status.stdout_lines }}"
+        msg: "再起動前: {{ uptime_before.stdout }}"
+
+    - name: サーバーを再起動
+      reboot:
+        reboot_timeout: 300
+        pre_reboot_delay: 10
+        post_reboot_delay: 30
+
+    - name: 再起動後 - 稼働時間
+      command: uptime
+      register: uptime_after
+      changed_when: false
+
+    - name: 再起動後 - 表示
+      debug:
+        msg: "再起動後: {{ uptime_after.stdout }}"
+
+    - name: 再起動後 - サービス確認
+      systemd:
+        name: "{{ item }}"
+        state: started
+        enabled: yes
+      loop: "{{ important_services }}"
+
+    - name: 再起動完了
+      debug:
+        msg: "サーバーの再起動が正常に完了しました"
+```
+
+### playbooks/manage_services.yml
+
+```yaml
+---
+- name: サービス管理
+  hosts: webservers
+  become: yes
+
+  vars:
+    target_service: "crond"
+    target_action: "restarted"
+
+  tasks:
+    - name: 変更前の状態確認
+      systemd:
+        name: "{{ target_service }}"
+      register: before
+      changed_when: false
+      ignore_errors: yes
+
+    - name: 変更前の表示
+      debug:
+        msg: "{{ target_service }}: {{ before.status.ActiveState | default('不明') }}"
+
+    - name: サービスの状態変更
+      systemd:
+        name: "{{ target_service }}"
+        state: "{{ target_action }}"
+        enabled: yes
+
+    - name: 変更後の状態確認
+      systemd:
+        name: "{{ target_service }}"
+      register: after
+      changed_when: false
+
+    - name: 変更後の表示
+      debug:
+        msg: "{{ target_service }}: {{ after.status.ActiveState }}"
 ```
 
 </details>
 
 ---
 
-## ⚠️ リソースの削除
-
-ワークショップ終了後に削除してください：
-
-```bash
-cd terraform/cloudwatch-iam
-terraform destroy
-cd ../..  # プロジェクトルートに戻る
-```
-
-> CloudWatch AgentはEC2上のソフトウェアなので、EC2削除時に一緒に消えます。IAMリソースはTerraformで別途削除が必要です。
-
-> ⚠️ **削除の順序**: IAMプロファイルを先にdestroy → その後 vpc-ec2 をdestroy してください。
-
----
-
 ## ➡️ 次のステップ
 
-[セッション5：サーバー情報取得・運用レポート作成（任意）](session5_guide.md) に進んでください。
+[セッション5：CloudWatch Agent & SSM Agent のインストール](session5_guide.md) に進んでください。

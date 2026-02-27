@@ -1,171 +1,283 @@
-# セッション5：サーバー情報取得・運用レポート作成（任意・発展）
+# セッション5：CloudWatch Agent & SSM Agent のインストール（必須・1.5時間）
 
 ## 🎯 このセッションのゴール
 
-Ansibleでサーバー情報を自動収集し、Jinja2テンプレートで運用レポートを生成します。
+AnsibleでEC2に **SSM Agent** と **CloudWatch Agent** を段階的にインストール・設定します。このセッションでは **Terraform は使わず、Ansible のみ** で実施します。
 
 ![目標構成](../images/session5_target.svg)
 
-| 作成するもの | 内容 |
-|-------------|------|
-| gather_info.yml | サーバー情報の自動収集 |
-| generate_report.yml | レポート生成 Playbook |
-| server_report.md.j2 | レポートテンプレート（Jinja2） |
+| Step | インストールするもの | 目的 |
+|------|---------------------|------|
+| 前半 | SSM Agent | AWSコンソールからのリモート管理 |
+| 後半 | CloudWatch Agent | メトリクス・ログの収集 |
 
-### 構築の流れ
-
-```
-Step 1: サーバー情報を収集する Playbook
-    ↓
-Step 2: レポートテンプレートを作成
-    ↓
-Step 3: レポートを自動生成
-```
+> 🎓 **なぜ2つのAgentを入れるのか？**
+> - **SSM Agent**: AWSコンソールからEC2にリモートアクセス（Session Manager）。SSHなしで管理できる。
+> - **CloudWatch Agent**: CPU/メモリ/ディスクのメトリクスやログをCloudWatchに送信。監視に必須。
 
 ---
 
 ## 📚 事前準備
 
-- セッション3のAnsible環境が構築済みであること（`cd ansible && ansible all -m ping && cd ..` で確認）
-
-> ⚠️ **作業ディレクトリについて**: Continueへのプロンプトは **プロジェクトルート** から実行してください。Ansible コマンドの手動実行時は `ansible/` ディレクトリに移動してください。
-
----
-
-## Step 1: サーバー情報を収集しよう（20分）
-
-### ゴール
-
-`ansible/playbooks/gather_info.yml` を作成して、以下の情報を収集する：
-
-- OS情報（distribution, version, kernel）
-- CPU情報（コア数）
-- メモリ情報（合計、使用量、使用率）
-- ディスク使用量
-- 稼働時間
-- 実行中のサービス一覧
-- CloudWatch Agentのステータス（セッション4を実施した場合）
-- 最終ログイン情報
-
-追加の要件：
-- 収集した情報をJSON形式で `/tmp/server_info.json` に保存
-- JSONファイルをローカルの `reports/` フォルダに取得
-
-> 💡 **ヒント**: Ansible の `gather_facts: yes` で OS 情報やメモリ情報が自動的に取得されます（`ansible_memtotal_mb` などの変数で参照可能）。`fetch` モジュールでリモートファイルをローカルに取得できます。
-
-<details>
-<summary>📝 プロンプト例</summary>
-
-```
-ansible/playbooks/gather_info.yml を作成してください。
-
-対象: webserversグループ
-収集する情報:
-- OS情報（ansible facts: distribution, version, kernel）
-- CPU情報（コア数）
-- メモリ情報（合計、使用量、使用率）
-- ディスク使用量（df -h）
-- 稼働時間（uptime）
-- 実行中のサービス一覧
-- CloudWatch Agentのステータス（存在する場合、ignore_errors）
-- 最終ログイン情報（last -n 5）
-
-要件:
-- gather_facts: yes を使用
-- コマンド実行のタスクには changed_when: false を設定
-- 収集した情報をJSON形式で /tmp/server_info.json に保存
-- JSON情報をローカルの reports/ フォルダに取得
-
-作成後、実行してください。
-```
-
-</details>
-
-情報が収集・表示されれば OK ✅
-
----
-
-## Step 2: レポートテンプレートを作ろう（15分）
-
-### ゴール
-
-`ansible/templates/server_report.md.j2` に Jinja2 テンプレートを作成する。
-
-テンプレートに含める内容：
-- タイトル: サーバー運用レポート
-- 生成日時
-- サーバー概要テーブル（ホスト名、IP、OS、カーネル、稼働時間）
-- リソース使用状況（CPU、メモリ、ディスク）
-- メモリ使用率が80%超の場合のアラート表示
-- ディスク使用率が80%超の場合のアラート表示
-- 実行中サービス一覧（上位20件）
-- CloudWatch Agentの状態
-- サマリー（アラート件数）
-
-> 💡 **ヒント**: Jinja2 では `{% if 条件 %}...{% endif %}` で条件分岐、`{% for item in list %}...{% endfor %}` でループを書けます。Ansible の変数がそのまま使えます。
-
-<details>
-<summary>📝 プロンプト例</summary>
-
-```
-ansible/templates/server_report.md.j2 を作成してください。
-
-Jinja2テンプレートの内容:
-- タイトル: サーバー運用レポート
-- 生成日時
-- サーバー概要テーブル（ホスト名、IP、OS、カーネル、稼働時間）
-- リソース使用状況（CPU、メモリ、ディスク）
-- メモリ使用率が80%超の場合はアラート表示
-- ディスク使用率が80%超の場合はアラート表示
-- 実行中サービス一覧（上位20件）
-- CloudWatch Agentの状態
-- サマリー（アラート件数）
-```
-
-</details>
-
----
-
-## Step 3: レポートを自動生成しよう（15分）
-
-### ゴール
-
-`ansible/playbooks/generate_report.yml` を作成して、Step 1 の情報収集 + Step 2 のテンプレートを使ってレポートを自動生成する。
-
-- 保存先: `reports/server_report_<ホスト名>_<日付>.md`
-
-> 💡 **ヒント**: Ansible の `template` モジュールでJinja2テンプレートからファイルを生成できます。`delegate_to: localhost` を使えばローカルにファイルを保存できます。
-
-<details>
-<summary>📝 プロンプト例</summary>
-
-```
-ansible/playbooks/generate_report.yml を作成してください。
-
-対象: webserversグループ
-処理:
-1. uptime, df, サービス一覧, CloudWatch Agent状態, 最終ログインを収集
-2. ローカルに reports/ フォルダを作成
-3. ansible/templates/server_report.md.j2 テンプレートを使ってレポート生成
-4. 保存先: reports/server_report_<ホスト名>_<日付>.md
-
-作成後、実行してください。
-```
-
-</details>
-
-### 確認
-
-プロジェクトルートから確認します：
+- セッション4のAnsible環境が構築済みであること
+- 接続確認：
 
 ```bash
-ls ansible/reports/
-cat ansible/reports/server_report_web1_*.md
+cd ansible
+ansible all -m ping
+cd ..
 ```
 
-> 💡 ファイルが見つからない場合は、Playbookの `dest` パスを確認してください。`playbook_dir` の値によってパスが変わることがあります。
+> ⚠️ **作業ディレクトリについて**: Continueへのプロンプトは **プロジェクトルート** から実行してください。
 
-レポートが生成されていれば **セッション5完了** 🎉
+---
+
+## 構築の流れ
+
+```
+Step 1: IAMロールの作成（AWS CLI）
+    ↓
+Step 2: SSM Agent のインストール（Ansible）
+    ↓
+Step 3: SSM Agent の動作確認
+    ↓
+Step 4: CloudWatch Agent のインストール（Ansible）
+    ↓
+Step 5: CloudWatch Agent の設定・起動（Ansible）
+    ↓
+Step 6: CloudWatch での確認
+```
+
+---
+
+## Step 1: IAMロールを作成しよう（15分）
+
+### やること
+
+CloudWatch Agent と SSM Agent が AWS と通信するには、EC2 に IAM ロール（インスタンスプロファイル）が必要です。Agentに AWS CLI コマンドで作成してもらいます。
+
+### ゴール
+
+以下のリソースを AWS CLI で作成する：
+
+- IAMロール: `training-ec2-agent-role`（EC2 の AssumeRole）
+- アタッチするポリシー: `CloudWatchAgentServerPolicy`, `AmazonSSMManagedInstanceCore`
+- インスタンスプロファイル: `training-ec2-agent-profile`
+- EC2 にプロファイルを関連付け
+
+> 💡 **ヒント**: Agentに「AWS CLIで IAM ロールとインスタンスプロファイルを作成して、EC2に関連付けて」と伝えると、必要なコマンドを順番に実行してくれます。
+
+<details>
+<summary>📝 プロンプト例</summary>
+
+```
+以下の手順を AWS CLI で実行してください。
+
+1. IAM ロール training-ec2-agent-role を作成
+   - 信頼ポリシー: EC2 サービスからの AssumeRole を許可
+2. ポリシーをアタッチ:
+   - arn:aws:iam::aws:policy/CloudWatchAgentServerPolicy
+   - arn:aws:iam::aws:policy/AmazonSSMManagedInstanceCore
+3. インスタンスプロファイル training-ec2-agent-profile を作成
+4. ロールをインスタンスプロファイルに追加
+5. terraform/vpc-ec2 で terraform output instance_id を実行してEC2のIDを取得
+6. EC2 にインスタンスプロファイルを関連付け
+```
+
+</details>
+
+<details>
+<summary>❓ 「There is an existing association」エラーが出た場合</summary>
+
+すでにプロファイルが関連付けられている場合は **このStepはスキップしてOK** です。
+
+関連付けを変更したい場合：
+```bash
+# 現在の関連付けIDを確認
+aws ec2 describe-iam-instance-profile-associations --filters "Name=instance-id,Values=<インスタンスID>"
+# 関連付けを解除
+aws ec2 disassociate-iam-instance-profile --association-id <association-id>
+# 再度関連付け
+aws ec2 associate-iam-instance-profile --instance-id <ID> --iam-instance-profile Name=training-ec2-agent-profile
+```
+
+</details>
+
+---
+
+## Step 2: SSM Agent をインストールしよう（15分）
+
+### やること
+
+Ansible Playbook で EC2 に SSM Agent をインストールします。
+
+> 💡 Amazon Linux 2023 には SSM Agent が**プリインストール**されている場合があります。Playbook では「インストール確認 → 未インストールならインストール → 起動」の流れにすると安全です。
+
+### ゴール
+
+`ansible/playbooks/install_ssm_agent.yml` を作成して、以下を行う：
+
+- SSM Agent がインストール済みか確認
+- 未インストールの場合はインストール
+- SSM Agent を起動・有効化
+- ステータスを確認・表示
+
+<details>
+<summary>📝 プロンプト例</summary>
+
+```
+ansible/playbooks/install_ssm_agent.yml を作成してください。
+
+対象: webserversグループ
+タスク:
+- amazon-ssm-agent がインストール済みか確認
+- 未インストールの場合は yum でインストール
+- amazon-ssm-agent サービスを起動・有効化（systemd）
+- ステータスを確認して表示
+
+作成後、Playbookを実行してください。
+```
+
+</details>
+
+Agent が `active (running)` 状態になれば OK ✅
+
+---
+
+## Step 3: SSM Agent の動作確認（10分）
+
+### やること
+
+AWSコンソールで SSM Agent が正しく動作しているか確認します。
+
+### 手順
+
+1. **AWS コンソール** → **Systems Manager** → **フリートマネージャー** を開く
+2. EC2 インスタンスが **マネージドインスタンス** として表示されていることを確認
+
+> ⚠️ IAMロールの反映に 1〜2分かかることがあります。表示されない場合は少し待ってからリロードしてください。
+
+3. （オプション）**Session Manager** から接続を試す：
+   - インスタンスを選択 → 「ノードアクション」→「ターミナルセッションを開始」
+   - SSHなしでシェルに接続できることを確認
+
+SSM でインスタンスが管理対象として表示されれば OK ✅
+
+---
+
+## Step 4: CloudWatch Agent をインストールしよう（15分）
+
+### やること
+
+Ansible Playbook で CloudWatch Agent をインストールします。
+
+### ゴール
+
+`ansible/playbooks/install_cwagent.yml` を作成して、以下を行う：
+
+- `amazon-cloudwatch-agent` パッケージを yum でインストール
+- インストール結果を表示
+- バージョン確認
+
+> 💡 **ヒント**: CloudWatch Agent のコマンドは `/opt/aws/amazon-cloudwatch-agent/bin/amazon-cloudwatch-agent-ctl` にあります。`-a status` でステータスを確認できます。
+
+<details>
+<summary>📝 プロンプト例</summary>
+
+```
+ansible/playbooks/install_cwagent.yml を作成してください。
+
+対象: webserversグループ
+タスク:
+- amazon-cloudwatch-agent パッケージをyumでインストール
+- インストール結果を表示
+- バージョン確認（/opt/aws/amazon-cloudwatch-agent/bin/amazon-cloudwatch-agent-ctl -a status）
+
+作成後、Playbookを実行してください。
+```
+
+</details>
+
+インストール成功のメッセージが出れば OK ✅
+
+---
+
+## Step 5: CloudWatch Agent を設定・起動しよう（20分）
+
+### やること
+
+CloudWatch Agent の設定ファイルを配置し、Agent を起動します。
+
+### ゴール
+
+`ansible/playbooks/configure_cwagent.yml` を作成して、以下を行う：
+
+1. 設定ファイル（JSON）を `/opt/aws/amazon-cloudwatch-agent/etc/` に配置
+2. Agent を起動
+3. ステータス確認
+
+設定内容：
+- メトリクス収集間隔: 60秒
+- 収集するメトリクス: CPU使用率、メモリ使用率、ディスク使用率
+- 収集するログ: `/var/log/messages`, `/var/log/secure`
+- メトリクス名前空間: `Training/EC2`
+
+> 💡 **ヒント**: CloudWatch Agent の設定はJSON形式です。Ansibleの `copy` モジュールで `content` にJSON を書いて配置できます。起動は `-a fetch-config` コマンドを使います。
+
+<details>
+<summary>📝 プロンプト例</summary>
+
+```
+ansible/playbooks/configure_cwagent.yml を作成してください。
+
+対象: webserversグループ
+タスク:
+1. CloudWatch Agent設定ファイル（JSON）を /opt/aws/amazon-cloudwatch-agent/etc/ に配置
+2. CloudWatch Agentを起動
+3. ステータス確認
+
+設定内容:
+- メトリクス収集間隔: 60秒
+- 収集するメトリクス: CPU使用率、メモリ使用率、ディスク使用率
+- 収集するログ: /var/log/messages, /var/log/secure
+- メトリクス名前空間: Training/EC2
+
+作成後、Playbookを実行してください。
+```
+
+</details>
+
+Agent が running 状態になれば OK ✅
+
+---
+
+## Step 6: CloudWatch で確認しよう（10分）
+
+AWSコンソールで確認：
+
+1. **CloudWatch → メトリクス → カスタム名前空間 → Training/EC2** でメトリクスを確認
+2. **CloudWatch → ロググループ → /training/ec2/** でログを確認
+
+> 💡 メトリクスとログが反映されるまで数分かかることがあります。
+
+---
+
+## 📝 振り返り（5分）
+
+### このセッションで体験したこと
+
+| 作業 | ツール | 学び |
+|------|--------|------|
+| IAMロール作成 | AWS CLI (Agent) | CLI操作もAgentに任せられる |
+| SSM Agent導入 | Ansible | プリインストール確認の重要性 |
+| CW Agent導入 | Ansible | パッケージ管理の自動化 |
+| CW Agent設定 | Ansible | JSON設定のテンプレート化 |
+
+### Terraform を使わなかった理由
+
+- IAMロールはワンタイムの作成なので AWS CLI で十分
+- SSM/CW Agent はEC2上のソフトウェア → Ansible の領域
+- **ツールの使い分け**: インフラ構築 → Terraform、サーバー設定 → Ansible
 
 ---
 
@@ -173,236 +285,181 @@ cat ansible/reports/server_report_web1_*.md
 
 ```
 ansible/
-├── inventory.ini              # セッション3で作成済み
-├── ansible.cfg                # セッション3で作成済み
-├── playbooks/
-│   ├── gather_info.yml
-│   └── generate_report.yml
-├── templates/
-│   └── server_report.md.j2
-└── reports/                   # 生成されたレポート
-    └── server_report_web1_YYYY-MM-DD.md
+├── inventory.ini            # セッション4で作成済み
+├── ansible.cfg              # セッション4で作成済み
+└── playbooks/
+    ├── install_ssm_agent.yml
+    ├── install_cwagent.yml
+    └── configure_cwagent.yml
 ```
 
 <details>
 <summary>📝 完成形のコード例（クリックで展開）</summary>
 
-### playbooks/gather_info.yml
+### playbooks/install_ssm_agent.yml
 
 ```yaml
 ---
-- name: サーバー情報の自動収集
+- name: SSM Agentのインストール
   hosts: webservers
   become: yes
-  gather_facts: yes
 
   tasks:
-    - name: ディスク使用量
-      command: df -h --output=target,size,used,avail,pcent
-      register: disk_result
-      changed_when: false
-
-    - name: 稼働時間
-      command: uptime -p
-      register: uptime_result
-      changed_when: false
-
-    - name: 実行中サービス
-      command: systemctl list-units --type=service --state=running --no-pager --plain
-      register: services_result
-      changed_when: false
-
-    - name: CloudWatch Agentステータス
-      command: /opt/aws/amazon-cloudwatch-agent/bin/amazon-cloudwatch-agent-ctl -a status
-      register: cwagent_status
+    - name: SSM Agentがインストール済みか確認
+      command: rpm -q amazon-ssm-agent
+      register: ssm_installed
       changed_when: false
       ignore_errors: yes
 
-    - name: 最終ログイン
-      command: last -n 5 --time-format iso
-      register: last_login
+    - name: インストール状態の表示
+      debug:
+        msg: "{{ '既にインストール済み' if ssm_installed.rc == 0 else '未インストール → インストールします' }}"
+
+    - name: SSM Agentインストール
+      yum:
+        name: amazon-ssm-agent
+        state: present
+      when: ssm_installed.rc != 0
+
+    - name: SSM Agent起動・有効化
+      systemd:
+        name: amazon-ssm-agent
+        state: started
+        enabled: yes
+
+    - name: ステータス確認
+      command: systemctl status amazon-ssm-agent
+      register: ssm_status
       changed_when: false
 
-    - name: サマリー表示
+    - name: ステータス表示
       debug:
-        msg: |
-          ホスト: {{ ansible_hostname }}
-          OS: {{ ansible_distribution }} {{ ansible_distribution_version }}
-          メモリ: {{ ansible_memtotal_mb }}MB
-          稼働: {{ uptime_result.stdout }}
+        msg: "{{ ssm_status.stdout_lines[:5] }}"
+```
 
-    - name: JSON保存
+### playbooks/install_cwagent.yml
+
+```yaml
+---
+- name: CloudWatch Agentのインストール
+  hosts: webservers
+  become: yes
+
+  tasks:
+    - name: CloudWatch Agentインストール
+      yum:
+        name: amazon-cloudwatch-agent
+        state: present
+      register: install_result
+
+    - name: インストール結果
+      debug:
+        msg: "{{ '新規インストール' if install_result.changed else '既にインストール済み' }}"
+
+    - name: バージョン確認
+      command: /opt/aws/amazon-cloudwatch-agent/bin/amazon-cloudwatch-agent-ctl -a status
+      register: status
+      changed_when: false
+      ignore_errors: yes
+
+    - name: ステータス表示
+      debug:
+        msg: "{{ status.stdout_lines }}"
+      when: status.rc == 0
+```
+
+### playbooks/configure_cwagent.yml
+
+```yaml
+---
+- name: CloudWatch Agent設定・起動
+  hosts: webservers
+  become: yes
+
+  vars:
+    cwagent_config:
+      agent:
+        metrics_collection_interval: 60
+        run_as_user: root
+      metrics:
+        namespace: Training/EC2
+        metrics_collected:
+          cpu:
+            measurement: [cpu_usage_idle, cpu_usage_user, cpu_usage_system]
+            totalcpu: true
+          mem:
+            measurement: [mem_used_percent, mem_available_percent]
+          disk:
+            measurement: [disk_used_percent]
+            resources: ["/"]
+      logs:
+        logs_collected:
+          files:
+            collect_list:
+              - file_path: /var/log/messages
+                log_group_name: /training/ec2/messages
+                log_stream_name: "{instance_id}"
+                retention_in_days: 7
+              - file_path: /var/log/secure
+                log_group_name: /training/ec2/secure
+                log_stream_name: "{instance_id}"
+                retention_in_days: 7
+
+  tasks:
+    - name: 設定ファイル配置
       copy:
-        content: |
-          {{ {
-            'timestamp': ansible_date_time.iso8601,
-            'hostname': ansible_hostname,
-            'os': ansible_distribution + ' ' + ansible_distribution_version,
-            'kernel': ansible_kernel,
-            'memory_total_mb': ansible_memtotal_mb,
-            'memory_free_mb': ansible_memfree_mb,
-            'disk': disk_result.stdout_lines,
-            'uptime': uptime_result.stdout,
-            'services_count': services_result.stdout_lines | length
-          } | to_nice_json }}
-        dest: /tmp/server_info.json
+        content: "{{ cwagent_config | to_nice_json }}"
+        dest: /opt/aws/amazon-cloudwatch-agent/etc/amazon-cloudwatch-agent.json
         mode: '0644'
 
-    - name: ローカルにreportsフォルダ作成
-      delegate_to: localhost
-      become: no
-      file:
-        path: "{{ playbook_dir }}/../reports"
-        state: directory
+    - name: CloudWatch Agent起動
+      command: >
+        /opt/aws/amazon-cloudwatch-agent/bin/amazon-cloudwatch-agent-ctl
+        -a fetch-config -m ec2
+        -c file:/opt/aws/amazon-cloudwatch-agent/etc/amazon-cloudwatch-agent.json
+        -s
 
-    - name: JSONをローカルに取得
-      fetch:
-        src: /tmp/server_info.json
-        dest: "{{ playbook_dir }}/../reports/{{ inventory_hostname }}_info.json"
-        flat: yes
-```
-
-### templates/server_report.md.j2
-
-```jinja2
-# サーバー運用レポート
-
-**生成日時**: {{ ansible_date_time.iso8601 }}
-
----
-
-## サーバー概要
-
-| 項目 | 値 |
-|------|-----|
-| ホスト名 | {{ ansible_hostname }} |
-| IP | {{ ansible_default_ipv4.address | default('不明') }} |
-| OS | {{ ansible_distribution }} {{ ansible_distribution_version }} |
-| カーネル | {{ ansible_kernel }} |
-| 稼働時間 | {{ uptime_result.stdout }} |
-
----
-
-## リソース使用状況
-
-### メモリ
-- 合計: {{ ansible_memtotal_mb }} MB
-- 空き: {{ ansible_memfree_mb }} MB
-{% set mem_usage = ((ansible_memtotal_mb | int - ansible_memfree_mb | int) / ansible_memtotal_mb | int * 100) | round(1) %}
-- **使用率: {{ mem_usage }}%**
-
-{% if mem_usage | float > 80.0 %}
-> ⚠️ **アラート**: メモリ使用率が80%超 ({{ mem_usage }}%)
-{% endif %}
-
-### ディスク
-```
-{{ disk_result.stdout }}
-```
-
----
-
-## サービス（上位20件）
-
-{% for service in services_result.stdout_lines[:20] %}
-- {{ service }}
-{% endfor %}
-
----
-
-## CloudWatch Agent
-
-{% if cwagent_status.rc == 0 %}
-- 状態: **稼働中** ✅
-{% else %}
-- 状態: 未インストール / 停止中
-{% endif %}
-
----
-
-*Ansible自動生成レポート*
-```
-
-### playbooks/generate_report.yml
-
-```yaml
----
-- name: 運用レポート生成
-  hosts: webservers
-  become: yes
-  gather_facts: yes
-
-  tasks:
-    - name: 稼働時間
-      command: uptime -p
-      register: uptime_result
-      changed_when: false
-
-    - name: ディスク使用量
-      command: df -h
-      register: disk_result
-      changed_when: false
-
-    - name: 実行中サービス
-      command: systemctl list-units --type=service --state=running --no-pager --plain
-      register: services_result
-      changed_when: false
-
-    - name: CloudWatch Agent状態
+    - name: ステータス確認
       command: /opt/aws/amazon-cloudwatch-agent/bin/amazon-cloudwatch-agent-ctl -a status
-      register: cwagent_status
+      register: status
       changed_when: false
-      ignore_errors: yes
 
-    - name: reportsフォルダ作成
-      delegate_to: localhost
-      become: no
-      file:
-        path: "{{ playbook_dir }}/../reports"
-        state: directory
-
-    - name: レポート生成
-      delegate_to: localhost
-      become: no
-      template:
-        src: "../templates/server_report.md.j2"
-        dest: "{{ playbook_dir }}/../reports/server_report_{{ inventory_hostname }}_{{ ansible_date_time.date }}.md"
+    - name: ステータス表示
+      debug:
+        msg: "{{ status.stdout_lines }}"
 ```
 
 </details>
 
 ---
 
-## 🎉 ワークショップ完了
+## ⚠️ リソースの削除
 
-お疲れ様でした！全セッションの振り返り：
+ワークショップ終了後に IAM リソースを削除してください：
 
-| セッション | 学んだこと | ツール |
-|-----------|-----------|-------|
-| 1 | VPC/EC2 段階的構築、Agent開発入門 | Terraform |
-| 2 | Webシステム構築（任意） | Terraform |
-| 3 | サーバー再起動の自動化 | Ansible |
-| 4 | CloudWatch Agent導入 | Terraform + Ansible |
-| 5 | サーバー情報収集・レポート生成（任意） | Ansible |
+```bash
+# インスタンスプロファイルからロールを削除
+aws iam remove-role-from-instance-profile \
+  --instance-profile-name training-ec2-agent-profile \
+  --role-name training-ec2-agent-role
+
+# ポリシーのデタッチ
+aws iam detach-role-policy --role-name training-ec2-agent-role \
+  --policy-arn arn:aws:iam::aws:policy/CloudWatchAgentServerPolicy
+aws iam detach-role-policy --role-name training-ec2-agent-role \
+  --policy-arn arn:aws:iam::aws:policy/AmazonSSMManagedInstanceCore
+
+# リソース削除
+aws iam delete-instance-profile --instance-profile-name training-ec2-agent-profile
+aws iam delete-role --role-name training-ec2-agent-role
+```
+
+> 💡 Agentに「training-ec2-agent-role と training-ec2-agent-profile を削除して」と伝えれば、上記コマンドを実行してくれます。
+
+> CloudWatch Agent と SSM Agent は EC2 上のソフトウェアなので、EC2 削除時に一緒に消えます。
 
 ---
 
-## ⚠️ リソースの削除
+## ➡️ 次のステップ
 
-ワークショップ終了後に **すべて** 削除してください。
-
-> ⚠️ **必ず以下の順序で削除**してください（依存関係があるため逆順だとエラーになります）。
-
-プロジェクトルートから実行：
-
-```bash
-# 1. セッション4: IAMロール（実施した場合のみ）
-cd terraform/cloudwatch-iam
-terraform destroy
-cd ../..
-
-# 2. セッション1+2: VPC/EC2（最後に削除）
-cd terraform/vpc-ec2
-terraform destroy
-cd ../..
-```
+[セッション6：サーバー情報取得・運用レポート作成（任意）](session6_guide.md) に進んでください。

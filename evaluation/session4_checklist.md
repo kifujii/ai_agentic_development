@@ -1,24 +1,24 @@
-# セッション4：CloudWatch Agentインストール・セットアップ 評価チェックリスト
+# セッション4：サーバー再起動の自動化 評価チェックリスト
 
-## Step 1: IAMロール（Terraform）
-- [ ] IAMロールを作成した
-- [ ] CloudWatchAgentServerPolicyをアタッチした
-- [ ] インスタンスプロファイルを作成した
+## Step 1: Ansible接続設定
+- [ ] ansible.cfg を作成した
+- [ ] inventory.ini を作成した（実際のIPアドレスを使用）
 
-## Step 2: EC2にプロファイル関連付け
-- [ ] インスタンスプロファイルをEC2に関連付けた
+## Step 2: 接続テスト
+- [ ] `ansible all -m ping` で SUCCESS が返った
 
-## Step 3: CloudWatch Agentインストール（Ansible）
-- [ ] install_cwagent.yml を作成・実行した
-- [ ] パッケージインストールが成功した
+## Step 3: サーバー状態確認
+- [ ] check_status.yml を作成した
+- [ ] OS情報・メモリ・ディスク情報が表示された
 
-## Step 4: 設定・起動（Ansible）
-- [ ] configure_cwagent.yml を作成・実行した
-- [ ] CloudWatch Agentが running 状態になった
+## Step 4: サーバー再起動
+- [ ] restart_server.yml を作成した
+- [ ] 再起動前後の状態が表示された
+- [ ] サーバーが正常に再起動した
 
-## Step 5: CloudWatch確認
-- [ ] メトリクスまたはログが確認できた（可能な場合）
+## Step 5: サービス管理
+- [ ] manage_services.yml を作成した
+- [ ] サービスの状態変更が確認できた
 
 ## 成果物
-- [ ] `terraform/cloudwatch-iam/` にTerraformコードが存在する
-- [ ] `ansible/playbooks/` にインストール・設定Playbookが存在する
+- [ ] `ansible/` ディレクトリに設定ファイルとPlaybookが作成されている

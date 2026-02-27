@@ -12,35 +12,35 @@ ContinueのAgent機能を使って、TerraformやAnsibleのコードを自動生
 |-----------|------|------|-----------|--------|
 | **1** | VPC + EC2 を段階的に構築 | 2h | 必須 | [ガイド](docs/session_guides/session1_guide.md) |
 | **2** | Webアプリケーションを公開 | 2h | 必須 | [ガイド](docs/session_guides/session2_guide.md) |
-| **2.5** | ALB を追加 | 1h | 任意 | [ガイド](docs/session_guides/session2_5_guide.md) |
-| **3** | サーバー再起動の自動化 (Ansible) | 1.5h | 必須 | [ガイド](docs/session_guides/session3_guide.md) |
-| **4** | CloudWatch Agentインストール | 1.5h | 必須 | [ガイド](docs/session_guides/session4_guide.md) |
-| **5** | サーバー情報取得・運用レポート | 1h | 任意 | [ガイド](docs/session_guides/session5_guide.md) |
+| **3** | EC2 + RDS で動的アプリ構築 | 1.5h | 任意 | [ガイド](docs/session_guides/session3_guide.md) |
+| **4** | サーバー再起動の自動化 (Ansible) | 1.5h | 必須 | [ガイド](docs/session_guides/session4_guide.md) |
+| **5** | SSM Agent & CloudWatch Agent 導入 | 1.5h | 必須 | [ガイド](docs/session_guides/session5_guide.md) |
+| **6** | サーバー情報取得・運用レポート | 1h | 任意 | [ガイド](docs/session_guides/session6_guide.md) |
 
 ### 時間配分
 
 ```
-Day 1 (4h + 任意1h): インフラ構築 (Terraform)
-├── Session 1  : VPC + EC2 を段階的に構築 (2h)         [必須]
-├── Session 2  : Webアプリケーションを公開 (2h)          [必須]
-└── Session 2.5: ALB を追加 (1h)                        [任意]
+Day 1 (4h + 任意1.5h): インフラ構築 (Terraform)
+├── Session 1: VPC + EC2 を段階的に構築 (2h)             [必須]
+├── Session 2: Webアプリケーションを公開 (2h)             [必須]
+└── Session 3: EC2 + RDS で動的アプリ構築 (1.5h)         [任意]
 
-Day 2 (4h): システム運用 (Ansible)
-├── Session 3: サーバー再起動の自動化 (1.5h)            [必須]
-├── Session 4: CloudWatch Agent導入 (1.5h)              [必須]
-└── Session 5: サーバー情報取得・レポート (1h)           [任意]
+Day 2 (3h + 任意1h): システム運用 (Ansible)
+├── Session 4: サーバー再起動の自動化 (1.5h)             [必須]
+├── Session 5: SSM Agent & CloudWatch Agent 導入 (1.5h)  [必須]
+└── Session 6: サーバー情報取得・レポート (1h)            [任意]
 ```
 
 ### セッション間のつながり
 
 ```
-Session 1: VPC + EC2 構築  ──→  Session 2: Webアプリ公開  ──→  Session 2.5: ALB追加（任意）
+Session 1: VPC + EC2 構築  ──→  Session 2: Webアプリ公開  ──→  Session 3: RDSアプリ（任意）
     ↓（EC2をAnsibleの操作対象として使用）
-Session 3: サーバー再起動の自動化
+Session 4: サーバー再起動の自動化
     ↓
-Session 4: CloudWatch Agent導入
+Session 5: SSM Agent & CloudWatch Agent 導入
     ↓
-Session 5: サーバー情報取得・レポート（任意）
+Session 6: サーバー情報取得・レポート（任意）
 ```
 
 ## クイックスタート
@@ -65,7 +65,7 @@ ai_agentic/
 ├── docs/
 │   ├── TRAINING_MENU.md         # トレーニングメニュー
 │   ├── images/                  # アーキテクチャ構成図
-│   ├── session_guides/          # セッションガイド (1〜5, 2.5)
+│   ├── session_guides/          # セッションガイド (1〜6)
 │   └── setup/                   # セットアップ手順
 ├── evaluation/                  # 評価チェックリスト
 ├── scripts/
@@ -80,15 +80,15 @@ ai_agentic/
 
 ## 注意事項
 
-- ワークショップ終了後は作成したAWSリソースを **必ず以下の順序で削除** してください（依存関係のため逆順だとエラーになります）：
+- ワークショップ終了後は作成したAWSリソースを **必ず以下の順序で削除** してください：
 
 ```bash
 # プロジェクトルートから実行してください
 
-# 1. セッション4: IAMロール（実施した場合のみ）
-cd terraform/cloudwatch-iam && terraform destroy && cd ../..
+# 1. セッション5: IAMリソース（実施した場合のみ）
+# → Agentに「training-ec2-agent-role と training-ec2-agent-profile を削除して」と伝えてください
 
-# 2. セッション1+2: VPC/EC2（最後に削除）
+# 2. セッション1〜3: VPC/EC2/RDS（最後に削除 ※RDS削除に数分かかります）
 cd terraform/vpc-ec2 && terraform destroy && cd ../..
 ```
 

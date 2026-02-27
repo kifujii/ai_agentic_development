@@ -1,18 +1,27 @@
-# セッション5：サーバー情報取得・運用レポート作成 評価チェックリスト（任意・発展）
+# セッション5：CloudWatch Agent & SSM Agent 評価チェックリスト
 
-## Step 1: サーバー情報収集
-- [ ] gather_info.yml を作成・実行した
-- [ ] サーバー情報がJSON形式で保存された
+## Step 1: IAMロール作成
+- [ ] AWS CLIでIAMロール・インスタンスプロファイルを作成した
+- [ ] EC2にプロファイルを関連付けた
 
-## Step 2: レポートテンプレート
-- [ ] server_report.md.j2 を作成した
-- [ ] アラート条件（メモリ80%超等）が含まれている
+## Step 2: SSM Agent インストール
+- [ ] install_ssm_agent.yml を作成した
+- [ ] SSM Agent が active (running) 状態になった
 
-## Step 3: レポート生成
-- [ ] generate_report.yml を作成・実行した
-- [ ] レポートファイルが reports/ フォルダに生成された
+## Step 3: SSM Agent 動作確認
+- [ ] Systems Manager フリートマネージャーにインスタンスが表示された
+
+## Step 4: CloudWatch Agent インストール
+- [ ] install_cwagent.yml を作成した
+- [ ] インストールが成功した
+
+## Step 5: CloudWatch Agent 設定・起動
+- [ ] configure_cwagent.yml を作成した
+- [ ] Agent が running 状態になった
+
+## Step 6: CloudWatch 確認
+- [ ] カスタム名前空間（Training/EC2）にメトリクスが表示された
+- [ ] ロググループにログが表示された
 
 ## 成果物
-- [ ] `ansible/playbooks/` に情報収集・レポート生成Playbookが存在する
-- [ ] `ansible/templates/` にJinja2テンプレートが存在する
-- [ ] `ansible/reports/` にレポートが生成されている
+- [ ] `ansible/playbooks/` に SSM/CW Agent 関連の Playbook が作成されている
