@@ -396,17 +396,12 @@ ansible/
 プロジェクトルートから実行：
 
 ```bash
-# 1. セッション2: Webシステム（実施した場合のみ）
-cd terraform/web-app
-terraform destroy
-cd ../..
-
-# 2. セッション4: IAMロール（実施した場合のみ）
+# 1. セッション4: IAMロール（実施した場合のみ）
 cd terraform/cloudwatch-iam
 terraform destroy
 cd ../..
 
-# 3. セッション1: VPC/EC2（最後に削除）
+# 2. セッション1+2: VPC/EC2/RDS（最後に削除 ※RDS削除に数分かかります）
 cd terraform/vpc-ec2
 terraform destroy
 cd ../..

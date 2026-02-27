@@ -10,8 +10,8 @@ ContinueのAgent機能を使って、TerraformやAnsibleのコードを自動生
 
 | セッション | 内容 | 時間 | 必須/任意 | ガイド |
 |-----------|------|------|-----------|--------|
-| **1** | VPC + EC2 を段階的に構築 | 1.5h | 必須 | [ガイド](docs/session_guides/session1_guide.md) |
-| **2** | Webシステム構築 (ALB/ECS/RDS) | 1h | 任意 | [ガイド](docs/session_guides/session2_guide.md) |
+| **1** | VPC + EC2 を段階的に構築 | 2h | 必須 | [ガイド](docs/session_guides/session1_guide.md) |
+| **2** | EC2 + RDS でデータベース環境構築 | 2h (+1h) | 必須 (+任意) | [ガイド](docs/session_guides/session2_guide.md) |
 | **3** | サーバー再起動の自動化 (Ansible) | 1.5h | 必須 | [ガイド](docs/session_guides/session3_guide.md) |
 | **4** | CloudWatch Agentインストール | 1.5h | 必須 | [ガイド](docs/session_guides/session4_guide.md) |
 | **5** | サーバー情報取得・運用レポート | 1h | 任意 | [ガイド](docs/session_guides/session5_guide.md) |
@@ -19,21 +19,21 @@ ContinueのAgent機能を使って、TerraformやAnsibleのコードを自動生
 ### 時間配分
 
 ```
-Day 1 (3.5h): インフラ構築 (Terraform)
-├── Session 1: VPC + EC2 を段階的に構築 (1.5h)  [必須]
-│   Step 1: VPC → Step 2: Subnet/IGW → Step 3: SG/KP → Step 4: EC2
-└── Session 2: Webシステム構築 (1h)              [任意]
+Day 1 (4h + 任意1h): インフラ構築 (Terraform)
+├── Session 1: VPC + EC2 を段階的に構築 (2h)          [必須]
+├── Session 2: EC2 + RDS でDB環境構築 (2h)             [必須]
+└── Session 2 任意: ALB追加 (+1h)                      [任意]
 
 Day 2 (4h): システム運用 (Ansible)
-├── Session 3: サーバー再起動の自動化 (1.5h)     [必須]
-├── Session 4: CloudWatch Agent導入 (1.5h)       [必須]
-└── Session 5: サーバー情報取得・レポート (1h)    [任意]
+├── Session 3: サーバー再起動の自動化 (1.5h)           [必須]
+├── Session 4: CloudWatch Agent導入 (1.5h)             [必須]
+└── Session 5: サーバー情報取得・レポート (1h)          [任意]
 ```
 
 ### セッション間のつながり
 
 ```
-Session 1: VPC + EC2 構築  ──→  Session 2: Webシステム（任意）
+Session 1: VPC + EC2 構築  ──→  Session 2: RDS追加 (+ 任意: ALB)
     ↓（EC2をAnsibleの操作対象として使用）
 Session 3: サーバー再起動の自動化
     ↓
@@ -84,13 +84,10 @@ ai_agentic/
 ```bash
 # プロジェクトルートから実行してください
 
-# 1. セッション2: Webシステム（実施した場合のみ）
-cd terraform/web-app && terraform destroy && cd ../..
-
-# 2. セッション4: IAMロール（実施した場合のみ）
+# 1. セッション4: IAMロール（実施した場合のみ）
 cd terraform/cloudwatch-iam && terraform destroy && cd ../..
 
-# 3. セッション1: VPC/EC2（最後に削除）
+# 2. セッション1+2: VPC/EC2/RDS（最後に削除 ※RDS削除に数分かかります）
 cd terraform/vpc-ec2 && terraform destroy && cd ../..
 ```
 

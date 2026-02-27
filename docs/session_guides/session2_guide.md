@@ -1,283 +1,455 @@
-# セッション2：Webシステム構築（任意・発展）
+# セッション2：EC2 + RDS でデータベース環境を構築しよう
 
 ## 🎯 このセッションのゴール
 
-セッション1で構築したVPCを活用し、ALB + ECS + RDS を含むWebアプリケーションインフラを構築します。
+セッション1で構築したEC2から、RDS（MySQL）データベースに接続できる環境を構築します。
 
 ![目標構成](../images/session2_target.svg)
 
+### 必須パート（2時間）
+
 | リソース | 設定値 |
 |---------|-------|
-| ALB | HTTP:80、パブリックサブネット |
-| ECS (Fargate) | CPU:256, メモリ:512, タスク数:2 |
-| ECR | Dockerイメージリポジトリ |
-| RDS (MySQL 8.0) | db.t3.micro, 20GB |
-| サブネット追加 | パブリック×2（ALB用）、プライベート×2（ECS/RDS用） |
+| プライベートサブネット × 2 | 10.0.20.0/24（1a）, 10.0.21.0/24（1c） |
+| RDS用セキュリティグループ | MySQL(3306) を EC2のSGからのみ許可 |
+| RDSサブネットグループ | プライベートサブネット × 2 |
+| RDS (MySQL 8.0) | db.t3.micro, 20GB, DB名 `trainingdb` |
 
-> ⚠️ このセッションは **任意（発展課題）** です。RDS作成に10分以上かかる場合があります。
+### 任意パート（+1時間）
 
-> 🎓 セッション1でプロンプトの書き方を学びました。このセッション以降は **自分でプロンプトを考えて** 進めましょう。各Stepには要件とヒントだけを示しています。
+| リソース | 設定値 |
+|---------|-------|
+| パブリックサブネット追加 | 10.0.2.0/24（1c） |
+| ALB用セキュリティグループ | HTTP(80) を許可 |
+| ALB | training-web-alb |
+| ターゲットグループ | EC2をターゲットに登録 |
 
-> ⚠️ **作業ディレクトリについて**: Continueへのプロンプトは **プロジェクトルート** から実行してください。ターミナルで確認コマンドを実行した後は `cd ../..` 等で戻ってください。
+> 🎓 セッション1でプロンプトの書き方を学びました。このセッションでは **自分でプロンプトを考えて** 進めましょう。
 
 ---
 
 ## 📚 事前準備
 
 - セッション1が完了していること（VPC/EC2が構築済み）
-- セッション1の VPC ID を確認して **メモしておく**こと：
+- セッション1の **VPC ID** と **EC2セキュリティグループID** を確認してメモ：
 
 ```bash
 cd terraform/vpc-ec2
 terraform output vpc_id
+terraform output security_group_id
 cd ../..  # プロジェクトルートに戻る
 ```
 
-> 💡 VPC IDは `vpc-0abc1234def56789` のような形式です。後のStepで何度も使うのでコピーしておきましょう。
+> ⚠️ **作業ディレクトリについて**: Continueへのプロンプトは **プロジェクトルート** から実行してください。
 
 ---
 
 ## 構築の流れ
 
 ```
-Step 1: サブネットを追加（ALB用 × 2, ECS/RDS用 × 2）
+【必須パート】
+Step 1: プライベートサブネットを追加（25分）
     ↓
-Step 2: ALB + セキュリティグループを作成
+Step 2: RDS用セキュリティグループ作成（20分）
     ↓
-Step 3: ECR + ECS クラスター/サービスを作成
+Step 3: RDSインスタンスを作成（30分 ※作成待ち含む）
     ↓
-Step 4: RDS データベースを作成
+Step 4: EC2からRDSに接続（25分）
     ↓
-Step 5: 動作確認
+Step 5: データベース操作で動作確認（15分）
+    ↓
+振り返り（5分）
+
+【任意パート】
+Step 6: ALBを追加してHTTPアクセス可能にする（60分）
 ```
 
 ---
 
-## Step 1: サブネットを追加しよう（15分）
+## Step 1: プライベートサブネットを追加しよう（25分）
+
+### やること
+
+RDSを配置するためのプライベートサブネットを2つ作成します。
+
+> 💡 **なぜ2つ？** RDSのサブネットグループは、異なるアベイラビリティゾーン（AZ）に最低2つのサブネットが必要です。これはRDSの高可用性を確保するためのAWSの仕様です。
 
 ### ゴール
 
-`terraform/web-app/` フォルダに、ALB・ECS・RDS用のサブネットを作成する。
+`terraform/vpc-ec2/` の既存コードに、以下を追加して apply する：
 
-### 要件
+- プライベートサブネット1: `10.0.20.0/24`（ap-northeast-1a）
+- プライベートサブネット2: `10.0.21.0/24`（ap-northeast-1c）
+- 各サブネットに適切なNameタグ
 
-- 既存のVPC ID は変数 (`var.vpc_id`) で指定する
-- ALB用パブリックサブネット × 2:
-  - `10.0.2.0/24` (ap-northeast-1a)
-  - `10.0.3.0/24` (ap-northeast-1c)
-- ECS/RDS用プライベートサブネット × 2:
-  - `10.0.10.0/24` (ap-northeast-1a)
-  - `10.0.11.0/24` (ap-northeast-1c)
-- `terraform init` → `terraform apply` まで実行
-
-> 💡 **ヒント**: 新しいフォルダ（`terraform/web-app/`）で始めるので、provider設定と `var.vpc_id` の変数定義も必要です。**VPC IDは `terraform.tfvars` ファイルに書いておくと、apply時に毎回入力する手間が省けます**。
+> 💡 **ヒント**: プライベートサブネットはパブリックサブネットと異なり、`map_public_ip_on_launch = false`（デフォルト値なので省略可）で、インターネットゲートウェイへのルートは不要です。
 
 <details>
 <summary>📝 プロンプト例</summary>
 
 ```
-terraform/web-app/ フォルダに、以下の要件でサブネットを作成するTerraformコードを作成してください。
+terraform/vpc-ec2/ の既存コードに、RDS用のプライベートサブネットを2つ追加してください。
 
-前提:
-- 既存のVPC ID は変数 (var.vpc_id) で指定します
-- terraform.tfvars に vpc_id = "vpc-xxxxxxxxx" を設定してください
-  （値はセッション1のVPC IDに置き換えます）
-
-作成するサブネット:
-- ALB用パブリックサブネット: 10.0.2.0/24 (ap-northeast-1a), 10.0.3.0/24 (ap-northeast-1c)
-- ECS/RDS用プライベートサブネット: 10.0.10.0/24 (ap-northeast-1a), 10.0.11.0/24 (ap-northeast-1c)
-
-terraform init と terraform apply まで実行してください。
-```
-
-> ⚠️ Agentが作成する `terraform.tfvars` の VPC ID がプレースホルダーのままの場合は、事前準備でメモした実際のVPC IDに書き換えてから apply してください。
-
-</details>
-
----
-
-## Step 2: ALBを作ろう（15分）
-
-### ゴール
-
-`terraform/web-app/` にALBとその関連リソースを追加する。
-
-### 要件
-
-- ALBセキュリティグループ: HTTP(80) を許可
-- ALB: `training-web-alb`、パブリックサブネットに配置
-- ターゲットグループ: HTTP:80、ヘルスチェック `/ → 200 OK`
-- ALBリスナー: HTTP:80
-- `terraform apply` まで実行
-
-> 💡 **ヒント**: ALBは「外部からのHTTPリクエストを受けてバックエンドに振り分ける」役割です。セキュリティグループ → ALB → ターゲットグループ → リスナー の順で依存関係を意識しましょう。
-
-<details>
-<summary>📝 プロンプト例</summary>
-
-```
-terraform/web-app/ の既存コードに、以下を追加してください。
-
-- ALBセキュリティグループ: HTTP(80)を許可
-- ALB: training-web-alb, パブリックサブネットに配置
-- ターゲットグループ: HTTP:80, ヘルスチェック / → 200 OK
-- ALBリスナー: HTTP:80
+- プライベートサブネット1: 10.0.20.0/24 (ap-northeast-1a), Name = "training-private-subnet-1a"
+- プライベートサブネット2: 10.0.21.0/24 (ap-northeast-1c), Name = "training-private-subnet-1c"
+- outputs.tf にサブネットIDリストを追加
 
 terraform apply まで実行してください。
 ```
 
 </details>
 
----
-
-## Step 3: ECS/ECRを作ろう（15分）
-
-### ゴール
-
-`terraform/web-app/` にコンテナ実行環境を追加する。
-
-### 要件
-
-- ECRリポジトリ: `training-web-app`、プッシュ時スキャン有効
-- ECSセキュリティグループ: ALBからの80番ポートのみ許可
-- ECSクラスター: `training-web-cluster`
-- ECSタスク定義: FARGATE、CPU:256、メモリ:512、**公開Dockerイメージ `nginx:latest` を使用**
-- ECSサービス: タスク数1、**パブリックサブネット**に配置（`assign_public_ip = true`）、ALBに接続
-- CloudWatch Logsグループ: `/ecs/training-web-app`
-
-> 💡 **ヒント**: ECSのセキュリティグループは「ALBのSGからのみ」通信を許可するのがベストプラクティスです。`security_groups = [ALBのSG ID]` のように書きます。
-
-> ⚠️ **なぜパブリックサブネット？**: ECSタスクがDockerイメージをpullするにはインターネット接続が必要です。NAT Gatewayを使わずにシンプルにするため、パブリックサブネットに配置します。
-
-<details>
-<summary>📝 プロンプト例</summary>
-
-```
-terraform/web-app/ の既存コードに、以下を追加してください。
-
-- ECRリポジトリ: training-web-app, プッシュ時スキャン有効
-- ECSセキュリティグループ: ALB SGからの80番ポートのみ許可、アウトバウンド全許可
-- ECSクラスター: training-web-cluster
-- ECSタスク定義: FARGATE, CPU:256, メモリ:512
-  - コンテナイメージ: nginx:latest（まずは公開イメージを使用）
-  - IAM実行ロール（ecsTaskExecutionRole）も作成してください
-- ECSサービス: タスク数1, パブリックサブネットに配置, assign_public_ip = true, ALBターゲットグループに接続
-- CloudWatch Logsグループ: /ecs/training-web-app
-
-terraform apply まで実行してください。
-```
-
-</details>
-
----
-
-## Step 4: RDSを作ろう（15分）
-
-### ゴール
-
-`terraform/web-app/` にデータベースを追加する。
-
-### 要件
-
-- RDSセキュリティグループ: ECS SGからの3306番ポートのみ許可
-- RDSサブネットグループ: プライベートサブネットを使用
-- RDSインスタンス: MySQL 8.0、db.t3.micro、20GB、DB名 `webappdb`
-- パスワードは `sensitive = true` の変数で管理
-- `skip_final_snapshot = true`
-
-> 💡 **ヒント**: RDS のセキュリティグループも ECS と同様に「ECS のSGからのみ」に制限しましょう。パスワードを変数にする場合、apply 時に入力を求められます。
-
-> ⏱️ RDSの作成には10分以上かかることがあります。
-
-<details>
-<summary>📝 プロンプト例</summary>
-
-```
-terraform/web-app/ の既存コードに、以下を追加してください。
-
-- RDSセキュリティグループ: ECS SGからの3306番ポートのみ許可
-- RDSサブネットグループ: プライベートサブネットを使用
-- RDSインスタンス: MySQL 8.0, db.t3.micro, 20GB, DB名 webappdb
-
-注意:
-- db_password は変数で定義し、sensitive = true にしてください
-- skip_final_snapshot = true にしてください
-
-terraform apply まで実行してください。
-```
-
-</details>
-
----
-
-## Step 5: 動作確認（10分）
-
-### ALBの確認
+### 確認
 
 ```bash
-cd terraform/web-app
-terraform output alb_dns_name
-cd ../..  # プロジェクトルートに戻る
+cd terraform/vpc-ec2
+terraform output
+cd ../..
 ```
 
-ALBのDNS名が表示されたら、ブラウザでアクセスしてみましょう。
+プライベートサブネットIDが表示されれば OK ✅
 
-> ⚠️ ECSタスクが起動するまで **3〜5分** かかります。最初は `503 Service Temporarily Unavailable` が表示されることがあります。数分待ってからリロードしてください。
+---
 
-nginx のデフォルトページ（「Welcome to nginx!」）が表示されれば **Webシステム構築完了** ✅
+## Step 2: RDS用セキュリティグループを作ろう（20分）
+
+### やること
+
+EC2からのMySQL接続（3306番ポート）のみを許可するセキュリティグループを作成します。
+
+### ゴール
+
+`terraform/vpc-ec2/` の既存コードに、以下を追加して apply する：
+
+- RDS用セキュリティグループ: `training-rds-sg`
+- インバウンド: MySQL(3306) を **EC2のセキュリティグループからのみ** 許可
+- アウトバウンド: 全許可
+
+> 💡 **ヒント**: セキュリティグループのインバウンドルールで、CIDRブロックではなく **別のセキュリティグループのID** を指定できます。これにより「EC2からのアクセスだけ」に制限できます。Terraformでは `security_groups = [aws_security_group.ec2_sg.id]` のように書きます。
+
+<details>
+<summary>📝 プロンプト例</summary>
+
+```
+terraform/vpc-ec2/ の既存コードに、RDS用のセキュリティグループを追加してください。
+
+- 名前: training-rds-sg
+- VPC: 既存のVPC
+- インバウンド: MySQL(3306) を既存のEC2セキュリティグループ(training-ec2-sg)からのみ許可
+- アウトバウンド: 全許可
+- outputs.tf にRDSセキュリティグループIDを追加
+
+terraform apply まで実行してください。
+```
+
+</details>
+
+### 確認
+
+```bash
+cd terraform/vpc-ec2
+terraform output
+cd ../..
+```
+
+RDSセキュリティグループID（`sg-xxxxx`）が表示されれば OK ✅
+
+---
+
+## Step 3: RDSインスタンスを作ろう（30分）
+
+### やること
+
+MySQLデータベースインスタンスを作成します。
+
+> ⏱️ **RDSの作成には10〜15分かかります**。apply実行後は待ち時間になるので、その間に次のStep 4の準備を読んでおきましょう。
+
+### ゴール
+
+`terraform/vpc-ec2/` の既存コードに、以下を追加して apply する：
+
+- RDSサブネットグループ: `training-db-subnet-group`（プライベートサブネット × 2）
+- RDSインスタンス:
+  - 識別子: `training-db`
+  - エンジン: MySQL 8.0
+  - インスタンスクラス: `db.t3.micro`
+  - ストレージ: 20GB
+  - データベース名: `trainingdb`
+  - ユーザー名: `admin`
+  - パスワード: 変数で管理（`sensitive = true`）
+  - `skip_final_snapshot = true`
+  - マルチAZ: 無効（ワークショップ用）
+  - パブリックアクセス: 無効
+
+> 💡 **ヒント**: パスワードは `variable` で定義し `sensitive = true` にすると、terraform outputで非表示になります。apply時にパスワードの入力を求められるので、覚えやすいものを入力してください（例: `Training2024!`）。
+
+<details>
+<summary>📝 プロンプト例</summary>
+
+```
+terraform/vpc-ec2/ の既存コードに、RDSインスタンスを追加してください。
+
+- RDSサブネットグループ: training-db-subnet-group（既存のプライベートサブネット2つを使用）
+- RDSインスタンス:
+  - identifier: training-db
+  - engine: mysql 8.0
+  - instance_class: db.t3.micro
+  - allocated_storage: 20
+  - db_name: trainingdb
+  - username: admin
+  - password: 変数で管理 (sensitive = true)
+  - skip_final_snapshot: true
+  - multi_az: false
+  - publicly_accessible: false
+  - RDS用セキュリティグループを使用
+- outputs.tf に RDS エンドポイントを追加
+
+terraform apply まで実行してください。
+```
+
+</details>
+
+### 確認
+
+apply が完了したら（10〜15分待ち）：
+
+```bash
+cd terraform/vpc-ec2
+terraform output rds_endpoint
+cd ../..
+```
+
+RDSエンドポイント（`training-db.xxxxx.ap-northeast-1.rds.amazonaws.com:3306`）が表示されれば OK ✅
+
+---
+
+## Step 4: EC2からRDSに接続しよう（25分）
+
+### やること
+
+セッション1のEC2にSSHログインし、mysqlクライアントをインストールしてRDSに接続します。
+
+### 手順
+
+1. **EC2のIPアドレスを確認**:
+
+```bash
+cd terraform/vpc-ec2
+terraform output instance_public_ip
+cd ../..
+```
+
+2. **EC2にSSHログイン**:
+
+```bash
+ssh -i ~/.ssh/training-key ec2-user@<EC2のIPアドレス>
+```
+
+3. **EC2内でmysqlクライアントをインストール**:
+
+```bash
+sudo dnf install -y mariadb105
+```
+
+4. **RDSに接続**（エンドポイントはStep 3で確認した値）:
+
+```bash
+mysql -h <RDSエンドポイント（:3306は除く）> -u admin -p trainingdb
+```
+
+パスワードを聞かれたら、Step 3で設定したパスワードを入力します。
+
+5. 接続成功すると `mysql>` プロンプトが表示されます ✅
+
+> 💡 **Agentを使う場合**: SSH先のEC2内での操作は、Agentの「ターミナル操作」として依頼することもできます。ただし、SSHセッション内でのコマンド実行はAgentの苦手分野の一つです。ここは手動操作が確実です。
+
+<details>
+<summary>❓ RDSに接続できない場合</summary>
+
+- **RDSのステータスが `available` か確認**: RDS作成に10〜15分かかります
+- **セキュリティグループの確認**: RDS SGのインバウンドルールでEC2 SGからの3306が許可されているか
+- **エンドポイントが正しいか確認**: `terraform output rds_endpoint` で取得した値の `:3306` 部分を除いたホスト名を使用
+- **サブネットの確認**: EC2とRDSが同じVPC内にあることを確認
+
+</details>
+
+---
+
+## Step 5: データベース操作で動作確認（15分）
+
+### やること
+
+RDSに接続した状態で、簡単なデータベース操作を行い、正しく動作していることを確認します。
+
+### 手順（mysql> プロンプトで実行）
+
+```sql
+-- テーブル作成
+CREATE TABLE users (
+  id INT AUTO_INCREMENT PRIMARY KEY,
+  name VARCHAR(100),
+  email VARCHAR(100),
+  created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+);
+
+-- データ挿入
+INSERT INTO users (name, email) VALUES ('田中太郎', 'tanaka@example.com');
+INSERT INTO users (name, email) VALUES ('佐藤花子', 'sato@example.com');
+
+-- データ確認
+SELECT * FROM users;
+
+-- テーブル一覧
+SHOW TABLES;
+```
+
+`users` テーブルにデータが表示されれば OK ✅
+
+```sql
+-- 接続を終了
+EXIT;
+```
+
+EC2からもログアウト：
+
+```bash
+exit
+```
+
+---
+
+## 📝 振り返り（5分）
+
+### Session 1 → Session 2 で追加された要素
+
+| 概念 | Session 1 | Session 2 |
+|------|-----------|-----------|
+| **サブネットの種類** | パブリックのみ | パブリック + プライベート |
+| **セキュリティグループ** | CIDRで許可 | SG間参照で許可 |
+| **AWSサービス** | EC2のみ | EC2 + RDS |
+| **データの永続化** | なし | RDS（データベース） |
+
+### プロンプトで意識したこと
+
+- 「既存コードに追加」という文脈を常に伝える
+- セキュリティグループの **参照関係**（EC2のSGからのみ許可）を明示する
+- RDSのようなパラメータが多いリソースは **全ての設定値を列挙** する
+
+> 任意パートのALBに進まない場合は、[セッション3](session3_guide.md) に進んでください。
+
+---
+
+## 【任意】Step 6: ALBを追加してHTTPアクセス可能にしよう（60分）
+
+> このStepは **任意（発展課題）** です。EC2にnginxをインストールし、ALB経由でブラウザからアクセスできるようにします。
+
+### やること
+
+1. ALB用の2つ目のパブリックサブネットを追加
+2. ALBとターゲットグループを作成
+3. EC2にnginxをインストール
+4. ブラウザでアクセスして確認
+
+### 構成イメージ
+
+```
+User → ALB (HTTP:80) → EC2 (nginx:80)
+       ↑ パブリックサブネット × 2（ALBには2AZ必要）
+```
+
+### Step 6-1: 2つ目のパブリックサブネット + ALBを追加（30分）
+
+#### ゴール
+
+`terraform/vpc-ec2/` の既存コードに、以下を追加して apply する：
+
+- パブリックサブネット2: `10.0.2.0/24`（ap-northeast-1c）、パブリックIP自動割り当て有効
+- IGWへのルートテーブル関連付け
+- ALBセキュリティグループ: HTTP(80) を許可
+- ALB: `training-web-alb`、パブリックサブネット × 2 に配置
+- ターゲットグループ: HTTP:80、ヘルスチェック `/`
+- ALBリスナー: HTTP:80 → ターゲットグループ
+- **EC2のセキュリティグループ** に HTTP(80) のインバウンドルールを追加（ALB SGからのみ）
+- EC2をターゲットグループに登録
+
+<details>
+<summary>📝 プロンプト例</summary>
+
+```
+terraform/vpc-ec2/ の既存コードに、ALB関連リソースを追加してください。
+
+1. パブリックサブネット2: 10.0.2.0/24 (ap-northeast-1c), パブリックIP自動割り当て有効
+   - 既存のルートテーブルに関連付け
+2. ALBセキュリティグループ: training-alb-sg, HTTP(80)許可
+3. ALB: training-web-alb, パブリックサブネット2つに配置
+4. ターゲットグループ: training-web-tg, HTTP:80, ヘルスチェック /
+5. ALBリスナー: HTTP:80 → ターゲットグループ
+6. 既存のEC2セキュリティグループに HTTP(80) のインバウンドルール追加（ALB SGからのみ）
+7. 既存のEC2をターゲットグループに登録（aws_lb_target_group_attachment）
+8. outputs.tf に ALBのDNS名を追加
+
+terraform apply まで実行してください。
+```
+
+</details>
+
+### Step 6-2: EC2にnginxをインストール（15分）
+
+EC2にSSHログインして nginx をインストールします：
+
+```bash
+ssh -i ~/.ssh/training-key ec2-user@<EC2のIP>
+```
+
+```bash
+sudo dnf install -y nginx
+sudo systemctl start nginx
+sudo systemctl enable nginx
+exit
+```
+
+> 💡 **ヒント**: この作業はセッション3でAnsibleを使って自動化する内容のプレビューでもあります。
+
+### Step 6-3: ブラウザで確認（5分）
+
+```bash
+cd terraform/vpc-ec2
+terraform output alb_dns_name
+cd ../..
+```
+
+表示されたALBのDNS名をブラウザで開き、nginxのデフォルトページが表示されれば **完了** 🎉
+
+> ⚠️ ALBのヘルスチェックが正常になるまで1〜2分かかることがあります。
+
+### 任意パートの振り返り
+
+- ALBは **2つのAZ** にまたがるパブリックサブネットが必要
+- セキュリティグループは **階層的**（ALB → EC2 → RDS）に設計する
+- `aws_lb_target_group_attachment` でEC2をターゲットに登録する
 
 ---
 
 ## ファイル構成
 
+セッション完了時、以下の構成になっています：
+
 ```
 terraform/
-└── web-app/
-    ├── main.tf          # 全リソース
+└── vpc-ec2/
+    ├── main.tf          # VPC, Subnet, IGW, RT, SG, KP, EC2, RDS, (ALB)
     ├── variables.tf     # 変数定義
-    └── outputs.tf       # ALB DNS, ECR URL 等
+    └── outputs.tf       # VPC ID, Subnet ID, SG ID, Public IP, RDS Endpoint, (ALB DNS)
 ```
 
-<details>
-<summary>📝 完成形のコード例（クリックで展開）</summary>
+> 💡 セッション1と同じフォルダ（`terraform/vpc-ec2/`）にコードを追加していくため、Terraformの状態ファイル（`terraform.tfstate`）で全リソースが一括管理されます。
 
-### variables.tf
+<details>
+<summary>📝 完成形のコード例 — 必須パート追加分（クリックで展開）</summary>
+
+### variables.tf に追加
 
 ```hcl
-variable "region" {
-  description = "AWSリージョン"
-  type        = string
-  default     = "ap-northeast-1"
-}
-
-variable "vpc_id" {
-  description = "VPC ID（セッション1で構築したVPC）"
-  type        = string
-}
-
-variable "public_subnet_cidrs" {
-  description = "ALB用パブリックサブネット"
-  type        = list(string)
-  default     = ["10.0.2.0/24", "10.0.3.0/24"]
-}
-
-variable "private_subnet_cidrs" {
-  description = "ECS/RDS用プライベートサブネット"
-  type        = list(string)
-  default     = ["10.0.10.0/24", "10.0.11.0/24"]
-}
-
-variable "availability_zones" {
-  type    = list(string)
-  default = ["ap-northeast-1a", "ap-northeast-1c"]
-}
-
-variable "db_username" {
-  description = "RDSユーザー名"
-  type        = string
-  default     = "admin"
-}
-
 variable "db_password" {
   description = "RDSパスワード"
   type        = string
@@ -285,221 +457,103 @@ variable "db_password" {
 }
 ```
 
-### main.tf（主要部分のみ）
+### main.tf に追加
 
 ```hcl
-provider "aws" {
-  region = var.region
-}
+# --- プライベートサブネット（Step 1） ---
+resource "aws_subnet" "private_1a" {
+  vpc_id            = aws_vpc.main.id
+  cidr_block        = "10.0.20.0/24"
+  availability_zone = "${var.region}a"
 
-# --- サブネット ---
-resource "aws_subnet" "public" {
-  count                   = length(var.public_subnet_cidrs)
-  vpc_id                  = var.vpc_id
-  cidr_block              = var.public_subnet_cidrs[count.index]
-  availability_zone       = var.availability_zones[count.index]
-  map_public_ip_on_launch = true
-  tags = { Name = "training-web-public-${count.index + 1}" }
-}
-
-resource "aws_subnet" "private" {
-  count             = length(var.private_subnet_cidrs)
-  vpc_id            = var.vpc_id
-  cidr_block        = var.private_subnet_cidrs[count.index]
-  availability_zone = var.availability_zones[count.index]
-  tags = { Name = "training-web-private-${count.index + 1}" }
-}
-
-# --- ALB ---
-resource "aws_security_group" "alb_sg" {
-  name   = "training-alb-sg"
-  vpc_id = var.vpc_id
-  ingress {
-    from_port   = 80
-    to_port     = 80
-    protocol    = "tcp"
-    cidr_blocks = ["0.0.0.0/0"]
-  }
-  egress {
-    from_port   = 0
-    to_port     = 0
-    protocol    = "-1"
-    cidr_blocks = ["0.0.0.0/0"]
+  tags = {
+    Name = "training-private-subnet-1a"
   }
 }
 
-resource "aws_lb" "web_alb" {
-  name               = "training-web-alb"
-  internal           = false
-  load_balancer_type = "application"
-  security_groups    = [aws_security_group.alb_sg.id]
-  subnets            = aws_subnet.public[*].id
-}
+resource "aws_subnet" "private_1c" {
+  vpc_id            = aws_vpc.main.id
+  cidr_block        = "10.0.21.0/24"
+  availability_zone = "${var.region}c"
 
-resource "aws_lb_target_group" "web_tg" {
-  name        = "training-web-tg"
-  port        = 80
-  protocol    = "HTTP"
-  vpc_id      = var.vpc_id
-  target_type = "ip"
-  health_check {
-    path    = "/"
-    matcher = "200"
+  tags = {
+    Name = "training-private-subnet-1c"
   }
 }
 
-resource "aws_lb_listener" "web" {
-  load_balancer_arn = aws_lb.web_alb.arn
-  port              = "80"
-  protocol          = "HTTP"
-  default_action {
-    type             = "forward"
-    target_group_arn = aws_lb_target_group.web_tg.arn
-  }
-}
-
-# --- ECS ---
-resource "aws_security_group" "ecs_sg" {
-  name   = "training-ecs-sg"
-  vpc_id = var.vpc_id
-  ingress {
-    from_port       = 80
-    to_port         = 80
-    protocol        = "tcp"
-    security_groups = [aws_security_group.alb_sg.id]
-  }
-  egress {
-    from_port   = 0
-    to_port     = 0
-    protocol    = "-1"
-    cidr_blocks = ["0.0.0.0/0"]
-  }
-}
-
-resource "aws_ecr_repository" "web_app" {
-  name = "training-web-app"
-  image_scanning_configuration { scan_on_push = true }
-}
-
-resource "aws_ecs_cluster" "web" {
-  name = "training-web-cluster"
-}
-
-resource "aws_iam_role" "ecs_execution" {
-  name = "training-ecs-execution-role"
-  assume_role_policy = jsonencode({
-    Version = "2012-10-17"
-    Statement = [{
-      Action = "sts:AssumeRole"
-      Effect = "Allow"
-      Principal = { Service = "ecs-tasks.amazonaws.com" }
-    }]
-  })
-}
-
-resource "aws_iam_role_policy_attachment" "ecs_execution" {
-  role       = aws_iam_role.ecs_execution.name
-  policy_arn = "arn:aws:iam::aws:policy/service-role/AmazonECSTaskExecutionRolePolicy"
-}
-
-resource "aws_ecs_task_definition" "web" {
-  family                   = "training-web-app"
-  network_mode             = "awsvpc"
-  requires_compatibilities = ["FARGATE"]
-  cpu                      = "256"
-  memory                   = "512"
-  execution_role_arn       = aws_iam_role.ecs_execution.arn
-  container_definitions = jsonencode([{
-    name  = "web-app"
-    image = "nginx:latest"  # まずは公開イメージを使用
-    portMappings = [{ containerPort = 80, protocol = "tcp" }]
-    logConfiguration = {
-      logDriver = "awslogs"
-      options = {
-        "awslogs-group"         = aws_cloudwatch_log_group.ecs.name
-        "awslogs-region"        = var.region
-        "awslogs-stream-prefix" = "ecs"
-      }
-    }
-  }])
-}
-
-resource "aws_ecs_service" "web" {
-  name            = "training-web-service"
-  cluster         = aws_ecs_cluster.web.id
-  task_definition = aws_ecs_task_definition.web.arn
-  desired_count   = 1
-  launch_type     = "FARGATE"
-  network_configuration {
-    subnets          = aws_subnet.public[*].id  # パブリックサブネット（NAT不要）
-    security_groups  = [aws_security_group.ecs_sg.id]
-    assign_public_ip = true  # イメージpullにインターネット接続が必要
-  }
-  load_balancer {
-    target_group_arn = aws_lb_target_group.web_tg.arn
-    container_name   = "web-app"
-    container_port   = 80
-  }
-  depends_on = [aws_lb_listener.web]
-}
-
-# --- RDS ---
+# --- RDSセキュリティグループ（Step 2） ---
 resource "aws_security_group" "rds_sg" {
-  name   = "training-rds-sg"
-  vpc_id = var.vpc_id
+  name        = "training-rds-sg"
+  description = "Security group for training RDS"
+  vpc_id      = aws_vpc.main.id
+
   ingress {
+    description     = "MySQL from EC2"
     from_port       = 3306
     to_port         = 3306
     protocol        = "tcp"
-    security_groups = [aws_security_group.ecs_sg.id]
+    security_groups = [aws_security_group.ec2_sg.id]
   }
+
   egress {
     from_port   = 0
     to_port     = 0
     protocol    = "-1"
     cidr_blocks = ["0.0.0.0/0"]
   }
+
+  tags = {
+    Name = "training-rds-sg"
+  }
 }
 
-resource "aws_db_subnet_group" "web" {
-  name       = "training-web-db-subnet"
-  subnet_ids = aws_subnet.private[*].id
+# --- RDS（Step 3） ---
+resource "aws_db_subnet_group" "training" {
+  name       = "training-db-subnet-group"
+  subnet_ids = [aws_subnet.private_1a.id, aws_subnet.private_1c.id]
+
+  tags = {
+    Name = "training-db-subnet-group"
+  }
 }
 
-resource "aws_db_instance" "web" {
-  identifier             = "training-web-db"
+resource "aws_db_instance" "training" {
+  identifier             = "training-db"
   engine                 = "mysql"
   engine_version         = "8.0"
   instance_class         = "db.t3.micro"
   allocated_storage      = 20
-  db_name                = "webappdb"
-  username               = var.db_username
+  db_name                = "trainingdb"
+  username               = "admin"
   password               = var.db_password
   vpc_security_group_ids = [aws_security_group.rds_sg.id]
-  db_subnet_group_name   = aws_db_subnet_group.web.name
+  db_subnet_group_name   = aws_db_subnet_group.training.name
   skip_final_snapshot    = true
-}
+  multi_az               = false
+  publicly_accessible    = false
 
-resource "aws_cloudwatch_log_group" "ecs" {
-  name              = "/ecs/training-web-app"
-  retention_in_days = 7
+  tags = {
+    Name = "training-db"
+  }
 }
 ```
 
-### outputs.tf
+### outputs.tf に追加
 
 ```hcl
-output "alb_dns_name" {
-  value = aws_lb.web_alb.dns_name
-}
-
-output "ecr_repository_url" {
-  value = aws_ecr_repository.web_app.repository_url
-}
-
 output "rds_endpoint" {
-  value     = aws_db_instance.web.endpoint
-  sensitive = true
+  description = "RDSエンドポイント"
+  value       = aws_db_instance.training.endpoint
+}
+
+output "rds_database_name" {
+  description = "データベース名"
+  value       = aws_db_instance.training.db_name
+}
+
+output "private_subnet_ids" {
+  description = "プライベートサブネットID"
+  value       = [aws_subnet.private_1a.id, aws_subnet.private_1c.id]
 }
 ```
 
@@ -509,15 +563,15 @@ output "rds_endpoint" {
 
 ## ⚠️ リソースの削除
 
-ワークショップ終了後に必ず削除してください：
+> **全セッション終了後**に削除してください。セッション1〜2のリソースは同じフォルダで管理されているため、一括で削除できます。
 
 ```bash
-cd terraform/web-app
+cd terraform/vpc-ec2
 terraform destroy
-cd ../..  # プロジェクトルートに戻る
+cd ../..
 ```
 
-> ⚠️ **削除の順序**: web-app は vpc-ec2 のVPCに依存しています。**web-app を先に削除** してから vpc-ec2 を削除してください。
+> ⚠️ RDSの削除には数分かかります。`terraform destroy` がすべてのリソースの削除を完了するまで待ってください。
 
 ---
 
