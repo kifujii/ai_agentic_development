@@ -79,17 +79,19 @@ ai_agentic/
 
 ## 注意事項
 
-- ワークショップ終了後は作成したAWSリソースを **必ず削除** してください：
+- ワークショップ終了後は作成したAWSリソースを **必ず以下の順序で削除** してください（依存関係のため逆順だとエラーになります）：
 
 ```bash
-# セッション1: VPC/EC2
-cd terraform/vpc-ec2 && terraform destroy
+# プロジェクトルートから実行してください
 
-# セッション2: Webシステム（実施した場合）
-cd terraform/web-app && terraform destroy
+# 1. セッション2: Webシステム（実施した場合のみ）
+cd terraform/web-app && terraform destroy && cd ../..
 
-# セッション4: IAMロール
-cd terraform/cloudwatch-iam && terraform destroy
+# 2. セッション4: IAMロール（実施した場合のみ）
+cd terraform/cloudwatch-iam && terraform destroy && cd ../..
+
+# 3. セッション1: VPC/EC2（最後に削除）
+cd terraform/vpc-ec2 && terraform destroy && cd ../..
 ```
 
 - AWS認証情報は安全に管理してください

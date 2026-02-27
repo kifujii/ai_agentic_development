@@ -26,8 +26,9 @@ Step 3: レポートを自動生成
 
 ## 📚 事前準備
 
-- セッション3のAnsible環境が構築済みであること
-- `ansible all -m ping` が成功すること
+- セッション3のAnsible環境が構築済みであること（`cd ansible && ansible all -m ping && cd ..` で確認）
+
+> ⚠️ **作業ディレクトリについて**: Continueへのプロンプトは **プロジェクトルート** から実行してください。Ansible コマンドの手動実行時は `ansible/` ディレクトリに移動してください。
 
 ---
 
@@ -155,9 +156,14 @@ ansible/playbooks/generate_report.yml を作成してください。
 
 ### 確認
 
+プロジェクトルートから確認します：
+
 ```bash
+ls ansible/reports/
 cat ansible/reports/server_report_web1_*.md
 ```
+
+> 💡 ファイルが見つからない場合は、Playbookの `dest` パスを確認してください。`playbook_dir` の値によってパスが変わることがあります。
 
 レポートが生成されていれば **セッション5完了** 🎉
 
@@ -383,15 +389,25 @@ ansible/
 
 ## ⚠️ リソースの削除
 
-ワークショップ終了後に **すべて** 削除してください：
+ワークショップ終了後に **すべて** 削除してください。
+
+> ⚠️ **必ず以下の順序で削除**してください（依存関係があるため逆順だとエラーになります）。
+
+プロジェクトルートから実行：
 
 ```bash
-# セッション1: VPC/EC2
-cd terraform/vpc-ec2 && terraform destroy
+# 1. セッション2: Webシステム（実施した場合のみ）
+cd terraform/web-app
+terraform destroy
+cd ../..
 
-# セッション2: Webシステム（実施した場合）
-cd terraform/web-app && terraform destroy
+# 2. セッション4: IAMロール（実施した場合のみ）
+cd terraform/cloudwatch-iam
+terraform destroy
+cd ../..
 
-# セッション4: IAMロール
-cd terraform/cloudwatch-iam && terraform destroy
+# 3. セッション1: VPC/EC2（最後に削除）
+cd terraform/vpc-ec2
+terraform destroy
+cd ../..
 ```

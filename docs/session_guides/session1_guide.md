@@ -46,6 +46,8 @@ ssh-keygen -t rsa -b 4096 -f ~/.ssh/training-key -N ""
 chmod 400 ~/.ssh/training-key
 ```
 
+> ⚠️ **作業ディレクトリについて**: Continueへのプロンプトは **プロジェクトルート**（このREADMEがあるフォルダ）から実行してください。ターミナルで確認コマンドを実行した後は `cd` で戻ってください。
+
 ---
 
 ## Step 1: VPCを作ろう — 🟢 お手本（20分）
@@ -92,6 +94,7 @@ terraform init と terraform apply まで実行してください。
 ```bash
 cd terraform/vpc-ec2
 terraform output
+cd ../..  # プロジェクトルートに戻る
 ```
 
 VPC ID（`vpc-xxxxx`）が表示されれば OK ✅
@@ -99,9 +102,9 @@ VPC ID（`vpc-xxxxx`）が表示されれば OK ✅
 <details>
 <summary>❓ うまくいかない場合</summary>
 
-- エラーが出たら、エラーメッセージをそのままAgentに伝えてください
+- エラーが出たら、**エラーメッセージをそのままAgentに伝えて**ください — Agentが自動修正してくれます
 - 「terraform init から再実行してください」と指示するのも効果的です
-- AWS認証情報が設定されているか確認してください
+- AWS認証情報が設定されているか確認してください（`aws sts get-caller-identity`）
 
 </details>
 
@@ -150,7 +153,9 @@ terraform apply まで実行してください。
 ### 確認
 
 ```bash
+cd terraform/vpc-ec2
 terraform output
+cd ../..  # プロジェクトルートに戻る
 ```
 
 サブネットID（`subnet-xxxxx`）が表示されれば OK ✅
@@ -202,7 +207,9 @@ terraform apply まで実行してください。
 ### 確認
 
 ```bash
+cd terraform/vpc-ec2
 terraform output
+cd ../..  # プロジェクトルートに戻る
 ```
 
 セキュリティグループID（`sg-xxxxx`）が表示されれば OK ✅
@@ -251,7 +258,9 @@ terraform apply まで実行してください。
 ### 確認
 
 ```bash
+cd terraform/vpc-ec2
 terraform output instance_public_ip
+cd ../..  # プロジェクトルートに戻る
 ```
 
 IPアドレスが表示されれば OK ✅
@@ -262,8 +271,31 @@ IPアドレスが表示されれば OK ✅
 
 構築した EC2 に SSH で接続して、環境が正しく構築されたか確認します。
 
+### 手順
+
+1. **IPアドレスを確認**:
+
 ```bash
-ssh -i ~/.ssh/training-key ec2-user@$(cd terraform/vpc-ec2 && terraform output -raw instance_public_ip)
+cd terraform/vpc-ec2
+terraform output instance_public_ip
+```
+
+2. **SSH接続**（表示されたIPアドレスに置き換えてください）:
+
+```bash
+ssh -i ~/.ssh/training-key ec2-user@<表示されたIPアドレス>
+```
+
+3. 接続できたら `exit` で切断:
+
+```bash
+exit
+```
+
+4. **プロジェクトルートに戻る**:
+
+```bash
+cd ../..
 ```
 
 接続できれば **セッション1完了** 🎉
@@ -273,11 +305,11 @@ ssh -i ~/.ssh/training-key ec2-user@$(cd terraform/vpc-ec2 && terraform output -
 <details>
 <summary>❓ SSH接続できない場合</summary>
 
+- **数分待ってから再試行** — EC2起動直後は接続できないことがあります（1〜2分）
 - セキュリティグループでSSH（22番ポート）が許可されているか確認
 - キーペアファイルの権限を確認（`chmod 400 ~/.ssh/training-key`）
 - パブリックIPが割り当てられているか確認（`terraform output`）
 - EC2インスタンスが起動しているか確認
-- 数分待ってから再試行（起動直後は接続できないことがあります）
 
 </details>
 
@@ -508,11 +540,12 @@ output "instance_id" {
 
 ## ⚠️ リソースの削除
 
-> ワークショップ期間中はEC2を削除しないでください。**ワークショップ終了後**に削除してください。
+> ワークショップ期間中はEC2を削除しないでください。**全セッション終了後**に削除してください。
 
 ```bash
 cd terraform/vpc-ec2
 terraform destroy
+cd ../..  # プロジェクトルートに戻る
 ```
 
 ---

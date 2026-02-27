@@ -32,8 +32,9 @@ Step 5: CloudWatchで確認
 ## 📚 事前準備
 
 - セッション1のEC2が起動していること
-- セッション3のAnsible環境が構築済みであること
-- `ansible all -m ping` が成功すること
+- セッション3のAnsible環境が構築済みであること（`cd ansible && ansible all -m ping && cd ..` で確認）
+
+> ⚠️ **作業ディレクトリについて**: Continueへのプロンプトは **プロジェクトルート** から実行してください。
 
 ---
 
@@ -99,6 +100,29 @@ AWS CLI コマンド `aws ec2 associate-iam-instance-profile` を使って関連
 2. terraform/cloudwatch-iam/ で terraform output instance_profile_name を実行してプロファイル名を取得
 3. 取得した値を使って、以下のコマンドを実行:
    aws ec2 associate-iam-instance-profile --instance-id <取得したID> --iam-instance-profile Name=<取得したプロファイル名>
+```
+
+</details>
+
+<details>
+<summary>❓ 「There is an existing association」エラーが出た場合</summary>
+
+すでにプロファイルが関連付けられている場合、以下のエラーが出ます：
+
+```
+An error occurred (IncorrectState): There is an existing association for instance i-xxxxx
+```
+
+この場合は、既に関連付け済みなので **このStepはスキップしてOK** です。
+
+もし関連付けを変更したい場合は、まず現在の関連付けを解除してから再実行します：
+```bash
+# 現在の関連付けIDを確認
+aws ec2 describe-iam-instance-profile-associations --filters "Name=instance-id,Values=<インスタンスID>"
+# 関連付けを解除（association-idは上のコマンドで表示される値）
+aws ec2 disassociate-iam-instance-profile --association-id <association-id>
+# 再度関連付け
+aws ec2 associate-iam-instance-profile ...
 ```
 
 </details>
@@ -208,7 +232,6 @@ AWSコンソールで確認：
 terraform/
 └── cloudwatch-iam/
     ├── main.tf
-    ├── variables.tf
     └── outputs.tf
 
 ansible/
@@ -379,9 +402,12 @@ output "iam_role_arn" {
 ```bash
 cd terraform/cloudwatch-iam
 terraform destroy
+cd ../..  # プロジェクトルートに戻る
 ```
 
 > CloudWatch AgentはEC2上のソフトウェアなので、EC2削除時に一緒に消えます。IAMリソースはTerraformで別途削除が必要です。
+
+> ⚠️ **削除の順序**: IAMプロファイルを先にdestroy → その後 vpc-ec2 をdestroy してください。
 
 ---
 
