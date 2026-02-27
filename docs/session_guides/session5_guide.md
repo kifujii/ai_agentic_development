@@ -1,4 +1,4 @@
-# セッション5：CloudWatch Agent & SSM Agent のインストール（必須・1.5時間）
+# セッション5：CloudWatch Agent & SSM Agent のインストール（必須・2時間）
 
 ## 🎯 このセッションのゴール
 
@@ -35,17 +35,23 @@ cd ..
 ## 構築の流れ
 
 ```
-Step 1: IAMロールの作成（AWS CLI）
+Step 1: IAMロールの作成（AWS CLI）（15分）
     ↓
-Step 2: SSM Agent のインストール（Ansible）
+Step 2: SSM Agent のインストール（Ansible）（15分）
     ↓
-Step 3: SSM Agent の動作確認
+Step 3: SSM Agent の動作確認（10分）
     ↓
-Step 4: CloudWatch Agent のインストール（Ansible）
+Step 4: SSM Run Command の体験（15分）
     ↓
-Step 5: CloudWatch Agent の設定・起動（Ansible）
+Step 5: CloudWatch Agent のインストール（Ansible）（15分）
     ↓
-Step 6: CloudWatch での確認
+Step 6: CloudWatch Agent の設定・起動（Ansible）（20分）
+    ↓
+Step 7: CloudWatch での確認（10分）
+    ↓
+Step 8: CloudWatch Alarm の作成（10分）
+    ↓
+振り返り（10分）
 ```
 
 ---
@@ -157,15 +163,50 @@ AWSコンソールで SSM Agent が正しく動作しているか確認します
 
 > ⚠️ IAMロールの反映に 1〜2分かかることがあります。表示されない場合は少し待ってからリロードしてください。
 
-3. （オプション）**Session Manager** から接続を試す：
-   - インスタンスを選択 → 「ノードアクション」→「ターミナルセッションを開始」
-   - SSHなしでシェルに接続できることを確認
-
 SSM でインスタンスが管理対象として表示されれば OK ✅
 
 ---
 
-## Step 4: CloudWatch Agent をインストールしよう（15分）
+## Step 4: SSM Run Command を体験しよう（15分）
+
+### やること
+
+SSM Agent が入ったことで、**AWSコンソール から直接コマンドを実行** できるようになりました。SSH不要のリモート管理を体験します。
+
+### 手順
+
+1. **AWS コンソール** → **Systems Manager** → **Run Command** を開く
+2. 「コマンドを実行」をクリック
+3. コマンドドキュメント: `AWS-RunShellScript` を選択
+4. コマンドパラメータに以下を入力：
+
+```bash
+echo "=== SSM Run Command テスト ==="
+hostname
+uptime
+free -m
+df -h
+```
+
+5. ターゲット: インスタンスを手動で選択 → EC2 を選択
+6. 「実行」をクリック
+7. 出力を確認
+
+> 💡 **これが SSM の真価**: SSHポートを開けなくても、AWSコンソールからサーバー管理ができます。
+
+### Ansible との比較を考えてみましょう
+
+| 項目 | SSM Run Command | Ansible |
+|------|----------------|---------|
+| 接続方式 | AWS API 経由 | SSH |
+| 実行場所 | AWSコンソール | ターミナル |
+| 適した用途 | 緊急対応、一回限りの操作 | 繰り返す定型作業、自動化 |
+
+出力にサーバー情報が表示されれば OK ✅
+
+---
+
+## Step 5: CloudWatch Agent をインストールしよう（15分）
 
 ### やること
 
@@ -202,7 +243,7 @@ ansible/playbooks/install_cwagent.yml を作成してください。
 
 ---
 
-## Step 5: CloudWatch Agent を設定・起動しよう（20分）
+## Step 6: CloudWatch Agent を設定・起動しよう（20分）
 
 ### やること
 
@@ -251,7 +292,7 @@ Agent が running 状態になれば OK ✅
 
 ---
 
-## Step 6: CloudWatch で確認しよう（10分）
+## Step 7: CloudWatch で確認しよう（10分）
 
 AWSコンソールで確認：
 
@@ -260,9 +301,48 @@ AWSコンソールで確認：
 
 > 💡 メトリクスとログが反映されるまで数分かかることがあります。
 
+メトリクスまたはロググループが表示されれば OK ✅
+
 ---
 
-## 📝 振り返り（5分）
+## Step 8: CloudWatch Alarm を作成しよう（10分）
+
+### やること
+
+CloudWatch Agent が収集したメトリクスに対してアラームを設定します。Agentに AWS CLI で作成してもらいます。
+
+### ゴール
+
+CPU使用率が80%を超えたらアラーム状態になる CloudWatch Alarm を作成する。
+
+> 💡 **ヒント**: Agentに「CloudWatch Alarmを作成して」と伝えると、必要なAWS CLIコマンドを実行してくれます。
+
+<details>
+<summary>📝 プロンプト例</summary>
+
+```
+AWS CLI で以下の CloudWatch Alarm を作成してください。
+
+- アラーム名: training-cpu-alarm
+- メトリクス: Training/EC2 名前空間の cpu_usage_user
+- 条件: 1分間の平均が80%以上
+- 比較期間: 1期間
+- アクション: なし（通知は不要）
+
+作成後、CloudWatch のアラームコンソールで確認できるか教えてください。
+```
+
+</details>
+
+### 確認
+
+**AWS コンソール** → **CloudWatch → アラーム** で `training-cpu-alarm` が表示されていれば OK ✅
+
+> 💡 現時点ではCPU使用率が低いため、ステータスは「OK」のはずです。
+
+---
+
+## 📝 振り返り（10分）
 
 ### このセッションで体験したこと
 
@@ -270,14 +350,19 @@ AWSコンソールで確認：
 |------|--------|------|
 | IAMロール作成 | AWS CLI (Agent) | CLI操作もAgentに任せられる |
 | SSM Agent導入 | Ansible | プリインストール確認の重要性 |
+| SSM Run Command | AWSコンソール | SSH不要のリモート管理 |
 | CW Agent導入 | Ansible | パッケージ管理の自動化 |
 | CW Agent設定 | Ansible | JSON設定のテンプレート化 |
+| CW Alarm | AWS CLI (Agent) | 監視設定もAgentで自動化 |
 
-### Terraform を使わなかった理由
+### ツールの使い分け
 
-- IAMロールはワンタイムの作成なので AWS CLI で十分
-- SSM/CW Agent はEC2上のソフトウェア → Ansible の領域
-- **ツールの使い分け**: インフラ構築 → Terraform、サーバー設定 → Ansible
+| ツール | 用途 | このセッションでの使い方 |
+|--------|------|------------------------|
+| Terraform | インフラの構築 | 今回は使わなかった |
+| Ansible | サーバー内の設定・ソフトウェア管理 | SSM/CW Agentのインストール・設定 |
+| AWS CLI | AWSリソースの操作 | IAMロール、CloudWatch Alarm |
+| SSM | 緊急時のリモート管理 | Run Commandでサーバー操作 |
 
 ---
 

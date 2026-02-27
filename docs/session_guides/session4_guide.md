@@ -1,8 +1,8 @@
-# セッション4：サーバー再起動の自動化（Ansible入門）
+# セッション4：サーバー再起動の自動化（Ansible入門・2時間）
 
 ## 🎯 このセッションのゴール
 
-セッション1で構築したEC2に対して、Ansibleでサーバー再起動を自動化します。
+セッション1で構築したEC2に対して、Ansibleでサーバーの状態確認・再起動・サービス管理を自動化します。
 
 ![目標構成](../images/session4_target.svg)
 
@@ -13,19 +13,24 @@
 | check_status.yml | サーバー状態確認 |
 | restart_server.yml | サーバー再起動（前後チェック付き） |
 | manage_services.yml | サービスの起動/停止/再起動 |
+| maintain_nginx.yml | nginx設定管理・ヘルスチェック |
 
 ### 構築の流れ
 
 ```
-Step 1: Ansible の接続設定
+Step 1: Ansible の接続設定（15分）
     ↓
-Step 2: 接続テスト（ping）
+Step 2: 接続テスト - ping（5分）
     ↓
-Step 3: サーバー状態を確認する Playbook
+Step 3: サーバー状態を確認する Playbook（20分）
     ↓
-Step 4: サーバー再起動の Playbook
+Step 4: サーバー再起動の Playbook（25分）
     ↓
-Step 5: サービス管理の Playbook
+Step 5: サービス管理の Playbook（20分）
+    ↓
+Step 6: nginx 管理の Playbook（25分）
+    ↓
+振り返り（10分）
 ```
 
 ---
@@ -117,7 +122,7 @@ Agentに `ansible/ フォルダで接続テスト（ansible all -m ping）を実
 
 ---
 
-## Step 3: サーバー状態を確認しよう（15分）
+## Step 3: サーバー状態を確認しよう（20分）
 
 ### やること
 
@@ -158,7 +163,7 @@ ansible/playbooks/check_status.yml を作成してください。
 
 ---
 
-## Step 4: サーバー再起動を自動化しよう（20分）
+## Step 4: サーバー再起動を自動化しよう（25分）
 
 ### やること
 
@@ -199,7 +204,7 @@ ansible/playbooks/restart_server.yml を作成してください。
 
 ---
 
-## Step 5: サービス管理を自動化しよう（15分）
+## Step 5: サービス管理を自動化しよう（20分）
 
 ### やること
 
@@ -235,13 +240,71 @@ ansible/playbooks/manage_services.yml を作成してください。
 
 ---
 
-## 📝 振り返り（5分）
+## Step 6: nginx を Ansible で管理しよう（25分）
 
-| Terraform（セッション1-3） | Ansible（セッション4） |
+### やること
+
+セッション2でインストールしたnginxを、Ansibleで管理する実践的なPlaybookを作成します。これまでのStep 3〜5の知識を組み合わせた応用ステップです。
+
+### ゴール
+
+`ansible/playbooks/maintain_nginx.yml` を作成する。以下の処理を含めること：
+
+1. **nginx の状態確認**: 起動状態、設定ファイルテスト（`nginx -t`）
+2. **nginx の再起動**: 設定テスト → OK なら再起動
+3. **ヘルスチェック**: 再起動後に `curl http://localhost` でレスポンスを確認
+4. **結果サマリー**: すべての結果をまとめて表示
+
+> 💡 **ヒント**: `command` モジュールで `nginx -t` を実行し、結果を `register` で保存します。`uri` モジュールを使えばHTTPリクエストでヘルスチェックもできます。
+
+<details>
+<summary>📝 プロンプト例</summary>
+
+```
+ansible/playbooks/maintain_nginx.yml を作成してください。
+
+対象: webserversグループ
+処理の流れ:
+1. nginx の起動状態を確認
+2. nginx の設定テスト（nginx -t）
+3. 設定テストが成功したら nginx を再起動
+4. 再起動後に curl http://localhost でヘルスチェック
+5. すべての結果をサマリーとして表示
+
+注意:
+- become: yes を使用
+- 設定テストが失敗したら再起動をスキップ
+- ヘルスチェック結果のHTTPステータスコードを表示
+
+作成後、Playbookを実行してください。
+```
+
+</details>
+
+nginx のヘルスチェックが成功し、サマリーが表示されれば OK ✅
+
+> 💡 **ブラウザでも確認**: Playbook 実行後、`http://<EC2のIPアドレス>` にアクセスしてWebページが表示されることを確認しましょう。
+
+---
+
+## 📝 振り返り（10分）
+
+### TerraformとAnsibleの使い分け
+
+| Terraform（セッション1-2） | Ansible（セッション4） |
 |:---:|:---:|
 | リソースの **作成・管理** | サーバーの **設定・運用** |
 | AWSリソースを構築 | 構築済みサーバーを操作 |
 | `terraform apply` | `ansible-playbook` |
+
+### このセッションで作ったPlaybook
+
+| Playbook | 用途 | 実務での活用場面 |
+|----------|------|-----------------|
+| check_status.yml | サーバー状態確認 | 定期的なヘルスチェック |
+| restart_server.yml | サーバー再起動 | メンテナンス作業 |
+| manage_services.yml | サービス管理 | 障害対応・デプロイ |
+| maintain_nginx.yml | nginx管理 | Webサーバー運用 |
 
 ---
 
@@ -254,7 +317,8 @@ ansible/
 └── playbooks/
     ├── check_status.yml
     ├── restart_server.yml
-    └── manage_services.yml
+    ├── manage_services.yml
+    └── maintain_nginx.yml
 ```
 
 <details>
@@ -414,6 +478,59 @@ ansible_ssh_common_args='-o StrictHostKeyChecking=no'
     - name: 変更後の表示
       debug:
         msg: "{{ target_service }}: {{ after.status.ActiveState }}"
+```
+
+### playbooks/maintain_nginx.yml
+
+```yaml
+---
+- name: nginx管理・ヘルスチェック
+  hosts: webservers
+  become: yes
+
+  tasks:
+    - name: nginx の起動状態確認
+      systemd:
+        name: nginx
+      register: nginx_status
+      changed_when: false
+      ignore_errors: yes
+
+    - name: 起動状態の表示
+      debug:
+        msg: "nginx: {{ nginx_status.status.ActiveState | default('不明') }}"
+
+    - name: nginx 設定テスト
+      command: nginx -t
+      register: config_test
+      changed_when: false
+      ignore_errors: yes
+
+    - name: 設定テスト結果
+      debug:
+        msg: "設定テスト: {{ '成功 ✅' if config_test.rc == 0 else '失敗 ❌' }}"
+
+    - name: nginx を再起動（設定テスト成功時のみ）
+      systemd:
+        name: nginx
+        state: restarted
+      when: config_test.rc == 0
+
+    - name: ヘルスチェック
+      uri:
+        url: http://localhost
+        return_content: no
+        status_code: 200
+      register: health
+      ignore_errors: yes
+
+    - name: サマリー
+      debug:
+        msg: |
+          === nginx 管理レポート ===
+          起動状態: {{ nginx_status.status.ActiveState | default('不明') }}
+          設定テスト: {{ '成功' if config_test.rc == 0 else '失敗' }}
+          ヘルスチェック: {{ 'OK (HTTP ' ~ health.status ~ ')' if health.status is defined else '失敗' }}
 ```
 
 </details>

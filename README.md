@@ -12,29 +12,29 @@ ContinueのAgent機能を使って、TerraformやAnsibleのコードを自動生
 |-----------|------|------|-----------|--------|
 | **1** | VPC + EC2 を段階的に構築 | 2h | 必須 | [ガイド](docs/session_guides/session1_guide.md) |
 | **2** | Webアプリケーションを公開 | 2h | 必須 | [ガイド](docs/session_guides/session2_guide.md) |
-| **3** | EC2 + RDS で動的アプリ構築 | 1.5h | 任意 | [ガイド](docs/session_guides/session3_guide.md) |
-| **4** | サーバー再起動の自動化 (Ansible) | 1.5h | 必須 | [ガイド](docs/session_guides/session4_guide.md) |
-| **5** | SSM Agent & CloudWatch Agent 導入 | 1.5h | 必須 | [ガイド](docs/session_guides/session5_guide.md) |
+| **3** | 動的 Web アプリ構築 | 45min | 任意 | [ガイド](docs/session_guides/session3_guide.md) |
+| **4** | サーバー再起動の自動化 (Ansible) | 2h | 必須 | [ガイド](docs/session_guides/session4_guide.md) |
+| **5** | SSM Agent & CloudWatch Agent 導入 | 2h | 必須 | [ガイド](docs/session_guides/session5_guide.md) |
 | **6** | サーバー情報取得・運用レポート | 1h | 任意 | [ガイド](docs/session_guides/session6_guide.md) |
 
 ### 時間配分
 
 ```
-Day 1 (4h + 任意1.5h): インフラ構築 (Terraform)
+Day 1 (4h + 任意45min): インフラ構築 (Terraform)
 ├── Session 1: VPC + EC2 を段階的に構築 (2h)             [必須]
 ├── Session 2: Webアプリケーションを公開 (2h)             [必須]
-└── Session 3: EC2 + RDS で動的アプリ構築 (1.5h)         [任意]
+└── Session 3: 動的 Web アプリ構築 (45min)               [任意]
 
-Day 2 (3h + 任意1h): システム運用 (Ansible)
-├── Session 4: サーバー再起動の自動化 (1.5h)             [必須]
-├── Session 5: SSM Agent & CloudWatch Agent 導入 (1.5h)  [必須]
+Day 2 (4h + 任意1h): システム運用 (Ansible)
+├── Session 4: サーバー再起動の自動化 (2h)               [必須]
+├── Session 5: SSM Agent & CloudWatch Agent 導入 (2h)    [必須]
 └── Session 6: サーバー情報取得・レポート (1h)            [任意]
 ```
 
 ### セッション間のつながり
 
 ```
-Session 1: VPC + EC2 構築  ──→  Session 2: Webアプリ公開  ──→  Session 3: RDSアプリ（任意）
+Session 1: VPC + EC2 構築  ──→  Session 2: Webアプリ公開  ──→  Session 3: 動的アプリ（任意）
     ↓（EC2をAnsibleの操作対象として使用）
 Session 4: サーバー再起動の自動化
     ↓
@@ -88,7 +88,7 @@ ai_agentic/
 # 1. セッション5: IAMリソース（実施した場合のみ）
 # → Agentに「training-ec2-agent-role と training-ec2-agent-profile を削除して」と伝えてください
 
-# 2. セッション1〜3: VPC/EC2/RDS（最後に削除 ※RDS削除に数分かかります）
+# 2. セッション1〜2: VPC/EC2
 cd terraform/vpc-ec2 && terraform destroy && cd ../..
 ```
 
