@@ -6,7 +6,7 @@
 
 - [セッション1](session1_checklist.md) - VPC + EC2 を段階的に構築
 - [セッション2](session2_checklist.md) - Webアプリケーションを公開
-- [セッション3](session3_checklist.md) - 動的 Web アプリ構築（任意）
+- [セッション3](session3_checklist.md) - HTTPS 対応（任意）
 - [セッション4](session4_checklist.md) - サーバー再起動の自動化（Ansible）
 - [セッション5](session5_checklist.md) - SSM Agent & CloudWatch Agent 導入
 - [セッション6](session6_checklist.md) - サーバー情報取得・運用レポート作成（任意）

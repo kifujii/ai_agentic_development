@@ -1,22 +1,23 @@
-# セッション3：動的 Web アプリ 評価チェックリスト
+# セッション3：HTTPS 対応 評価チェックリスト
 
 ## 事前準備
 - [ ] セッション2が完了していること（EC2にnginxがインストール済み）
 - [ ] EC2のIPアドレスを確認した
 
-## Step 1: Flask アプリの作成・デプロイ
-- [ ] Python Flask がインストールされた
-- [ ] ゲストブックアプリ（app.py）が作成された
-- [ ] systemd サービスとして登録・起動された
-- [ ] nginx がリバースプロキシとして設定された
+## Step 1: セキュリティグループに HTTPS(443) 追加
+- [ ] Terraform で HTTPS(443) のインバウンドルールを追加した
+- [ ] terraform apply が成功した
 
-## Step 2: ブラウザ確認
-- [ ] `http://<EC2のIP>` でゲストブックが表示された
-- [ ] フォームからメッセージを投稿できた
-- [ ] 投稿後、一覧に新しいメッセージが表示された
+## Step 2: SSL証明書の作成と nginx HTTPS 設定
+- [ ] 自己署名SSL証明書が作成された
+- [ ] nginx が HTTPS(443) で応答するよう設定された
+- [ ] HTTP(80) → HTTPS(443) のリダイレクトが設定された
 
-## 成果物（EC2上）
-- [ ] `/opt/guestbook/app.py` が作成されている
-- [ ] `/opt/guestbook/guestbook.db` が作成されている
-- [ ] `/etc/systemd/system/guestbook.service` が作成されている
-- [ ] nginx のリバースプロキシ設定が有効
+## Step 3: ブラウザ確認
+- [ ] `http://<EC2のIP>` が `https://` にリダイレクトされた
+- [ ] HTTPS でセッション2のWebページが表示された
+
+## 成果物
+- [ ] `terraform/vpc-ec2/` の SG に HTTPS(443) ルールが追加されている
+- [ ] EC2上に SSL証明書が作成されている
+- [ ] nginx が HTTPS で応答する
