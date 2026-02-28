@@ -381,7 +381,7 @@ ansible/
 |-----------|-----------|-------|
 | 1 | VPC/EC2 段階的構築、Agent開発入門 | Terraform |
 | 2 | Webアプリ公開、デプロイの流れ | Terraform + Agent |
-| 3 | 動的Webアプリ構築（任意） | PHP + SQLite |
+| 3 | 動的Webアプリ構築（任意） | Python Flask + SQLite |
 | 4 | サーバー再起動の自動化 | Ansible |
 | 5 | SSM/CW Agent導入 | Ansible + AWS CLI |
 | 6 | サーバー情報収集・レポート生成（任意） | Ansible |

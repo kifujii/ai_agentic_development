@@ -18,7 +18,7 @@
 |---|------|------|-----------|--------|
 | 1 | VPC + EC2 を段階的に構築 | 2h | 必須 | Terraform |
 | 2 | Webアプリケーションを公開 | 2h | 必須 | Terraform |
-| 3 | 動的 Web アプリ構築 | 45min | 任意 | PHP + SQLite |
+| 3 | 動的 Web アプリ構築 | 45min | 任意 | Python Flask + SQLite |
 | 4 | サーバー再起動の自動化 | 2h | 必須 | Ansible |
 | 5 | SSM Agent & CloudWatch Agent 導入 | 2h | 必須 | Ansible + AWS CLI |
 | 6 | サーバー情報取得・運用レポート | 1h | 任意 | Ansible |
@@ -79,7 +79,7 @@ ContinueのAgent機能を使って、VPC → サブネット → セキュリテ
 
 ### セッション3：動的 Web アプリ構築（任意・45min）
 
-セッション2の静的HTMLをステップアップし、PHP + SQLite で動的 Web アプリ（ゲストブック）を構築します。Agentに一括指示して環境構築からデプロイまで実行します。
+セッション2の静的HTMLをステップアップし、Python Flask + SQLite で動的 Web アプリ（ゲストブック）を構築します。nginx をリバースプロキシとして構成し、Flask アプリを systemd サービスとして運用します。
 
 **構築ステップ**:
 1. Agentに環境構築〜アプリ作成〜デプロイを一括指示
