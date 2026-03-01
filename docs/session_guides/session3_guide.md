@@ -116,7 +116,7 @@ EC2にSSHで接続して、以下の作業を実行してください。
 
 ■ 接続情報
 - IP: <EC2のIPアドレス>
-- SSH鍵: ~/.ssh/training-key
+- SSH鍵: keys/training-key
 - ユーザー: ec2-user
 
 ■ 1. 自己署名SSL証明書の作成

@@ -22,6 +22,9 @@ pip-delete-this-directory.txt
 credentials
 .aws/
 
+# SSH鍵
+keys/
+
 # Terraform
 *.tfstate
 *.tfstate.*
