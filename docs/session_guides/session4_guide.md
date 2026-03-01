@@ -37,13 +37,26 @@ Step 6: nginx 管理の Playbook（25分）
 
 ## 📚 事前準備
 
+> ⚠️ **DevSpacesのワークスペースを再構築した場合**:
+> 休憩後のタイムアウトや翌日の作業開始時にワークスペースを再構築した場合は、環境セットアップスクリプトを再実行してください。
+> ```bash
+> ./scripts/setup_devspaces.sh
+> ```
+> プロジェクト内のファイル（SSH鍵、Terraformの状態、生成したコード）は保持されています。
+
 - セッション1のEC2が起動していること
 - EC2のパブリックIPを確認して **メモしておく**：
 
 ```bash
 cd terraform/vpc-ec2
+```
+
+```bash
 terraform output instance_public_ip
-cd ../..  # プロジェクトルートに戻る
+```
+
+```bash
+cd ../..
 ```
 
 > 💡 IPアドレスは `13.xxx.xxx.xxx` のような形式です。このセッションで何度も使うのでコピーしておきましょう。
@@ -106,8 +119,12 @@ Agentに `ansible/ フォルダで接続テスト（ansible all -m ping）を実
 > 💡 手動で実行する場合は `ansible/` ディレクトリに移動してからコマンドを実行してください：
 > ```bash
 > cd ansible
+> ```
+> ```bash
 > ansible all -m ping
-> cd ..  # プロジェクトルートに戻る
+> ```
+> ```bash
+> cd ..
 > ```
 
 <details>

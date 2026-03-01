@@ -38,16 +38,29 @@ Step 5: SSH 接続で動作確認
 
 ## 📚 事前準備
 
+> ⚠️ **DevSpacesのワークスペースを再構築した場合**:
+> 休憩後のタイムアウトや翌日の作業開始時にワークスペースを再構築した場合は、環境セットアップスクリプトを再実行してください。
+> ```bash
+> ./scripts/setup_devspaces.sh
+> ```
+> プロジェクト内のファイル（SSH鍵、Terraformの状態、生成したコード）は保持されています。
+
 1. [環境セットアップガイド](../setup/ENVIRONMENT_SETUP.md) が完了していること
 2. SSH鍵ペアを生成しておくこと：
 
 ```bash
 mkdir -p keys
+```
+
+```bash
 ssh-keygen -t rsa -b 4096 -f keys/training-key -N ""
+```
+
+```bash
 chmod 400 keys/training-key
 ```
 
-> 💡 **なぜ `keys/` フォルダに保存するのか**: DevSpacesではタイムアウト時に環境が再構築されますが、プロジェクトディレクトリ内のファイルは保持されます。`~/.ssh/` に保存すると休憩後に鍵が失われる可能性があるため、プロジェクト内に保存します。
+> 💡 **なぜ `keys/` フォルダに保存するのか**: DevSpacesではタイムアウト時に環境が再構築されますが、プロジェクトディレクトリ内のファイルは保持されます。`~/.ssh/` に保存するとワークスペースを再構築した場合に鍵が失われてしまうため、プロジェクト内に保存します。
 
 > ⚠️ **作業ディレクトリについて**: Continueへのプロンプトは **プロジェクトルート**（このREADMEがあるフォルダ）から実行してください。ターミナルで確認コマンドを実行した後は `cd` で戻ってください。
 
@@ -96,11 +109,17 @@ terraform init と terraform apply まで実行してください。
 
 ```bash
 cd terraform/vpc-ec2
+```
+
+```bash
 terraform output
-cd ../..  # プロジェクトルートに戻る
 ```
 
 VPC ID（`vpc-xxxxx`）が表示されれば OK ✅
+
+```bash
+cd ../..
+```
 
 <details>
 <summary>❓ うまくいかない場合</summary>
@@ -157,11 +176,17 @@ terraform apply まで実行してください。
 
 ```bash
 cd terraform/vpc-ec2
+```
+
+```bash
 terraform output
-cd ../..  # プロジェクトルートに戻る
 ```
 
 サブネットID（`subnet-xxxxx`）が表示されれば OK ✅
+
+```bash
+cd ../..
+```
 
 > 💡 **ポイント**: 「既存コードに追加して」と伝えるだけで、Agentが既存ファイルを読み取り、適切な位置にコードを追加してくれます。
 
@@ -211,11 +236,17 @@ terraform apply まで実行してください。
 
 ```bash
 cd terraform/vpc-ec2
+```
+
+```bash
 terraform output
-cd ../..  # プロジェクトルートに戻る
 ```
 
 セキュリティグループID（`sg-xxxxx`）が表示されれば OK ✅
+
+```bash
+cd ../..
+```
 
 > ⚠️ **セキュリティ注意**: SSH を `0.0.0.0/0` から許可するのはワークショップ用です。本番では自分のIPのみに制限しましょう。
 
@@ -265,11 +296,17 @@ terraform apply まで実行してください。
 
 ```bash
 cd terraform/vpc-ec2
+```
+
+```bash
 terraform output instance_public_ip
-cd ../..  # プロジェクトルートに戻る
 ```
 
 IPアドレスが表示されれば OK ✅
+
+```bash
+cd ../..
+```
 
 ---
 
@@ -283,6 +320,9 @@ IPアドレスが表示されれば OK ✅
 
 ```bash
 cd terraform/vpc-ec2
+```
+
+```bash
 terraform output instance_public_ip
 ```
 
@@ -550,8 +590,14 @@ output "instance_id" {
 
 ```bash
 cd terraform/vpc-ec2
+```
+
+```bash
 terraform destroy
-cd ../..  # プロジェクトルートに戻る
+```
+
+```bash
+cd ../..
 ```
 
 ---

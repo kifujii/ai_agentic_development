@@ -20,13 +20,26 @@
 
 ## 📚 事前準備
 
+> ⚠️ **DevSpacesのワークスペースを再構築した場合**:
+> 休憩後のタイムアウトや翌日の作業開始時にワークスペースを再構築した場合は、環境セットアップスクリプトを再実行してください。
+> ```bash
+> ./scripts/setup_devspaces.sh
+> ```
+> プロジェクト内のファイル（SSH鍵、Terraformの状態、生成したコード）は保持されています。
+
 - セッション1が完了していること（VPC/EC2が構築済み）
 - EC2のIPアドレスを確認してメモ：
 
 ```bash
 cd terraform/vpc-ec2
+```
+
+```bash
 terraform output instance_public_ip
-cd ../..  # プロジェクトルートに戻る
+```
+
+```bash
+cd ../..
 ```
 
 > ⚠️ **作業ディレクトリについて**: Continueへのプロンプトは **プロジェクトルート** から実行してください。
@@ -84,16 +97,19 @@ terraform apply まで実行してください。
 
 ```bash
 cd terraform/vpc-ec2
+```
+
+```bash
 terraform output
 ```
 
 AWSコンソールまたは以下のコマンドで、HTTP(80)ルールが追加されていることを確認：
 
 ```bash
-# セッション1で security_group_id を output に定義している場合
-aws ec2 describe-security-groups \
-  --group-ids "$(terraform output -raw security_group_id)" \
-  --query 'SecurityGroups[0].IpPermissions'
+aws ec2 describe-security-groups --group-ids "$(terraform output -raw security_group_id)" --query 'SecurityGroups[0].IpPermissions'
+```
+
+```bash
 cd ../..
 ```
 
@@ -322,7 +338,13 @@ web/
 
 ```bash
 cd terraform/vpc-ec2
+```
+
+```bash
 terraform destroy
+```
+
+```bash
 cd ../..
 ```
 

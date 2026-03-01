@@ -26,6 +26,13 @@ Step 3: レポートを自動生成
 
 ## 📚 事前準備
 
+> ⚠️ **DevSpacesのワークスペースを再構築した場合**:
+> 休憩後のタイムアウトや翌日の作業開始時にワークスペースを再構築した場合は、環境セットアップスクリプトを再実行してください。
+> ```bash
+> ./scripts/setup_devspaces.sh
+> ```
+> プロジェクト内のファイル（SSH鍵、Terraformの状態、Ansibleの設定、生成したコード）は保持されています。
+
 - セッション4のAnsible環境が構築済みであること（`cd ansible && ansible all -m ping && cd ..` で確認）
 
 > ⚠️ **作業ディレクトリについて**: Continueへのプロンプトは **プロジェクトルート** から実行してください。Ansible コマンドの手動実行時は `ansible/` ディレクトリに移動してください。
@@ -160,6 +167,9 @@ ansible/playbooks/generate_report.yml を作成してください。
 
 ```bash
 ls ansible/reports/
+```
+
+```bash
 cat ansible/reports/server_report_web1_*.md
 ```
 
@@ -396,12 +406,20 @@ ansible/
 
 プロジェクトルートから実行：
 
-```bash
-# 1. セッション5: IAMリソース（実施した場合のみ）
-# Agentに「training-ec2-agent-role と training-ec2-agent-profile を削除して」と伝えてください
+**1. セッション5: IAMリソース（実施した場合のみ）**
 
-# 2. セッション1〜2: VPC/EC2
+Agentに「training-ec2-agent-role と training-ec2-agent-profile を削除して」と伝えてください。
+
+**2. セッション1〜2: VPC/EC2**
+
+```bash
 cd terraform/vpc-ec2
+```
+
+```bash
 terraform destroy
+```
+
+```bash
 cd ../..
 ```

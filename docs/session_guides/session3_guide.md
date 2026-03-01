@@ -22,12 +22,25 @@
 
 ## 📚 事前準備
 
+> ⚠️ **DevSpacesのワークスペースを再構築した場合**:
+> 休憩後のタイムアウトや翌日の作業開始時にワークスペースを再構築した場合は、環境セットアップスクリプトを再実行してください。
+> ```bash
+> ./scripts/setup_devspaces.sh
+> ```
+> プロジェクト内のファイル（SSH鍵、Terraformの状態、生成したコード）は保持されています。
+
 - セッション2が完了していること（EC2にnginxがインストール済み、HTTPでアクセスできる状態）
 - EC2のIPアドレスを確認：
 
 ```bash
 cd terraform/vpc-ec2
+```
+
+```bash
 terraform output instance_public_ip
+```
+
+```bash
 cd ../..
 ```
 
@@ -77,7 +90,13 @@ terraform apply まで実行してください。
 
 ```bash
 cd terraform/vpc-ec2
+```
+
+```bash
 terraform output
+```
+
+```bash
 cd ../..
 ```
 
