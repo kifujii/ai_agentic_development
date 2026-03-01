@@ -1,21 +1,5 @@
-# 注意: Continueはエディタ拡張機能なので、Pythonパッケージは不要です
-# Continueの設定は .continue/config.json を参照してください
-
-# AWS関連
-boto3>=1.28.0
-botocore>=1.31.0
-
-# 環境変数管理
-python-dotenv>=1.0.0
-
-# YAML処理
-pyyaml>=6.0
-
-# テンプレート処理
-jinja2>=3.1.0
-
-# HTTPリクエスト
-requests>=2.31.0
-
-# ユーティリティ
-colorama>=0.4.6
+# ワークショップ参加者向けのPythonパッケージは不要です
+# ワークショップでは Terraform、Ansible、AWS CLI を直接使用します
+#
+# 開発者向け（構成図生成）:
+#   pip install diagrams  # scripts/generate_diagrams.py で使用

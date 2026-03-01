@@ -38,7 +38,6 @@
   - Terraform（~/.local/binにインストール）
   - Ansible（pipでユーザー権限インストール）
   - AWS CLI（~/.local/binにインストール）
-  - Pythonパッケージ（scripts/requirements.txtから、--userオプションでインストール）
 - **VS Code拡張機能**:
   - Continue
 

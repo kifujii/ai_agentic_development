@@ -134,33 +134,11 @@ else
     log_warn "AWS CLIは既にインストールされています: $(aws --version)"
 fi
 
-# 6. Pythonパッケージのインストール
-# 重要: python3 -m pipを使用することで、python3コマンドと同じPythonバージョンに確実にインストールされます
-# 注意: pipは既にセクション3でインストール済みです
-log_info "Pythonパッケージのインストール中..."
-
-# スクリプトのディレクトリを取得
-SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
-REQUIREMENTS_FILE="${SCRIPT_DIR}/requirements.txt"
-
-if [ -f "$REQUIREMENTS_FILE" ]; then
-    python3 -m pip install --user -r "$REQUIREMENTS_FILE" -q || {
-        log_error "requirements.txtからのインストールに失敗しました"
-        log_info "基本的なパッケージを個別にインストールします..."
-        python3 -m pip install --user python-dotenv boto3 pyyaml jinja2 requests colorama -q
-    }
-    log_info "Pythonパッケージのインストール完了"
-else
-    log_warn "requirements.txtが見つかりません。基本的なパッケージをインストールします..."
-    python3 -m pip install --user python-dotenv boto3 pyyaml jinja2 requests colorama -q || {
-        log_error "Pythonパッケージのインストールに失敗しました"
-        exit 1
-    }
-    log_info "基本的なPythonパッケージのインストール完了"
-fi
-
-# 注意: Continueはエディタ拡張機能なので、Pythonパッケージのインストールは不要です
-# Continueの設定は .continue/config.json を参照してください
+# 6. Pythonパッケージのインストール（スキップ）
+# ワークショップでは Terraform、Ansible、AWS CLI を直接使用するため、
+# 追加のPythonパッケージは不要です。
+# Continueはエディタ拡張機能なので、Pythonパッケージも不要です。
+log_info "Pythonパッケージのインストール: ワークショップでは不要のためスキップします"
 
 # 6-1. VS Code拡張機能のインストール（CLI経由）
 log_info "VS Code拡張機能のインストール中..."
@@ -260,22 +238,16 @@ if [ ! -f "$CONTINUE_CONFIG_FILE" ] || ! grep -q '"provider": "bedrock"' "$CONTI
 {
   "models": [
     {
-      "title": "Llama 3.1 70B (Bedrock - Agent用)",
+      "title": "GTP-OSS-120B (Bedrock)",
       "provider": "bedrock",
-      "model": "us.meta.llama3-1-70b-instruct-v1:0",
-      "region": "us-east-1"
-    },
-    {
-      "title": "Claude 3.5 Sonnet v2 (Bedrock - 要申請)",
-      "provider": "bedrock",
-      "model": "us.anthropic.claude-3-5-sonnet-20241022-v2:0",
+      "model": "openai.gpt-oss-120b-1:0",
       "region": "us-east-1"
     }
   ],
   "tabAutocompleteModel": {
-    "title": "Llama 3.2 1B (Autocomplete)",
+    "title": "GTP-OSS-120B (Autocomplete)",
     "provider": "bedrock",
-    "model": "us.meta.llama3-2-1b-instruct-v1:0",
+    "model": "openai.gpt-oss-120b-1:0",
     "region": "us-east-1"
   },
   "allowAnonymousTelemetry": false,
