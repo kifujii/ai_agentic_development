@@ -66,15 +66,15 @@ ai_agentic/
 │   ├── TRAINING_MENU.md         # トレーニングメニュー
 │   ├── images/                  # アーキテクチャ構成図
 │   ├── session_guides/          # セッションガイド (1〜6)
-│   └── setup/                   # セットアップ手順
+│   └── setup/                   # セットアップ手順（Claude Code, 環境構築, FAQ）
 ├── evaluation/                  # 評価チェックリスト
 ├── scripts/
-│   ├── setup_devspaces.sh       # セットアップスクリプト
-│   ├── generate_diagrams.py     # 構成図生成スクリプト
-│   └── requirements.txt
+│   ├── setup_devspaces.sh       # 環境セットアップスクリプト
+│   └── check.sh                 # セッション完了チェックスクリプト
 ├── terraform/                   # Terraformコード（セッション中に作成）
 ├── ansible/                     # Ansibleコード（セッション中に作成）
-├── .vscode/                     # エディタ設定
+├── .claude/                     # Claude Code設定（.gitignore対象、スクリプトで自動生成）
+├── .env.template                # AWS認証情報テンプレート
 └── README.md
 ```
 

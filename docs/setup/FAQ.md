@@ -9,7 +9,7 @@
 - Terraform
 - Ansible
 - AWS CLI
-- Pythonパッケージ
+- Claude Code（npm グローバルインストール）
 - Git
 
 これらのツールは、DevSpaces環境内でトレーニングを実施するために必要です。
@@ -55,7 +55,7 @@
 - **Terraform**: `~/.local/bin`にインストール
 - **Ansible**: `pip3 install --user`でインストール
 - **AWS CLI**: `~/.local/bin`にインストール
-- **Pythonパッケージ**: `pip3 install --user`でインストール
+- **Claude Code**: `npm install -g`でインストール（npm prefixを`~/.local`に設定）
 
 **手動インストールが必要な場合**:
 `docs/setup/ENVIRONMENT_SETUP.md`の「手動インストール」セクションを参照してください。
@@ -70,7 +70,7 @@
 - 権限エラー
 - パッケージインストールエラー
 - AWS認証エラー
-- APIキーエラー
+- Claude Code Bedrock接続エラー
 
 ## Q: セットアップ完了後、どのようにトレーニングを開始すればいいですか？
 
