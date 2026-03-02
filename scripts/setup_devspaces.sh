@@ -63,7 +63,7 @@ log_info "Terraformのインストール中..."
 if ! command -v terraform &> /dev/null; then
     # Terraform 1.6.0: ワークショップで使用する機能（VPC, EC2, ALB, ECS, RDS, IAM）に十分な安定バージョン
     # バージョン更新時はプロバイダ互換性を確認してください
-    TERRAFORM_VERSION="1.6.0"
+    TERRAFORM_VERSION="1.14.6"
     TERRAFORM_URL="https://releases.hashicorp.com/terraform/${TERRAFORM_VERSION}/terraform_${TERRAFORM_VERSION}_linux_amd64.zip"
     
     log_info "Terraform ${TERRAFORM_VERSION}をダウンロード中..."
@@ -232,7 +232,7 @@ if [ ! -d "$CONTINUE_CONFIG_DIR" ]; then
 fi
 
 # config.jsonが存在しない、または内容が正しくない場合は作成/更新
-if [ ! -f "$CONTINUE_CONFIG_FILE" ] || ! grep -q '"provider": "bedrock"' "$CONTINUE_CONFIG_FILE" 2>/dev/null; then
+if [ ! -f "$CONTINUE_CONFIG_FILE" ] || ! grep -q '"openai.gpt-oss-120b-1:0"' "$CONTINUE_CONFIG_FILE" 2>/dev/null; then
     log_info "Continue設定ファイル（config.json）を作成/更新中..."
     cat > "$CONTINUE_CONFIG_FILE" << 'EOF'
 {
@@ -395,9 +395,11 @@ fi
 
 # 10-1. .envファイルの自動読み込み設定を~/.bashrcに追加
 log_info ".envファイルの自動読み込み設定を追加中..."
-ENV_AUTO_LOAD="# .envファイルを自動的に読み込む（プロジェクトディレクトリにいる場合）
-if [ -f .env ]; then
-    export \$(cat .env | grep -v '^#' | xargs)
+ENV_AUTO_LOAD="# .envファイルを自動的に読み込む（プロジェクトディレクトリの場合のみ）
+if [ -f \"\$HOME/projects/ai_agentic/.env\" ]; then
+    set -a
+    source \"\$HOME/projects/ai_agentic/.env\"
+    set +a
 fi"
 
 # 既に設定が存在するかチェック

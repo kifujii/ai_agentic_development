@@ -1,13 +1,19 @@
 {
   "models": [
     {
-      "title": "Llama 3.3 70B (Bedrock)",
+      "title": "GTP-OSS-120B (Bedrock)",
       "provider": "bedrock",
-      "model": "us.meta.llama3-3-70b-instruct-v1:0",
-      "region": "us-west-2"
+      "model": "openai.gpt-oss-120b-1:0",
+      "region": "us-east-1"
     }
   ],
+  "tabAutocompleteModel": {
+    "title": "GTP-OSS-120B (Autocomplete)",
+    "provider": "bedrock",
+    "model": "openai.gpt-oss-120b-1:0",
+    "region": "us-east-1"
+  },
   "allowAnonymousTelemetry": false,
-  "disableIndexing": false,
+  "disableIndexing": true,
   "disableFormatting": true
 }

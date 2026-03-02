@@ -89,7 +89,7 @@ ai_agentic/
 # → Agentに「training-ec2-agent-role と training-ec2-agent-profile を削除して」と伝えてください
 
 # 2. セッション1〜2: VPC/EC2
-cd terraform/vpc-ec2 && terraform destroy && cd ../..
+terraform -chdir=terraform/vpc-ec2 destroy
 ```
 
 - AWS認証情報は安全に管理してください
