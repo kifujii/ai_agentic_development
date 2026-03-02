@@ -104,7 +104,7 @@ SSH鍵はプロジェクトルートの keys/training-key にあります。
 
 Ansible の `ping` モジュールで EC2 への接続を確認します。
 
-Agentに `ansible/ フォルダで接続テスト（ansible all -m ping）を実行して` と指示しましょう。
+Agentに `プロジェクトルートから Ansible の接続テスト（ansible all -m ping）を実行して` と指示しましょう。
 
 `web1 | SUCCESS` と表示されれば OK ✅
 
