@@ -7,7 +7,7 @@
 | 期間 | 2日間（必須8h + 任意1.75h） |
 | 形式 | ハンズオン形式のバイブコーディング |
 | 環境 | OpenShift DevSpaces + AWS |
-| 技術 | Terraform, Ansible, Cline（AWS Bedrock） |
+| 技術 | Terraform, Ansible, Claude Code（AWS Bedrock） |
 | 前提 | 事前勉強会で生成AIとIaCの基礎を学習済み |
 
 ---
@@ -46,7 +46,7 @@ Day 2 (4h + 任意1h): システム運用 (Ansible)
 
 ### セッション1：VPC + EC2 を段階的に構築（必須・2h）
 
-ClineのAIエージェント機能を使って、VPC → サブネット → セキュリティグループ → EC2 の順で段階的にAWSインフラを構築します。
+Claude CodeのAIエージェント機能を使って、VPC → サブネット → セキュリティグループ → EC2 の順で段階的にAWSインフラを構築します。
 
 **構築ステップ**:
 1. VPC作成
@@ -167,7 +167,7 @@ Session 6: サーバー情報取得・レポート（任意）
 ### 必要な環境
 - AWSアカウント（トレーニング用）
 - OpenShift DevSpacesへのアクセス
-- Cline（AWS Bedrock使用）
+- Claude Code（AWS Bedrock使用）
 
 ### 必要なスキル
 - 基本的なLinuxコマンド

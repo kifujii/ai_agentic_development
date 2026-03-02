@@ -134,96 +134,49 @@ else
     log_warn "AWS CLIは既にインストールされています: $(aws --version)"
 fi
 
-# 6. Pythonパッケージのインストール（スキップ）
-# ワークショップでは Terraform、Ansible、AWS CLI を直接使用するため、
-# 追加のPythonパッケージは不要です。
-# Clineはエディタ拡張機能なので、Pythonパッケージも不要です。
-log_info "Pythonパッケージのインストール: ワークショップでは不要のためスキップします"
-
-# 6-1. VS Code拡張機能のインストール（CLI経由）
-log_info "VS Code拡張機能のインストール中..."
-
-# code-ossコマンドのパスを探す（複数のパスを試す）
-CODE_CMD=""
-for CODE_PATH in "/usr/bin/code-oss" "/usr/local/bin/code-oss" "$HOME/.local/bin/code-oss" "code-oss" "/usr/bin/code" "/usr/local/bin/code" "$HOME/.local/bin/code" "code"; do
-    if command -v "$CODE_PATH" &> /dev/null; then
-        CODE_CMD="$CODE_PATH"
-        break
-    fi
-done
-
-if [ -n "$CODE_CMD" ]; then
-    log_info "VS Code CLIが見つかりました: $CODE_CMD"
-    
-    # 必要な拡張機能のリスト（Clineのみ）
-    EXTENSIONS=(
-        "saoudrizwan.claude-dev"
-    )
-    
-    INSTALLED_COUNT=0
-    FAILED_EXTENSIONS=()
-    
-    for EXT in "${EXTENSIONS[@]}"; do
-        # 既にインストールされているか確認
-        if "$CODE_CMD" --list-extensions 2>/dev/null | grep -q "^${EXT}$"; then
-            log_info "✓ 拡張機能 ${EXT} は既にインストールされています"
-            ((INSTALLED_COUNT++))
-        else
-            log_info "拡張機能 ${EXT} をインストール中..."
-            # リトライ処理（最大3回）
-            RETRY_COUNT=0
-            MAX_RETRIES=3
-            INSTALL_SUCCESS=false
-            
-            while [ $RETRY_COUNT -lt $MAX_RETRIES ]; do
-                if "$CODE_CMD" --install-extension "${EXT}" --force 2>/dev/null; then
-                    log_info "✓ 拡張機能 ${EXT} のインストールに成功しました"
-                    ((INSTALLED_COUNT++))
-                    INSTALL_SUCCESS=true
-                    break
-                else
-                    ((RETRY_COUNT++))
-                    if [ $RETRY_COUNT -lt $MAX_RETRIES ]; then
-                        log_warn "拡張機能 ${EXT} のインストールに失敗しました（リトライ ${RETRY_COUNT}/${MAX_RETRIES}）"
-                        sleep 2
-                    fi
-                fi
-            done
-            
-            if [ "$INSTALL_SUCCESS" = false ]; then
-                log_warn "拡張機能 ${EXT} のインストールに失敗しました（最大リトライ回数に達しました）"
-                FAILED_EXTENSIONS+=("${EXT}")
-            fi
-        fi
-    done
-    
-    # 結果のサマリー
-    if [ $INSTALLED_COUNT -eq ${#EXTENSIONS[@]} ]; then
-        log_info "✓ すべての拡張機能がインストールされています"
-    else
-        log_warn "一部の拡張機能のインストールに失敗しました（${INSTALLED_COUNT}/${#EXTENSIONS[@]} 成功）"
-        if [ ${#FAILED_EXTENSIONS[@]} -gt 0 ]; then
-            log_info "失敗した拡張機能: ${FAILED_EXTENSIONS[*]}"
-            log_info "手動でインストールする場合:"
-            for EXT in "${FAILED_EXTENSIONS[@]}"; do
-                log_info "  $CODE_CMD --install-extension ${EXT} --force"
-            done
-        fi
-    fi
+# 6. Node.js / npm の確認
+log_info "Node.js / npm の確認中..."
+if command -v node &> /dev/null && command -v npm &> /dev/null; then
+    log_info "✓ Node.js は既にインストールされています: $(node --version)"
+    log_info "✓ npm は既にインストールされています: $(npm --version)"
 else
-    log_warn "VS Code CLI (code-oss/code) が見つかりません。拡張機能は手動でインストールしてください。"
-    log_info "以下のコマンドでCline拡張機能をインストールできます:"
-    log_info "  code-oss --install-extension saoudrizwan.claude-dev --force"
+    log_warn "Node.js / npm がインストールされていません。"
+    log_info "Node.js のインストールを試みます..."
+    # nvm経由でインストール
+    if [ ! -d "$HOME/.nvm" ]; then
+        curl -o- https://raw.githubusercontent.com/nvm-sh/nvm/v0.40.1/install.sh | bash
+    fi
+    export NVM_DIR="$HOME/.nvm"
+    [ -s "$NVM_DIR/nvm.sh" ] && \. "$NVM_DIR/nvm.sh"
+    nvm install --lts || {
+        log_error "Node.js のインストールに失敗しました"
+        log_error "手動でインストールしてください: https://nodejs.org/"
+        exit 1
+    }
+    log_info "Node.js インストール完了: $(node --version)"
 fi
 
-# 6-2. Cline設定の案内
-log_info "Clineの設定について:"
-log_info "  Clineの初回起動時にAPIプロバイダーの設定画面が表示されます。"
-log_info "  以下の設定を入力してください:"
-log_info "    - API Provider: AWS Bedrock"
-log_info "    - Region: ap-northeast-1"
-log_info "    - Model: anthropic.claude-sonnet-4-6"
-log_info "  詳細は docs/setup/CLINE_SETUP.md を参照してください。"
+# 6-1. Claude Code のインストール（npm グローバル）
+log_info "Claude Code のインストール中..."
+if command -v claude &> /dev/null; then
+    log_info "✓ Claude Code は既にインストールされています: $(claude --version 2>/dev/null || echo '(バージョン取得不可)')"
+else
+    npm install -g @anthropic-ai/claude-code || {
+        log_error "Claude Code のインストールに失敗しました"
+        log_error "手動でインストールしてください: npm install -g @anthropic-ai/claude-code"
+        exit 1
+    }
+    log_info "✓ Claude Code インストール完了"
+fi
+
+# 6-2. Claude Code の Bedrock 設定案内
+log_info "Claude Code の設定について:"
+log_info "  Claude Code は AWS Bedrock 経由で Claude Sonnet 4.6 を使用します。"
+log_info "  .env ファイルに以下の環境変数が設定されていることを確認してください:"
+log_info "    - CLAUDE_CODE_USE_BEDROCK=1"
+log_info "    - AWS_REGION=ap-northeast-1"
+log_info "    - ANTHROPIC_MODEL=anthropic.claude-sonnet-4-6-20250514-v1:0"
+log_info "  詳細は docs/setup/CLAUDE_CODE_SETUP.md を参照してください。"
 
 # 7. Gitの確認（通常は既にインストールされている）
 log_info "Gitの確認中..."
@@ -326,7 +279,7 @@ else
 fi
 
 
-# 10-3. AWS CLI設定ファイルを作成（Cline拡張機能とAWS CLI用）
+# 10-3. AWS CLI設定ファイルを作成（Claude CodeとAWS CLI用）
 log_info "AWS CLI設定ファイルを作成中（.envファイルから自動設定）..."
 if [ -f ".env" ]; then
     # .envファイルからAWS認証情報を抽出
@@ -419,6 +372,12 @@ if command -v git &> /dev/null; then
     log_info "✓ Git: $(git --version)"
 else
     log_error "✗ Git: インストールされていません"
+fi
+
+if command -v claude &> /dev/null; then
+    log_info "✓ Claude Code: インストール済み"
+else
+    log_error "✗ Claude Code: インストールされていません"
 fi
 
 echo ""
