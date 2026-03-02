@@ -15,7 +15,7 @@ EC2に SSM Agent と CloudWatch Agent がインストール・稼働し、AWSコ
 > - **SSM Agent**: AWSコンソールからEC2にリモートアクセス（Session Manager）。SSHなしで管理できる。
 > - **CloudWatch Agent**: CPU/メモリ/ディスクのメトリクスやログをCloudWatchに送信。監視に必須。
 >
-> ⚠️ **用語の注意**: ここでの「Agent」は **EC2上で動くAWSのソフトウェア** です。Continue の「Agent モード」（AIアシスタント）とは別物です。
+> ⚠️ **用語の注意**: ここでの「Agent」は **EC2上で動くAWSのソフトウェア**（SSM Agent, CloudWatch Agent）です。Cline（AIコーディングエージェント）とは別物です。
 
 ---
 

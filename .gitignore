@@ -47,6 +47,7 @@ ansible.cfg.local
 # IDE
 .vscode/
 .idea/
+.continue/
 *.swp
 *.swo
 *~

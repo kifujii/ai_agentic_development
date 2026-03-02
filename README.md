@@ -1,10 +1,10 @@
 # AI駆動 Infrastructure as Code ワークショップ
 
-> AWS CLI、Ansible、Terraform、そしてContinueを活用した次世代IaC開発を学ぶ
+> AWS CLI、Ansible、Terraform、そしてClineを活用した次世代IaC開発を学ぶ
 
 ## 概要
 
-ContinueのAgent機能を使って、TerraformやAnsibleのコードを自動生成・実行しながら、AWSインフラの構築と運用を実践的に学びます。
+ClineのAIエージェント機能を使って、TerraformやAnsibleのコードを自動生成・実行しながら、AWSインフラの構築と運用を実践的に学びます。
 
 ## セッション構成
 
@@ -74,7 +74,7 @@ ai_agentic/
 │   └── requirements.txt
 ├── terraform/                   # Terraformコード（セッション中に作成）
 ├── ansible/                     # Ansibleコード（セッション中に作成）
-├── .continue/                   # Continue設定
+├── .vscode/                     # エディタ設定
 └── README.md
 ```
 
@@ -99,7 +99,7 @@ terraform -chdir=terraform/vpc-ec2 destroy
 - [Terraform公式ドキュメント](https://developer.hashicorp.com/terraform/docs)
 - [Ansible公式ドキュメント](https://docs.ansible.com/)
 - [AWS CLI公式ドキュメント](https://docs.aws.amazon.com/cli/)
-- [Continue公式ドキュメント](https://continue.dev/docs)
+- [Cline GitHub](https://github.com/cline/cline)
 
 ---
 
