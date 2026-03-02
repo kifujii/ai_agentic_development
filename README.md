@@ -1,10 +1,10 @@
 # AI駆動 Infrastructure as Code ワークショップ
 
-> AWS CLI、Ansible、Terraform、そしてContinueを活用した次世代IaC開発を学ぶ
+> AWS CLI、Ansible、Terraform、そしてClaude Codeを活用した次世代IaC開発を学ぶ
 
 ## 概要
 
-ContinueのAgent機能を使って、TerraformやAnsibleのコードを自動生成・実行しながら、AWSインフラの構築と運用を実践的に学びます。
+Claude CodeのAIエージェント機能を使って、TerraformやAnsibleのコードを自動生成・実行しながら、AWSインフラの構築と運用を実践的に学びます。
 
 ## セッション構成
 
@@ -66,15 +66,15 @@ ai_agentic/
 │   ├── TRAINING_MENU.md         # トレーニングメニュー
 │   ├── images/                  # アーキテクチャ構成図
 │   ├── session_guides/          # セッションガイド (1〜6)
-│   └── setup/                   # セットアップ手順
+│   └── setup/                   # セットアップ手順（Claude Code, 環境構築, FAQ）
 ├── evaluation/                  # 評価チェックリスト
 ├── scripts/
-│   ├── setup_devspaces.sh       # セットアップスクリプト
-│   ├── generate_diagrams.py     # 構成図生成スクリプト
-│   └── requirements.txt
+│   ├── setup_devspaces.sh       # 環境セットアップスクリプト
+│   └── check.sh                 # セッション完了チェックスクリプト
 ├── terraform/                   # Terraformコード（セッション中に作成）
 ├── ansible/                     # Ansibleコード（セッション中に作成）
-├── .continue/                   # Continue設定
+├── .claude/                     # Claude Code設定（.gitignore対象、スクリプトで自動生成）
+├── .env.template                # AWS認証情報テンプレート
 └── README.md
 ```
 
@@ -89,7 +89,7 @@ ai_agentic/
 # → Agentに「training-ec2-agent-role と training-ec2-agent-profile を削除して」と伝えてください
 
 # 2. セッション1〜2: VPC/EC2
-cd terraform/vpc-ec2 && terraform destroy && cd ../..
+terraform -chdir=terraform/vpc-ec2 destroy
 ```
 
 - AWS認証情報は安全に管理してください
@@ -99,7 +99,7 @@ cd terraform/vpc-ec2 && terraform destroy && cd ../..
 - [Terraform公式ドキュメント](https://developer.hashicorp.com/terraform/docs)
 - [Ansible公式ドキュメント](https://docs.ansible.com/)
 - [AWS CLI公式ドキュメント](https://docs.aws.amazon.com/cli/)
-- [Continue公式ドキュメント](https://continue.dev/docs)
+- [Claude Code公式ドキュメント](https://docs.anthropic.com/en/docs/claude-code)
 
 ---
 

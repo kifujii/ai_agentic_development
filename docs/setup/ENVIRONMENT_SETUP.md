@@ -7,119 +7,203 @@
 - **GitHub アカウント**: リポジトリへのアクセス用
 - **AWS アカウント**: トレーニング用（アクセスキー/シークレットキー）
 - **OpenShift DevSpaces へのアクセス**: 開発環境
-- **VS Code または Cursor エディタ**: Continue拡張機能を使用
 
 ## 🚀 セットアップ手順
 
 ### ステップ1: DevSpaces環境への資材の持ち込み
-
-#### 1.1 DevSpacesワークスペースの作成
 
 1. OpenShift DevSpacesのURLにアクセス
 2. ログイン
 3. 新しいワークスペースを作成
    - **Import from Git**: このリポジトリのURLを指定
 
-### ステップ2: 環境セットアップスクリプトの実行
+### ステップ2: AWS認証情報の設定（.envファイルの作成）
 
-**重要**: セットアップスクリプトは **OpenShift DevSpaces環境内** で実行する必要があります。
+**先に `.env` ファイルを作成しておくと、ステップ3のスクリプト実行1回で全セットアップが完了します。**
 
 1. **ターミナルを開く**
    - VS Codeのメニューから「ターミナル」→「新しいターミナル」を選択
    - または、ショートカットキー（`Ctrl+Shift+C` / `Cmd+Shift+C`）を使用
 
-2. **セットアップスクリプトの実行**
+2. **`.env.template` から `.env` ファイルを作成**
    ```bash
-   ./scripts/setup_devspaces.sh
+   cp .env.template .env
    ```
 
-**インストールされるツールと拡張機能**:
-- **ツール**:
-  - Terraform（~/.local/binにインストール）
-  - Ansible（pipでユーザー権限インストール）
-  - AWS CLI（~/.local/binにインストール）
-- **VS Code拡張機能**:
-  - Continue
+3. **`.env` ファイルを編集してAWS認証情報を設定**
 
-詳細は [`docs/setup/DEVSPACES_SETUP.md`](../setup/DEVSPACES_SETUP.md) を参照してください。
+   VS Codeで`.env`ファイルを開き、以下の値を実際のAWS認証情報に置き換えてください：
 
-### ステップ3: AWS認証情報の設定
+   ```bash
+   # AWS認証情報
+   AWS_ACCESS_KEY_ID=your-access-key-here
+   AWS_SECRET_ACCESS_KEY=your-secret-key-here
+   AWS_DEFAULT_REGION=ap-northeast-1
+   ```
 
-#### 3.1 .envファイルの作成と編集
+   **編集内容**:
+   - `your-access-key-here` → AWSアクセスキーID
+   - `your-secret-key-here` → AWSシークレットアクセスキー
 
-セットアップスクリプト（ステップ2）が`.env.template`ファイルを作成します。このテンプレートから`.env`ファイルを作成し、実際のAWS認証情報を設定します：
+### ステップ3: 環境セットアップスクリプトの実行
 
-```bash
-cp .env.template .env
-```
-
-VS Codeで`.env`ファイルを開き、以下の値を実際のAWS認証情報に置き換えてください：
-
-```bash
-# AWS認証情報
-AWS_ACCESS_KEY_ID=your-access-key-here
-AWS_SECRET_ACCESS_KEY=your-secret-key-here
-AWS_DEFAULT_REGION=ap-northeast-1
-```
-
-**編集内容**:
-- `your-access-key-here` → AWSアクセスキーID
-- `your-secret-key-here` → AWSシークレットアクセスキー
-
-#### 3.2 セットアップスクリプトの再実行（AWS CLI設定ファイルの自動作成）
-
-**重要**: `.env`ファイルを編集した後、セットアップスクリプトを再実行すると、`.env`ファイルから自動的にAWS CLI設定ファイル（`~/.aws/credentials`と`~/.aws/config`）が作成されます。これにより、Continue拡張機能がAWS認証情報にアクセスできるようになります。
-
-セットアップスクリプトを再実行します：
+**重要**: セットアップスクリプトは **OpenShift DevSpaces環境内** で実行する必要があります。
 
 ```bash
 ./scripts/setup_devspaces.sh
 ```
 
-このスクリプトは以下の処理を自動的に実行します：
-- `.env`ファイルからAWS認証情報を読み込み
-- `~/.aws/credentials`ファイルを作成（既に存在する場合は更新）
-- `~/.aws/config`ファイルを作成（リージョン設定）
-- Continue設定ファイル（`.continue/config.json`）の作成
+**スクリプトが行うこと**:
+- ツールのインストール（Terraform, Ansible, AWS CLI, Claude Code）
+- `.env` から AWS CLI 設定ファイル（`~/.aws/credentials`, `~/.aws/config`）を自動作成
+- AWSアカウントIDを取得して Claude Code Bedrock設定（`.claude/settings.local.json`）を自動生成
 
-#### 3.3 AWS認証情報の確認
+**インストール後の注意**:
+- スクリプト実行後、新しいターミナルを開くか、`source ~/.bashrc`を実行してPATHを更新してください
 
-AWS認証情報が正しく設定されているか確認します：
+### ステップ4: AWS認証情報の確認
 
 ```bash
 aws sts get-caller-identity
 ```
 
-### ステップ4: 動作確認
+### ステップ5: 動作確認
 
-#### 4.1 Continueの確認
+#### 5.1 ツールの確認
 
-1. **Continueを起動**
-   - 方法1: 左側のサイドバーからContinueアイコンをクリック
-   - 方法2: ショートカットキー（`Ctrl+L` / `Cmd+L`）を使用
+```bash
+terraform version
+```
 
-2. **Agentモードで動作確認**
-   - Continueのチャット画面で、Agentモードを有効化
-   - チャットに以下を入力：
+```bash
+ansible --version
+```
+
+```bash
+aws --version
+```
+
+#### 5.2 Claude Codeの確認
+
+1. **Claude Codeを起動**
+   ```bash
+   claude
+   ```
+
+2. **動作確認**
+   - 以下のプロンプトを入力：
      ```
-     testフォルダに「hello.txt」というファイルを作成して、その中に「Hello, Continue!」と書き込んでください
+     testフォルダに「hello.txt」というファイルを作成して、その中に「Hello, Claude Code!」と書き込んでください
      ```
-   - 画面下部にあるチャット画面のすぐ上に「Create New File」という表示が出るので、「Accept」をクリックしてください
-   - AIが`test`フォルダを作成し、`hello.txt`ファイルを作成して内容を書き込めば、設定は成功です
+   - Claude Codeがファイル作成の承認を求めてくるので確認して承認
+   - `test/hello.txt` が作成されれば、設定は成功です
 
 ## ✅ セットアップ完了チェックリスト
 
 - [ ] DevSpacesワークスペースを作成した
+- [ ] `.env`ファイルを作成し、AWS認証情報を入力した
 - [ ] セットアップスクリプトを実行した
-- [ ] `.env`ファイルを作成し、AWS認証情報を設定した
-- [ ] セットアップスクリプトを再実行してAWS CLI設定ファイルを作成した
 - [ ] AWS認証情報が正しく設定されていることを確認した（`aws sts get-caller-identity`）
-- [ ] Continueが正常に動作することを確認した（Agentモードでファイル作成テスト）
+- [ ] Claude Codeが正常に動作することを確認した（ファイル作成テスト）
 
 ## 🆘 トラブルシューティング
 
-よくある問題と解決方法は [`docs/setup/FAQ.md`](../setup/FAQ.md) を参照してください。
+### 権限エラー
+```bash
+chmod +x scripts/*.sh
+```
 
-## 📚 次のステップ
+### AWS認証エラー
+- 認証情報が正しく設定されているか確認
+- IAM権限が適切か確認
+- リージョンが正しいか確認
+
+### Claude Codeが起動しない
+1. Node.js / npm がインストールされているか確認（`node --version`）
+2. Claude Codeがインストールされているか確認（`which claude`）
+3. 再インストール:
+   ```bash
+   npm config set prefix "$HOME/.local"
+   npm install -g @anthropic-ai/claude-code
+   ```
+
+### Claude Codeでログイン画面が表示される
+1. `.claude/settings.local.json` が存在するか確認（`cat .claude/settings.local.json`）
+2. 存在しない場合、セットアップスクリプトを再実行（`./scripts/setup_devspaces.sh`）
+3. 詳細は [Claude Code セットアップガイド](CLAUDE_CODE_SETUP.md) を参照
+
+### AWS Bedrockへの接続エラー
+1. `.claude/settings.local.json` に正しいAWSアカウントIDが含まれているか確認
+2. AWS認証情報が正しく設定されているか確認（`aws sts get-caller-identity`）
+3. AWSリージョンが正しいか確認（`ap-northeast-1`）
+4. AWS Bedrockへのアクセス権限があるか確認（IAMポリシー）
+
+### 手動インストールが必要な場合
+
+スクリプトが失敗した場合の手動インストール手順：
+
+<details>
+<summary>Terraformの手動インストール</summary>
+
+```bash
+mkdir -p ~/.local/bin
+export PATH="$HOME/.local/bin:$PATH"
+TERRAFORM_VERSION="1.14.6"
+wget https://releases.hashicorp.com/terraform/${TERRAFORM_VERSION}/terraform_${TERRAFORM_VERSION}_linux_amd64.zip
+unzip terraform_${TERRAFORM_VERSION}_linux_amd64.zip
+mv terraform ~/.local/bin/
+chmod +x ~/.local/bin/terraform
+rm terraform_${TERRAFORM_VERSION}_linux_amd64.zip
+source ~/.bashrc
+terraform version
+```
+
+</details>
+
+<details>
+<summary>Ansibleの手動インストール</summary>
+
+```bash
+python3 -m pip install --user ansible
+ansible --version
+```
+
+</details>
+
+<details>
+<summary>AWS CLIの手動インストール</summary>
+
+```bash
+mkdir -p ~/.local/bin
+curl "https://awscli.amazonaws.com/awscli-exe-linux-x86_64.zip" -o "awscliv2.zip"
+unzip awscliv2.zip
+./aws/install --install-dir ~/.local/aws-cli --bin-dir ~/.local/bin
+rm -rf awscliv2.zip aws
+source ~/.bashrc
+aws --version
+```
+
+</details>
+
+<details>
+<summary>Claude Codeの手動インストール</summary>
+
+```bash
+npm config set prefix "$HOME/.local"
+npm install -g @anthropic-ai/claude-code
+claude --version
+```
+
+</details>
+
+よくある問題と解決方法は [`docs/setup/FAQ.md`](FAQ.md) を参照してください。
+
+## 📚 参考資料
+
+- [Claude Code セットアップガイド](CLAUDE_CODE_SETUP.md) — Claude Codeの詳細設定
+- [Terraform公式ドキュメント](https://www.terraform.io/docs)
+- [Ansible公式ドキュメント](https://docs.ansible.com/)
+
+## ➡️ 次のステップ
 
 環境セットアップが完了したら、[README.md](../../README.md) に戻ってワークショップを開始してください。

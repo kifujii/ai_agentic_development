@@ -9,7 +9,7 @@
 - Terraform
 - Ansible
 - AWS CLI
-- Pythonパッケージ
+- Claude Code（npm グローバルインストール）
 - Git
 
 これらのツールは、DevSpaces環境内でトレーニングを実施するために必要です。
@@ -44,7 +44,7 @@
 - `sudo`権限が必要な場合があります
 - DevSpaces環境と異なる動作をする可能性があります
 
-ローカル環境で実行する場合は、手動インストール手順（`docs/setup/DEVSPACES_SETUP.md`の「手動インストール」セクション）を参照してください。
+ローカル環境で実行する場合は、手動インストール手順（`docs/setup/ENVIRONMENT_SETUP.md`の「手動インストール」セクション）を参照してください。
 
 ## Q: セットアップスクリプトの実行にsudo権限が必要ですが、DevSpaces環境でsudoが使えない場合はどうすればいいですか？
 
@@ -55,22 +55,22 @@
 - **Terraform**: `~/.local/bin`にインストール
 - **Ansible**: `pip3 install --user`でインストール
 - **AWS CLI**: `~/.local/bin`にインストール
-- **Pythonパッケージ**: `pip3 install --user`でインストール
+- **Claude Code**: `npm install -g`でインストール（npm prefixを`~/.local`に設定）
 
 **手動インストールが必要な場合**:
-`docs/setup/DEVSPACES_SETUP.md`の「手動インストール」セクションを参照してください。
+`docs/setup/ENVIRONMENT_SETUP.md`の「手動インストール」セクションを参照してください。
 
 ## Q: セットアップスクリプトの実行中にエラーが発生した場合はどうすればいいですか？
 
 **A: トラブルシューティングセクションを参照してください。**
 
-`docs/setup/DEVSPACES_SETUP.md`の「トラブルシューティング」セクションに、よくある問題と解決方法が記載されています。
+`docs/setup/ENVIRONMENT_SETUP.md`の「トラブルシューティング」セクションに、よくある問題と解決方法が記載されています。
 
 よくある問題：
 - 権限エラー
 - パッケージインストールエラー
 - AWS認証エラー
-- APIキーエラー
+- Claude Code Bedrock接続エラー
 
 ## Q: セットアップ完了後、どのようにトレーニングを開始すればいいですか？
 

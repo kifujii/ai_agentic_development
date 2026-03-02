@@ -50,6 +50,104 @@ if [[ ":$PATH:" != *":$LOCAL_BIN:"* ]]; then
     log_info "PATHに ~/.local/bin を追加しました"
 fi
 
+# プロジェクトルートの取得
+PROJECT_ROOT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
+
+# ==============================================================
+# 0. .envファイルの確認と AWS認証情報の早期セットアップ
+# ==============================================================
+# .envファイルが先に作成されていれば、ツールインストール後の
+# Claude Code設定（AWSアカウントID取得）まで1回の実行で完結します。
+log_info ".envファイルの確認中..."
+AWS_CREDENTIALS_READY=false
+
+if [ ! -f ".env" ]; then
+    if [ -f ".env.template" ]; then
+        log_warn ".envファイルが見つかりません。"
+        log_info "先に .env ファイルを作成してからスクリプトを実行すると、1回で全セットアップが完了します。"
+        log_info "  コマンド: cp .env.template .env"
+        log_info "  その後、.env を編集してAWS認証情報を設定してください。"
+    else
+        log_warn ".env.templateファイルが見つかりません。"
+        log_info ".envファイルを手動で作成し、AWS認証情報を設定してください。"
+    fi
+else
+    log_info "✓ .envファイルが見つかりました。AWS認証情報を読み込みます..."
+
+    # .envファイルからAWS認証情報を抽出
+    AWS_ACCESS_KEY=$(grep "^AWS_ACCESS_KEY_ID=" .env | grep -v '^#' | cut -d'=' -f2 | sed "s/^['\"]//;s/['\"]$//" | head -1)
+    AWS_SECRET_KEY=$(grep "^AWS_SECRET_ACCESS_KEY=" .env | grep -v '^#' | cut -d'=' -f2 | sed "s/^['\"]//;s/['\"]$//" | head -1)
+    AWS_REGION_ENV=$(grep "^AWS_DEFAULT_REGION=" .env | grep -v '^#' | cut -d'=' -f2 | sed "s/^['\"]//;s/['\"]$//" | head -1)
+
+    if [ -n "$AWS_ACCESS_KEY" ] && [ -n "$AWS_SECRET_KEY" ] && [ "$AWS_ACCESS_KEY" != "your-access-key-here" ] && [ "$AWS_SECRET_KEY" != "your-secret-key-here" ]; then
+        # 環境変数にエクスポート（このスクリプト内で aws コマンドが使えるようにする）
+        export AWS_ACCESS_KEY_ID="$AWS_ACCESS_KEY"
+        export AWS_SECRET_ACCESS_KEY="$AWS_SECRET_KEY"
+        [ -n "$AWS_REGION_ENV" ] && export AWS_DEFAULT_REGION="$AWS_REGION_ENV"
+
+        # ~/.aws/credentials ファイルの作成・更新
+        mkdir -p ~/.aws
+        if [ ! -f ~/.aws/credentials ] || ! grep -q "\[default\]" ~/.aws/credentials 2>/dev/null; then
+            cat > ~/.aws/credentials << EOF
+[default]
+aws_access_key_id = ${AWS_ACCESS_KEY}
+aws_secret_access_key = ${AWS_SECRET_KEY}
+EOF
+            log_info "✓ AWS認証情報ファイルを作成しました: ~/.aws/credentials"
+        else
+            awk -v access_key="$AWS_ACCESS_KEY" -v secret_key="$AWS_SECRET_KEY" '
+                /\[default\]/ { in_default=1; print; next }
+                in_default && /^\[/ { in_default=0 }
+                in_default && /^aws_access_key_id/ { print "aws_access_key_id = " access_key; next }
+                in_default && /^aws_secret_access_key/ { print "aws_secret_access_key = " secret_key; next }
+                { print }
+            ' ~/.aws/credentials > ~/.aws/credentials.tmp && mv ~/.aws/credentials.tmp ~/.aws/credentials
+            log_info "✓ AWS認証情報ファイルを更新しました: ~/.aws/credentials"
+        fi
+
+        # ~/.aws/config ファイルの作成・更新
+        if [ -n "$AWS_REGION_ENV" ]; then
+            if [ ! -f ~/.aws/config ]; then
+                cat > ~/.aws/config << EOF
+[default]
+region = ${AWS_REGION_ENV}
+EOF
+                log_info "✓ AWS設定ファイルを作成しました: ~/.aws/config"
+            else
+                if ! grep -q "\[default\]" ~/.aws/config; then
+                    echo "" >> ~/.aws/config
+                    echo "[default]" >> ~/.aws/config
+                    echo "region = ${AWS_REGION_ENV}" >> ~/.aws/config
+                    log_info "✓ AWS設定ファイルにリージョンを追加しました: ~/.aws/config"
+                fi
+            fi
+        fi
+
+        AWS_CREDENTIALS_READY=true
+        log_info "✓ AWS認証情報のセットアップが完了しました"
+    else
+        log_warn ".envファイルに有効なAWS認証情報が設定されていません（テンプレートのままの可能性があります）"
+        log_info ".envファイルを編集してAWS認証情報を設定してください。"
+    fi
+fi
+
+# .envファイルの自動読み込み設定を~/.bashrcに追加
+log_info ".envファイルの自動読み込み設定を確認中..."
+ENV_AUTO_LOAD="# .envファイルを自動的に読み込む（プロジェクトディレクトリの場合のみ）
+if [ -f \"${PROJECT_ROOT_DIR}/.env\" ]; then
+    set -a
+    source \"${PROJECT_ROOT_DIR}/.env\"
+    set +a
+fi"
+
+if ! grep -q "# .envファイルを自動的に読み込む" ~/.bashrc 2>/dev/null; then
+    echo "" >> ~/.bashrc
+    echo "$ENV_AUTO_LOAD" >> ~/.bashrc
+    log_info "✓ .envファイルの自動読み込み設定を~/.bashrcに追加しました"
+else
+    log_info "✓ .envファイルの自動読み込み設定は既に存在します"
+fi
+
 # 1. システムパッケージの更新（sudoが使える場合のみ）
 if check_sudo; then
     log_info "システムパッケージの更新中..."
@@ -63,7 +161,7 @@ log_info "Terraformのインストール中..."
 if ! command -v terraform &> /dev/null; then
     # Terraform 1.6.0: ワークショップで使用する機能（VPC, EC2, ALB, ECS, RDS, IAM）に十分な安定バージョン
     # バージョン更新時はプロバイダ互換性を確認してください
-    TERRAFORM_VERSION="1.6.0"
+    TERRAFORM_VERSION="1.14.6"
     TERRAFORM_URL="https://releases.hashicorp.com/terraform/${TERRAFORM_VERSION}/terraform_${TERRAFORM_VERSION}_linux_amd64.zip"
     
     log_info "Terraform ${TERRAFORM_VERSION}をダウンロード中..."
@@ -82,12 +180,18 @@ else
     log_warn "Terraformは既にインストールされています: $(terraform version | head -n 1)"
 fi
 
-# 3. pipのインストール確認とインストール（Ansibleのインストール前に必要）
+# 3. pipのインストール確認とアップグレード（Ansibleのインストール前に必要）
 log_info "pipの確認中..."
 log_info "使用するPythonバージョン: $(python3 --version)"
 if python3 -m pip --version &>/dev/null; then
-    log_info "✓ pipは既にインストールされています"
-    python3 -m pip install --user --upgrade pip -q || log_warn "pipのアップグレードに失敗しましたが、続行します"
+    log_info "✓ pipは既にインストールされています: $(python3 -m pip --version)"
+    # pipをアップグレード（古いpipは依存解決が遅いため、先にアップグレードする）
+    log_info "pipをアップグレード中..."
+    python3 -m pip install --user --upgrade pip || log_warn "pipのアップグレードに失敗しましたが、続行します"
+    # アップグレード後のバージョンを確認
+    # --user でインストールしたpipを確実に使うため、ハッシュテーブルをリフレッシュ
+    hash -r 2>/dev/null
+    log_info "pipバージョン（アップグレード後）: $(python3 -m pip --version)"
 else
     log_warn "pipがインストールされていません。インストールします..."
     python3 -m ensurepip --user --upgrade || {
@@ -95,18 +199,22 @@ else
         log_error "手動でインストールしてください: python3 -m ensurepip --user"
         exit 1
     }
-    log_info "pipのインストール完了"
+    # インストール直後にアップグレード
+    python3 -m pip install --user --upgrade pip || log_warn "pipのアップグレードに失敗しましたが、続行します"
+    hash -r 2>/dev/null
+    log_info "pipのインストール完了: $(python3 -m pip --version)"
 fi
 
 # 4. Ansibleのインストール（python3 -m pipでユーザー権限）
 log_info "Ansibleのインストール中..."
 if ! command -v ansible &> /dev/null; then
     # python3 -m pipでインストール（ユーザー権限、python3と同じバージョンに確実にインストール）
-    python3 -m pip install --user ansible -q || {
+    python3 -m pip install --user ansible || {
         log_error "Ansibleのインストールに失敗しました"
         log_error "pipが正しくインストールされているか確認してください: python3 -m pip --version"
         exit 1
     }
+    hash -r 2>/dev/null
     log_info "Ansibleインストール完了: $(ansible --version | head -n 1)"
 else
     log_warn "Ansibleは既にインストールされています: $(ansible --version | head -n 1)"
@@ -134,181 +242,90 @@ else
     log_warn "AWS CLIは既にインストールされています: $(aws --version)"
 fi
 
-# 6. Pythonパッケージのインストール（スキップ）
-# ワークショップでは Terraform、Ansible、AWS CLI を直接使用するため、
-# 追加のPythonパッケージは不要です。
-# Continueはエディタ拡張機能なので、Pythonパッケージも不要です。
-log_info "Pythonパッケージのインストール: ワークショップでは不要のためスキップします"
-
-# 6-1. VS Code拡張機能のインストール（CLI経由）
-log_info "VS Code拡張機能のインストール中..."
-
-# code-ossコマンドのパスを探す（複数のパスを試す）
-CODE_CMD=""
-for CODE_PATH in "/usr/bin/code-oss" "/usr/local/bin/code-oss" "$HOME/.local/bin/code-oss" "code-oss" "/usr/bin/code" "/usr/local/bin/code" "$HOME/.local/bin/code" "code"; do
-    if command -v "$CODE_PATH" &> /dev/null; then
-        CODE_CMD="$CODE_PATH"
-        break
-    fi
-done
-
-if [ -n "$CODE_CMD" ]; then
-    log_info "VS Code CLIが見つかりました: $CODE_CMD"
-    
-    # 必要な拡張機能のリスト（Continueのみ）
-    EXTENSIONS=(
-        "continue.continue"
-    )
-    
-    INSTALLED_COUNT=0
-    FAILED_EXTENSIONS=()
-    
-    for EXT in "${EXTENSIONS[@]}"; do
-        # 既にインストールされているか確認
-        if "$CODE_CMD" --list-extensions 2>/dev/null | grep -q "^${EXT}$"; then
-            log_info "✓ 拡張機能 ${EXT} は既にインストールされています"
-            ((INSTALLED_COUNT++))
-        else
-            log_info "拡張機能 ${EXT} をインストール中..."
-            # リトライ処理（最大3回）
-            RETRY_COUNT=0
-            MAX_RETRIES=3
-            INSTALL_SUCCESS=false
-            
-            while [ $RETRY_COUNT -lt $MAX_RETRIES ]; do
-                if "$CODE_CMD" --install-extension "${EXT}" --force 2>/dev/null; then
-                    log_info "✓ 拡張機能 ${EXT} のインストールに成功しました"
-                    ((INSTALLED_COUNT++))
-                    INSTALL_SUCCESS=true
-                    break
-                else
-                    ((RETRY_COUNT++))
-                    if [ $RETRY_COUNT -lt $MAX_RETRIES ]; then
-                        log_warn "拡張機能 ${EXT} のインストールに失敗しました（リトライ ${RETRY_COUNT}/${MAX_RETRIES}）"
-                        sleep 2
-                    fi
-                fi
-            done
-            
-            if [ "$INSTALL_SUCCESS" = false ]; then
-                log_warn "拡張機能 ${EXT} のインストールに失敗しました（最大リトライ回数に達しました）"
-                FAILED_EXTENSIONS+=("${EXT}")
-            fi
-        fi
-    done
-    
-    # 結果のサマリー
-    if [ $INSTALLED_COUNT -eq ${#EXTENSIONS[@]} ]; then
-        log_info "✓ すべての拡張機能がインストールされています"
-    else
-        log_warn "一部の拡張機能のインストールに失敗しました（${INSTALLED_COUNT}/${#EXTENSIONS[@]} 成功）"
-        if [ ${#FAILED_EXTENSIONS[@]} -gt 0 ]; then
-            log_info "失敗した拡張機能: ${FAILED_EXTENSIONS[*]}"
-            log_info "手動でインストールする場合:"
-            for EXT in "${FAILED_EXTENSIONS[@]}"; do
-                log_info "  $CODE_CMD --install-extension ${EXT} --force"
-            done
-        fi
-    fi
+# 6. Node.js / npm の確認
+log_info "Node.js / npm の確認中..."
+if command -v node &> /dev/null && command -v npm &> /dev/null; then
+    log_info "✓ Node.js は既にインストールされています: $(node --version)"
+    log_info "✓ npm は既にインストールされています: $(npm --version)"
 else
-    log_warn "VS Code CLI (code-oss/code) が見つかりません。拡張機能は手動でインストールしてください。"
-    log_info "以下のコマンドでContinue拡張機能をインストールできます:"
-    log_info "  code-oss --install-extension continue.continue --force"
-fi
-
-# 6-2. Continue設定ファイルの確認と作成
-log_info "Continue設定ファイルの確認中..."
-CONTINUE_CONFIG_DIR=".continue"
-CONTINUE_CONFIG_FILE="${CONTINUE_CONFIG_DIR}/config.json"
-
-# プロジェクトルートのパスを取得（スクリプトがどこから実行されても正しく動作）
-PROJECT_ROOT="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
-PROJECT_CONTINUE_CONFIG="${PROJECT_ROOT}/${CONTINUE_CONFIG_FILE}"
-
-# .continueディレクトリが存在しない場合は作成
-if [ ! -d "$CONTINUE_CONFIG_DIR" ]; then
-    mkdir -p "$CONTINUE_CONFIG_DIR"
-    log_info "✓ .continueディレクトリを作成しました"
-fi
-
-# config.jsonが存在しない、または内容が正しくない場合は作成/更新
-if [ ! -f "$CONTINUE_CONFIG_FILE" ] || ! grep -q '"provider": "bedrock"' "$CONTINUE_CONFIG_FILE" 2>/dev/null; then
-    log_info "Continue設定ファイル（config.json）を作成/更新中..."
-    cat > "$CONTINUE_CONFIG_FILE" << 'EOF'
-{
-  "models": [
-    {
-      "title": "GTP-OSS-120B (Bedrock)",
-      "provider": "bedrock",
-      "model": "openai.gpt-oss-120b-1:0",
-      "region": "us-east-1"
+    log_warn "Node.js / npm がインストールされていません。"
+    log_info "Node.js のインストールを試みます..."
+    # nvm経由でインストール
+    if [ ! -d "$HOME/.nvm" ]; then
+        curl -o- https://raw.githubusercontent.com/nvm-sh/nvm/v0.40.1/install.sh | bash
+    fi
+    export NVM_DIR="$HOME/.nvm"
+    [ -s "$NVM_DIR/nvm.sh" ] && \. "$NVM_DIR/nvm.sh"
+    nvm install --lts || {
+        log_error "Node.js のインストールに失敗しました"
+        log_error "手動でインストールしてください: https://nodejs.org/"
+        exit 1
     }
-  ],
-  "tabAutocompleteModel": {
-    "title": "GTP-OSS-120B (Autocomplete)",
-    "provider": "bedrock",
-    "model": "openai.gpt-oss-120b-1:0",
-    "region": "us-east-1"
-  },
-  "allowAnonymousTelemetry": false,
-  "disableIndexing": true,
-  "disableFormatting": true
-}
-EOF
-    log_info "✓ Continue設定ファイルを作成/更新しました: ${CONTINUE_CONFIG_FILE}"
-else
-    log_info "✓ Continue設定ファイルは既に存在し、正しく設定されています"
+    log_info "Node.js インストール完了: $(node --version)"
 fi
 
-# 6-3. Continue設定ファイルを$HOME/.continueにシンボリックリンクで反映
-log_info "Continue設定ファイルを$HOME/.continueにリンク中..."
-USER_CONTINUE_DIR="$HOME/.continue"
-USER_CONTINUE_CONFIG="${USER_CONTINUE_DIR}/config.json"
+# 6-1. npm グローバルインストール先をユーザーディレクトリに設定
+# DevSpaces環境ではsudo権限がなく /usr/local/lib/node_modules に書き込めないため、
+# npm のグローバルインストール先を ~/.local に変更する
+NPM_GLOBAL_PREFIX="$HOME/.local"
+CURRENT_PREFIX="$(npm config get prefix 2>/dev/null)"
+if [ "$CURRENT_PREFIX" != "$NPM_GLOBAL_PREFIX" ]; then
+    log_info "npm のグローバルインストール先を ${NPM_GLOBAL_PREFIX} に設定中..."
+    npm config set prefix "$NPM_GLOBAL_PREFIX"
+    log_info "✓ npm prefix を ${NPM_GLOBAL_PREFIX} に設定しました"
+fi
 
-# プロジェクトルートのconfig.jsonが存在することを確認
-if [ ! -f "$PROJECT_CONTINUE_CONFIG" ]; then
-    log_warn "プロジェクトルートの設定ファイルが見つかりません: ${PROJECT_CONTINUE_CONFIG}"
-    log_warn "シンボリックリンクの作成をスキップします"
+# 6-2. Claude Code のインストール（npm グローバル → ~/.local/bin）
+log_info "Claude Code のインストール中..."
+if command -v claude &> /dev/null; then
+    log_info "✓ Claude Code は既にインストールされています: $(claude --version 2>/dev/null || echo '(バージョン取得不可)')"
 else
-    # $HOME/.continueディレクトリを作成（既に存在する場合は何もしない）
-    if [ ! -d "$USER_CONTINUE_DIR" ]; then
-        mkdir -p "$USER_CONTINUE_DIR"
-        log_info "✓ $HOME/.continueディレクトリを作成しました"
-    else
-        log_info "✓ $HOME/.continueディレクトリは既に存在しています"
+    npm install -g @anthropic-ai/claude-code || {
+        log_error "Claude Code のインストールに失敗しました"
+        log_error "手動でインストールしてください:"
+        log_error "  npm config set prefix \"\$HOME/.local\""
+        log_error "  npm install -g @anthropic-ai/claude-code"
+        exit 1
+    }
+    hash -r 2>/dev/null
+    log_info "✓ Claude Code インストール完了"
+fi
+
+# 6-3. Claude Code の Bedrock 設定ファイル作成
+log_info "Claude Code の Bedrock 設定ファイルを確認中..."
+CLAUDE_SETTINGS_DIR=".claude"
+CLAUDE_SETTINGS_FILE="${CLAUDE_SETTINGS_DIR}/settings.local.json"
+
+mkdir -p "$CLAUDE_SETTINGS_DIR"
+
+if [ -f "$CLAUDE_SETTINGS_FILE" ]; then
+    log_info "✓ Claude Code 設定ファイルは既に存在します: ${CLAUDE_SETTINGS_FILE}"
+else
+    # AWSアカウントIDを取得して設定ファイルを自動生成
+    AWS_ACCOUNT_ID=""
+    if [ "$AWS_CREDENTIALS_READY" = true ] && command -v aws &> /dev/null; then
+        AWS_ACCOUNT_ID=$(aws sts get-caller-identity --query Account --output text 2>/dev/null)
     fi
 
-    # シンボリックリンクを作成または更新
-    if [ -L "$USER_CONTINUE_CONFIG" ]; then
-        # 既存のシンボリックリンクを確認
-        LINK_TARGET="$(readlink -f "$USER_CONTINUE_CONFIG" 2>/dev/null || readlink "$USER_CONTINUE_CONFIG")"
-        if [ "$LINK_TARGET" != "$PROJECT_CONTINUE_CONFIG" ]; then
-            log_info "既存のシンボリックリンクを更新中..."
-            rm "$USER_CONTINUE_CONFIG"
-            if ln -s "$PROJECT_CONTINUE_CONFIG" "$USER_CONTINUE_CONFIG" 2>/dev/null; then
-                log_info "✓ シンボリックリンクを更新しました: ${USER_CONTINUE_CONFIG} -> ${PROJECT_CONTINUE_CONFIG}"
-            else
-                log_warn "シンボリックリンクの作成に失敗しました"
-            fi
-        else
-            log_info "✓ シンボリックリンクは既に正しく設定されています"
-        fi
-    elif [ -f "$USER_CONTINUE_CONFIG" ]; then
-        # 通常のファイルが存在する場合はバックアップしてからシンボリックリンクに置き換え
-        log_info "既存の設定ファイルをバックアップ中..."
-        mv "$USER_CONTINUE_CONFIG" "${USER_CONTINUE_CONFIG}.backup.$(date +%Y%m%d_%H%M%S)"
-        if ln -s "$PROJECT_CONTINUE_CONFIG" "$USER_CONTINUE_CONFIG" 2>/dev/null; then
-            log_info "✓ 既存の設定ファイルをバックアップし、シンボリックリンクを作成しました"
-        else
-            log_warn "シンボリックリンクの作成に失敗しました"
-        fi
+    if [ -n "$AWS_ACCOUNT_ID" ]; then
+        cat > "$CLAUDE_SETTINGS_FILE" << JSONEOF
+{
+    "env": {
+        "CLAUDE_CODE_ENABLE_TELEMETRY": "false",
+        "CLAUDE_CODE_USE_BEDROCK": "true",
+        "AWS_REGION": "ap-northeast-1",
+        "ANTHROPIC_MODEL": "arn:aws:bedrock:ap-northeast-1:${AWS_ACCOUNT_ID}:inference-profile/jp.anthropic.claude-sonnet-4-6"
+    }
+}
+JSONEOF
+        log_info "✓ Claude Code 設定ファイルを作成しました: ${CLAUDE_SETTINGS_FILE}"
+        log_info "  モデル: Claude Sonnet 4.6（Bedrock inference profile）"
+        log_info "  AWSアカウントID: ${AWS_ACCOUNT_ID}"
     else
-        # シンボリックリンクが存在しない場合は作成
-        if ln -s "$PROJECT_CONTINUE_CONFIG" "$USER_CONTINUE_CONFIG" 2>/dev/null; then
-            log_info "✓ シンボリックリンクを作成しました: ${USER_CONTINUE_CONFIG} -> ${PROJECT_CONTINUE_CONFIG}"
-        else
-            log_warn "シンボリックリンクの作成に失敗しました"
-        fi
+        log_warn "AWSアカウントIDを取得できませんでした。"
+        log_warn "AWS認証情報を設定後、セットアップスクリプトを再実行するか、"
+        log_warn "手動で ${CLAUDE_SETTINGS_FILE} を作成してください。"
+        log_info "  詳細は docs/setup/CLAUDE_CODE_SETUP.md を参照してください。"
     fi
 fi
 
@@ -335,142 +352,13 @@ else
     log_info "✓ Gitは既にインストールされています: $(git --version)"
 fi
 
-# 8. jqのインストール（ユーザー権限）
-log_info "jqのインストール中..."
-if ! command -v jq &> /dev/null; then
-    if check_sudo; then
-        sudo apt-get install -y jq
-        log_info "jqインストール完了"
-    else
-        log_info "jqをユーザー権限でインストール中..."
-        # jqの静的バイナリをダウンロード
-        JQ_VERSION="1.7"
-        # アーキテクチャの検出
-        ARCH=$(uname -m)
-        if [ "$ARCH" = "x86_64" ]; then
-            JQ_ARCH="amd64"
-        elif [ "$ARCH" = "aarch64" ]; then
-            JQ_ARCH="arm64"
-        else
-            JQ_ARCH="amd64"  # デフォルト
-        fi
-        
-        JQ_URL="https://github.com/jqlang/jq/releases/download/jq-${JQ_VERSION}/jq-linux-${JQ_ARCH}"
-        
-        if wget -q "${JQ_URL}" -O /tmp/jq 2>/dev/null; then
-            chmod +x /tmp/jq
-            mv /tmp/jq "$LOCAL_BIN/jq"
-            log_info "jqインストール完了: $(jq --version 2>/dev/null || echo 'jq ${JQ_VERSION}')"
-        else
-            log_warn "jqのダウンロードに失敗しました（オプショナル）。"
-            log_info "jqなしでもトレーニングは可能です。"
-            log_info "手動インストール: wget ${JQ_URL} -O ~/.local/bin/jq && chmod +x ~/.local/bin/jq"
-        fi
-    fi
-else
-    log_info "✓ jqは既にインストールされています: $(jq --version)"
-fi
-
-# 9. 作業ディレクトリの作成（プロジェクトルート配下）
+# 8. 作業ディレクトリの作成（プロジェクトルート配下）
 log_info "作業ディレクトリの作成中..."
-PROJECT_ROOT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
 mkdir -p "${PROJECT_ROOT_DIR}/terraform"
 mkdir -p "${PROJECT_ROOT_DIR}/ansible"
 log_info "作業ディレクトリの作成完了（${PROJECT_ROOT_DIR}/terraform, ${PROJECT_ROOT_DIR}/ansible）"
 
-# 10. .envファイルの確認
-log_info ".envファイルの確認中..."
-if [ ! -f ".env" ]; then
-    if [ -f ".env.template" ]; then
-        log_info ".env.templateファイルが見つかりました。"
-        log_info "次のステップ: .env.templateをコピーして.envファイルを作成し、AWS認証情報を設定してください。"
-        log_info "  コマンド: cp .env.template .env"
-    else
-        log_warn ".env.templateファイルが見つかりません。"
-        log_info ".envファイルを手動で作成し、AWS認証情報を設定してください。"
-    fi
-else
-    log_info ".envファイルは既に存在します"
-fi
-
-# 10-1. .envファイルの自動読み込み設定を~/.bashrcに追加
-log_info ".envファイルの自動読み込み設定を追加中..."
-ENV_AUTO_LOAD="# .envファイルを自動的に読み込む（プロジェクトディレクトリにいる場合）
-if [ -f .env ]; then
-    export \$(cat .env | grep -v '^#' | xargs)
-fi"
-
-# 既に設定が存在するかチェック
-if ! grep -q "# .envファイルを自動的に読み込む" ~/.bashrc 2>/dev/null; then
-    echo "" >> ~/.bashrc
-    echo "$ENV_AUTO_LOAD" >> ~/.bashrc
-    log_info "✓ .envファイルの自動読み込み設定を~/.bashrcに追加しました"
-    log_info "  新しいターミナルを開くか、source ~/.bashrcを実行すると有効になります"
-else
-    log_warn ".envファイルの自動読み込み設定は既に存在します"
-fi
-
-
-# 10-3. AWS CLI設定ファイルを作成（Continue拡張機能とAWS CLI用）
-log_info "AWS CLI設定ファイルを作成中（.envファイルから自動設定）..."
-if [ -f ".env" ]; then
-    # .envファイルからAWS認証情報を抽出
-    AWS_ACCESS_KEY=$(grep "^AWS_ACCESS_KEY_ID=" .env | grep -v '^#' | cut -d'=' -f2 | sed "s/^['\"]//;s/['\"]$//" | head -1)
-    AWS_SECRET_KEY=$(grep "^AWS_SECRET_ACCESS_KEY=" .env | grep -v '^#' | cut -d'=' -f2 | sed "s/^['\"]//;s/['\"]$//" | head -1)
-    AWS_REGION=$(grep "^AWS_DEFAULT_REGION=" .env | grep -v '^#' | cut -d'=' -f2 | sed "s/^['\"]//;s/['\"]$//" | head -1)
-    
-    if [ -n "$AWS_ACCESS_KEY" ] && [ -n "$AWS_SECRET_KEY" ] && [ "$AWS_ACCESS_KEY" != "your-access-key-here" ] && [ "$AWS_SECRET_KEY" != "your-secret-key-here" ]; then
-        # ~/.awsディレクトリを作成
-        mkdir -p ~/.aws
-        
-        # credentialsファイルを作成または更新
-        if [ ! -f ~/.aws/credentials ] || ! grep -q "\[default\]" ~/.aws/credentials 2>/dev/null; then
-            cat > ~/.aws/credentials << EOF
-[default]
-aws_access_key_id = ${AWS_ACCESS_KEY}
-aws_secret_access_key = ${AWS_SECRET_KEY}
-EOF
-            log_info "✓ AWS認証情報ファイルを作成しました: ~/.aws/credentials"
-        else
-            # 既存の[default]セクションを更新
-            if grep -q "\[default\]" ~/.aws/credentials; then
-                # 一時ファイルに書き込んでから置き換え
-                awk -v access_key="$AWS_ACCESS_KEY" -v secret_key="$AWS_SECRET_KEY" '
-                    /\[default\]/ { in_default=1; print; next }
-                    in_default && /^\[/ { in_default=0 }
-                    in_default && /^aws_access_key_id/ { print "aws_access_key_id = " access_key; next }
-                    in_default && /^aws_secret_access_key/ { print "aws_secret_access_key = " secret_key; next }
-                    { print }
-                ' ~/.aws/credentials > ~/.aws/credentials.tmp && mv ~/.aws/credentials.tmp ~/.aws/credentials
-                log_info "✓ AWS認証情報ファイルを更新しました: ~/.aws/credentials"
-            fi
-        fi
-        
-        # configファイルを作成または更新
-        if [ -n "$AWS_REGION" ]; then
-            if [ ! -f ~/.aws/config ]; then
-                cat > ~/.aws/config << EOF
-[default]
-region = ${AWS_REGION}
-EOF
-                log_info "✓ AWS設定ファイルを作成しました: ~/.aws/config"
-            else
-                if ! grep -q "\[default\]" ~/.aws/config; then
-                    echo "" >> ~/.aws/config
-                    echo "[default]" >> ~/.aws/config
-                    echo "region = ${AWS_REGION}" >> ~/.aws/config
-                    log_info "✓ AWS設定ファイルにリージョンを追加しました: ~/.aws/config"
-                fi
-            fi
-        fi
-    else
-        log_warn ".envファイルに有効なAWS認証情報が設定されていません（テンプレートのままの可能性があります）"
-    fi
-else
-    log_warn ".envファイルが存在しないため、AWS CLI設定ファイルの作成をスキップします"
-fi
-
-# 11. 動作確認
+# 9. 動作確認
 echo ""
 log_info "=========================================="
 log_info "インストールされたツールの確認"
@@ -506,7 +394,34 @@ else
     log_error "✗ Git: インストールされていません"
 fi
 
+if command -v claude &> /dev/null; then
+    log_info "✓ Claude Code: インストール済み"
+else
+    log_error "✗ Claude Code: インストールされていません"
+fi
+
+if [ -f ".claude/settings.local.json" ]; then
+    log_info "✓ Claude Code Bedrock設定: .claude/settings.local.json"
+else
+    log_warn "✗ Claude Code Bedrock設定: 未作成（AWS認証情報を設定後、スクリプトを再実行してください）"
+fi
+
+if [ -f ~/.aws/credentials ]; then
+    log_info "✓ AWS CLI設定: ~/.aws/credentials"
+else
+    log_warn "✗ AWS CLI設定: 未作成（.envファイルにAWS認証情報を設定後、スクリプトを再実行してください）"
+fi
+
 echo ""
 log_info "=========================================="
 log_info "セットアップ完了！"
 log_info "=========================================="
+
+if [ "$AWS_CREDENTIALS_READY" != true ]; then
+    echo ""
+    log_info "【次のステップ】"
+    log_info "  1. cp .env.template .env"
+    log_info "  2. .env を編集してAWS認証情報を設定"
+    log_info "  3. ./scripts/setup_devspaces.sh を再実行"
+    log_info "  → AWS CLI設定とClaude Code Bedrock設定が自動作成されます"
+fi
