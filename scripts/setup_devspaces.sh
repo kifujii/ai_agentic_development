@@ -216,7 +216,7 @@ else
         "CLAUDE_CODE_ENABLE_TELEMETRY": "false",
         "CLAUDE_CODE_USE_BEDROCK": "true",
         "AWS_REGION": "ap-northeast-1",
-        "ANTHROPIC_MODEL": "arn:aws:bedrock:ap-northeast-1:${AWS_ACCOUNT_ID}:inference-profile/ap.anthropic.claude-sonnet-4-6-20250514-v1:0"
+        "ANTHROPIC_MODEL": "arn:aws:bedrock:ap-northeast-1:${AWS_ACCOUNT_ID}:inference-profile/jp.anthropic.claude-sonnet-4-6"
     }
 }
 JSONEOF
