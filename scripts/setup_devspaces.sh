@@ -193,14 +193,43 @@ else
     log_info "✓ Claude Code インストール完了"
 fi
 
-# 6-3. Claude Code の Bedrock 設定案内
-log_info "Claude Code の設定について:"
-log_info "  Claude Code は AWS Bedrock 経由で Claude Sonnet 4.6 を使用します。"
-log_info "  .env ファイルに以下の環境変数が設定されていることを確認してください:"
-log_info "    - CLAUDE_CODE_USE_BEDROCK=1"
-log_info "    - AWS_REGION=ap-northeast-1"
-log_info "    - ANTHROPIC_MODEL=anthropic.claude-sonnet-4-6-20250514-v1:0"
-log_info "  詳細は docs/setup/CLAUDE_CODE_SETUP.md を参照してください。"
+# 6-3. Claude Code の Bedrock 設定ファイル作成
+log_info "Claude Code の Bedrock 設定ファイルを確認中..."
+CLAUDE_SETTINGS_DIR=".claude"
+CLAUDE_SETTINGS_FILE="${CLAUDE_SETTINGS_DIR}/settings.local.json"
+
+mkdir -p "$CLAUDE_SETTINGS_DIR"
+
+if [ -f "$CLAUDE_SETTINGS_FILE" ]; then
+    log_info "✓ Claude Code 設定ファイルは既に存在します: ${CLAUDE_SETTINGS_FILE}"
+else
+    # AWSアカウントIDを取得して設定ファイルを自動生成
+    AWS_ACCOUNT_ID=""
+    if command -v aws &> /dev/null; then
+        AWS_ACCOUNT_ID=$(aws sts get-caller-identity --query Account --output text 2>/dev/null)
+    fi
+
+    if [ -n "$AWS_ACCOUNT_ID" ]; then
+        cat > "$CLAUDE_SETTINGS_FILE" << JSONEOF
+{
+    "env": {
+        "CLAUDE_CODE_ENABLE_TELEMETRY": "false",
+        "CLAUDE_CODE_USE_BEDROCK": "true",
+        "AWS_REGION": "ap-northeast-1",
+        "ANTHROPIC_MODEL": "arn:aws:bedrock:ap-northeast-1:${AWS_ACCOUNT_ID}:inference-profile/ap.anthropic.claude-sonnet-4-6-20250514-v1:0"
+    }
+}
+JSONEOF
+        log_info "✓ Claude Code 設定ファイルを作成しました: ${CLAUDE_SETTINGS_FILE}"
+        log_info "  モデル: Claude Sonnet 4.6（Bedrock inference profile）"
+        log_info "  AWSアカウントID: ${AWS_ACCOUNT_ID}"
+    else
+        log_warn "AWSアカウントIDを取得できませんでした。"
+        log_warn "AWS認証情報を設定後、セットアップスクリプトを再実行するか、"
+        log_warn "手動で ${CLAUDE_SETTINGS_FILE} を作成してください。"
+        log_info "  詳細は docs/setup/CLAUDE_CODE_SETUP.md を参照してください。"
+    fi
+fi
 
 # 7. Gitの確認（通常は既にインストールされている）
 log_info "Gitの確認中..."
