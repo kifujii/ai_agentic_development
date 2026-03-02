@@ -352,49 +352,13 @@ else
     log_info "✓ Gitは既にインストールされています: $(git --version)"
 fi
 
-# 8. jqのインストール（ユーザー権限）
-log_info "jqのインストール中..."
-if ! command -v jq &> /dev/null; then
-    if check_sudo; then
-        sudo apt-get install -y jq
-        log_info "jqインストール完了"
-    else
-        log_info "jqをユーザー権限でインストール中..."
-        # jqの静的バイナリをダウンロード
-        JQ_VERSION="1.7"
-        # アーキテクチャの検出
-        ARCH=$(uname -m)
-        if [ "$ARCH" = "x86_64" ]; then
-            JQ_ARCH="amd64"
-        elif [ "$ARCH" = "aarch64" ]; then
-            JQ_ARCH="arm64"
-        else
-            JQ_ARCH="amd64"  # デフォルト
-        fi
-        
-        JQ_URL="https://github.com/jqlang/jq/releases/download/jq-${JQ_VERSION}/jq-linux-${JQ_ARCH}"
-        
-        if wget -q "${JQ_URL}" -O /tmp/jq 2>/dev/null; then
-            chmod +x /tmp/jq
-            mv /tmp/jq "$LOCAL_BIN/jq"
-            log_info "jqインストール完了: $(jq --version 2>/dev/null || echo 'jq ${JQ_VERSION}')"
-        else
-            log_warn "jqのダウンロードに失敗しました（オプショナル）。"
-            log_info "jqなしでもトレーニングは可能です。"
-            log_info "手動インストール: wget ${JQ_URL} -O ~/.local/bin/jq && chmod +x ~/.local/bin/jq"
-        fi
-    fi
-else
-    log_info "✓ jqは既にインストールされています: $(jq --version)"
-fi
-
-# 9. 作業ディレクトリの作成（プロジェクトルート配下）
+# 8. 作業ディレクトリの作成（プロジェクトルート配下）
 log_info "作業ディレクトリの作成中..."
 mkdir -p "${PROJECT_ROOT_DIR}/terraform"
 mkdir -p "${PROJECT_ROOT_DIR}/ansible"
 log_info "作業ディレクトリの作成完了（${PROJECT_ROOT_DIR}/terraform, ${PROJECT_ROOT_DIR}/ansible）"
 
-# 11. 動作確認
+# 9. 動作確認
 echo ""
 log_info "=========================================="
 log_info "インストールされたツールの確認"
