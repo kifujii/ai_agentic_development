@@ -231,8 +231,8 @@ if [ ! -d "$CONTINUE_CONFIG_DIR" ]; then
     log_info "✓ .continueディレクトリを作成しました"
 fi
 
-# config.jsonが存在しない、または内容が正しくない場合は作成/更新
-if [ ! -f "$CONTINUE_CONFIG_FILE" ] || ! grep -q '"provider": "bedrock"' "$CONTINUE_CONFIG_FILE" 2>/dev/null; then
+# config.jsonが存在しない、またはモデル設定が正しくない場合は作成/更新
+if [ ! -f "$CONTINUE_CONFIG_FILE" ] || ! grep -q '"openai.gpt-oss-120b-1:0"' "$CONTINUE_CONFIG_FILE" 2>/dev/null; then
     log_info "Continue設定ファイル（config.json）を作成/更新中..."
     cat > "$CONTINUE_CONFIG_FILE" << 'EOF'
 {

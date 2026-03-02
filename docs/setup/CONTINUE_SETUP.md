@@ -81,22 +81,16 @@ echo $AWS_DEFAULT_REGION
 {
   "models": [
     {
-      "title": "Llama 3.1 70B (Bedrock - Agent用)",
+      "title": "GTP-OSS-120B (Bedrock)",
       "provider": "bedrock",
-      "model": "us.meta.llama3-1-70b-instruct-v1:0",
-      "region": "us-east-1"
-    },
-    {
-      "title": "Claude 3.5 Sonnet v2 (Bedrock - 要申請)",
-      "provider": "bedrock",
-      "model": "us.anthropic.claude-3-5-sonnet-20241022-v2:0",
+      "model": "openai.gpt-oss-120b-1:0",
       "region": "us-east-1"
     }
   ],
   "tabAutocompleteModel": {
-    "title": "Llama 3.2 1B (Autocomplete)",
+    "title": "GTP-OSS-120B (Autocomplete)",
     "provider": "bedrock",
-    "model": "us.meta.llama3-2-1b-instruct-v1:0",
+    "model": "openai.gpt-oss-120b-1:0",
     "region": "us-east-1"
   },
   "allowAnonymousTelemetry": false,
@@ -115,9 +109,10 @@ echo $AWS_DEFAULT_REGION
 - `disableIndexing`: インデックス作成を無効化（パフォーマンス向上）
 - `disableFormatting`: 自動フォーマットを無効化
 
-**利用可能なモデル（on-demand対応）**:
-- `us.meta.llama3-1-70b-instruct-v1:0` (Meta Llama 3.1 70B Instruct) - 推奨
-- `us.meta.llama3-2-1b-instruct-v1:0` (Meta Llama 3.2 1B Instruct) - タブ補完用
+**その他の利用可能なモデル（on-demand対応）**:
+- `openai.gpt-oss-120b-1:0` (GTP-OSS-120B) - **ワークショップ標準**
+- `us.meta.llama3-1-70b-instruct-v1:0` (Meta Llama 3.1 70B Instruct)
+- `us.meta.llama3-2-1b-instruct-v1:0` (Meta Llama 3.2 1B Instruct)
 - `us.anthropic.claude-3-5-sonnet-20241022-v2:0` (Claude 3.5 Sonnet v2) - 要申請
 
 **注意**: 
