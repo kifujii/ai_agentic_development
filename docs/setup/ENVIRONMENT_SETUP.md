@@ -195,6 +195,7 @@ aws --version
 <summary>Claude Codeの手動インストール</summary>
 
 ```bash
+npm config set prefix "$HOME/.local"
 npm install -g @anthropic-ai/claude-code
 claude --version
 ```

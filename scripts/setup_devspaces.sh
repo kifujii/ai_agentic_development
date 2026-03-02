@@ -82,12 +82,18 @@ else
     log_warn "Terraformは既にインストールされています: $(terraform version | head -n 1)"
 fi
 
-# 3. pipのインストール確認とインストール（Ansibleのインストール前に必要）
+# 3. pipのインストール確認とアップグレード（Ansibleのインストール前に必要）
 log_info "pipの確認中..."
 log_info "使用するPythonバージョン: $(python3 --version)"
 if python3 -m pip --version &>/dev/null; then
-    log_info "✓ pipは既にインストールされています"
-    python3 -m pip install --user --upgrade pip -q || log_warn "pipのアップグレードに失敗しましたが、続行します"
+    log_info "✓ pipは既にインストールされています: $(python3 -m pip --version)"
+    # pipをアップグレード（古いpipは依存解決が遅いため、先にアップグレードする）
+    log_info "pipをアップグレード中..."
+    python3 -m pip install --user --upgrade pip || log_warn "pipのアップグレードに失敗しましたが、続行します"
+    # アップグレード後のバージョンを確認
+    # --user でインストールしたpipを確実に使うため、ハッシュテーブルをリフレッシュ
+    hash -r 2>/dev/null
+    log_info "pipバージョン（アップグレード後）: $(python3 -m pip --version)"
 else
     log_warn "pipがインストールされていません。インストールします..."
     python3 -m ensurepip --user --upgrade || {
@@ -95,18 +101,22 @@ else
         log_error "手動でインストールしてください: python3 -m ensurepip --user"
         exit 1
     }
-    log_info "pipのインストール完了"
+    # インストール直後にアップグレード
+    python3 -m pip install --user --upgrade pip || log_warn "pipのアップグレードに失敗しましたが、続行します"
+    hash -r 2>/dev/null
+    log_info "pipのインストール完了: $(python3 -m pip --version)"
 fi
 
 # 4. Ansibleのインストール（python3 -m pipでユーザー権限）
 log_info "Ansibleのインストール中..."
 if ! command -v ansible &> /dev/null; then
     # python3 -m pipでインストール（ユーザー権限、python3と同じバージョンに確実にインストール）
-    python3 -m pip install --user ansible -q || {
+    python3 -m pip install --user ansible || {
         log_error "Ansibleのインストールに失敗しました"
         log_error "pipが正しくインストールされているか確認してください: python3 -m pip --version"
         exit 1
     }
+    hash -r 2>/dev/null
     log_info "Ansibleインストール完了: $(ansible --version | head -n 1)"
 else
     log_warn "Ansibleは既にインストールされています: $(ansible --version | head -n 1)"
@@ -156,20 +166,34 @@ else
     log_info "Node.js インストール完了: $(node --version)"
 fi
 
-# 6-1. Claude Code のインストール（npm グローバル）
+# 6-1. npm グローバルインストール先をユーザーディレクトリに設定
+# DevSpaces環境ではsudo権限がなく /usr/local/lib/node_modules に書き込めないため、
+# npm のグローバルインストール先を ~/.local に変更する
+NPM_GLOBAL_PREFIX="$HOME/.local"
+CURRENT_PREFIX="$(npm config get prefix 2>/dev/null)"
+if [ "$CURRENT_PREFIX" != "$NPM_GLOBAL_PREFIX" ]; then
+    log_info "npm のグローバルインストール先を ${NPM_GLOBAL_PREFIX} に設定中..."
+    npm config set prefix "$NPM_GLOBAL_PREFIX"
+    log_info "✓ npm prefix を ${NPM_GLOBAL_PREFIX} に設定しました"
+fi
+
+# 6-2. Claude Code のインストール（npm グローバル → ~/.local/bin）
 log_info "Claude Code のインストール中..."
 if command -v claude &> /dev/null; then
     log_info "✓ Claude Code は既にインストールされています: $(claude --version 2>/dev/null || echo '(バージョン取得不可)')"
 else
     npm install -g @anthropic-ai/claude-code || {
         log_error "Claude Code のインストールに失敗しました"
-        log_error "手動でインストールしてください: npm install -g @anthropic-ai/claude-code"
+        log_error "手動でインストールしてください:"
+        log_error "  npm config set prefix \"\$HOME/.local\""
+        log_error "  npm install -g @anthropic-ai/claude-code"
         exit 1
     }
+    hash -r 2>/dev/null
     log_info "✓ Claude Code インストール完了"
 fi
 
-# 6-2. Claude Code の Bedrock 設定案内
+# 6-3. Claude Code の Bedrock 設定案内
 log_info "Claude Code の設定について:"
 log_info "  Claude Code は AWS Bedrock 経由で Claude Sonnet 4.6 を使用します。"
 log_info "  .env ファイルに以下の環境変数が設定されていることを確認してください:"
