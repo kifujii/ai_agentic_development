@@ -48,6 +48,7 @@ ansible.cfg.local
 .vscode/
 .idea/
 .continue/
+.claude/
 *.swp
 *.swo
 *~

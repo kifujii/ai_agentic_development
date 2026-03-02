@@ -1,10 +1,10 @@
 # AI駆動 Infrastructure as Code ワークショップ
 
-> AWS CLI、Ansible、Terraform、そしてClineを活用した次世代IaC開発を学ぶ
+> AWS CLI、Ansible、Terraform、そしてClaude Codeを活用した次世代IaC開発を学ぶ
 
 ## 概要
 
-ClineのAIエージェント機能を使って、TerraformやAnsibleのコードを自動生成・実行しながら、AWSインフラの構築と運用を実践的に学びます。
+Claude CodeのAIエージェント機能を使って、TerraformやAnsibleのコードを自動生成・実行しながら、AWSインフラの構築と運用を実践的に学びます。
 
 ## セッション構成
 
@@ -66,15 +66,15 @@ ai_agentic/
 │   ├── TRAINING_MENU.md         # トレーニングメニュー
 │   ├── images/                  # アーキテクチャ構成図
 │   ├── session_guides/          # セッションガイド (1〜6)
-│   └── setup/                   # セットアップ手順
+│   └── setup/                   # セットアップ手順（Claude Code, 環境構築, FAQ）
 ├── evaluation/                  # 評価チェックリスト
 ├── scripts/
-│   ├── setup_devspaces.sh       # セットアップスクリプト
-│   ├── generate_diagrams.py     # 構成図生成スクリプト
-│   └── requirements.txt
+│   ├── setup_devspaces.sh       # 環境セットアップスクリプト
+│   └── check.sh                 # セッション完了チェックスクリプト
 ├── terraform/                   # Terraformコード（セッション中に作成）
 ├── ansible/                     # Ansibleコード（セッション中に作成）
-├── .vscode/                     # エディタ設定
+├── .claude/                     # Claude Code設定（.gitignore対象、スクリプトで自動生成）
+├── .env.template                # AWS認証情報テンプレート
 └── README.md
 ```
 
@@ -99,7 +99,7 @@ terraform -chdir=terraform/vpc-ec2 destroy
 - [Terraform公式ドキュメント](https://developer.hashicorp.com/terraform/docs)
 - [Ansible公式ドキュメント](https://docs.ansible.com/)
 - [AWS CLI公式ドキュメント](https://docs.aws.amazon.com/cli/)
-- [Cline GitHub](https://github.com/cline/cline)
+- [Claude Code公式ドキュメント](https://docs.anthropic.com/en/docs/claude-code)
 
 ---
 
