@@ -309,9 +309,9 @@ fi
 # 10-1. .envファイルの自動読み込み設定を~/.bashrcに追加
 log_info ".envファイルの自動読み込み設定を追加中..."
 ENV_AUTO_LOAD="# .envファイルを自動的に読み込む（プロジェクトディレクトリの場合のみ）
-if [ -f \"\$HOME/projects/ai_agentic/.env\" ]; then
+if [ -f \"${PROJECT_ROOT_DIR}/.env\" ]; then
     set -a
-    source \"\$HOME/projects/ai_agentic/.env\"
+    source \"${PROJECT_ROOT_DIR}/.env\"
     set +a
 fi"
 
