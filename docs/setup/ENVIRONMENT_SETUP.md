@@ -7,7 +7,7 @@
 - **GitHub アカウント**: リポジトリへのアクセス用
 - **AWS アカウント**: トレーニング用（アクセスキー/シークレットキー）
 - **OpenShift DevSpaces へのアクセス**: 開発環境
-- **VS Code または Cursor エディタ**: Continue拡張機能を使用
+- **VS Code または Cursor エディタ**: Cline拡張機能を使用
 
 ## 🚀 セットアップ手順
 
@@ -37,7 +37,7 @@
   - Ansible（pipでユーザー権限インストール）
   - AWS CLI（~/.local/binにインストール）
 - **VS Code拡張機能**:
-  - Continue
+  - Cline
 
 **インストール後の注意**:
 - スクリプト実行後、新しいターミナルを開くか、`source ~/.bashrc`を実行してPATHを更新してください
@@ -95,19 +95,24 @@ ansible --version
 aws --version
 ```
 
-#### 4.2 Continueの確認
+#### 4.2 Clineの確認
 
-1. **Continueを起動**
-   - 方法1: 左側のサイドバーからContinueアイコンをクリック
-   - 方法2: ショートカットキー（`Ctrl+L` / `Cmd+L`）を使用
+1. **Clineを起動**
+   - 方法1: 左側のサイドバーからClineアイコンをクリック
+   - 方法2: コマンドパレット（`Ctrl+Shift+P` / `Cmd+Shift+P`）→ "Cline: Open"
 
-2. **Agentモードで動作確認**
-   - Continueのチャット画面で、Agentモードを有効化
+2. **初回設定**（初めて起動する場合）
+   - API Provider: `AWS Bedrock`
+   - Region: `ap-northeast-1`
+   - Model: `anthropic.claude-sonnet-4-6`
+
+3. **動作確認**
    - チャットに以下を入力：
      ```
-     testフォルダに「hello.txt」というファイルを作成して、その中に「Hello, Continue!」と書き込んでください
+     testフォルダに「hello.txt」というファイルを作成して、その中に「Hello, Cline!」と書き込んでください
      ```
-   - AIが`test`フォルダを作成し、`hello.txt`ファイルを作成して内容を書き込めば、設定は成功です
+   - Clineがファイル作成の承認を求めてくるので「Accept」をクリック
+   - `test/hello.txt` が作成されれば、設定は成功です
 
 ## ✅ セットアップ完了チェックリスト
 
@@ -116,7 +121,7 @@ aws --version
 - [ ] `.env`ファイルを作成し、AWS認証情報を設定した
 - [ ] セットアップスクリプトを再実行してAWS CLI設定ファイルを作成した
 - [ ] AWS認証情報が正しく設定されていることを確認した（`aws sts get-caller-identity`）
-- [ ] Continueが正常に動作することを確認した（Agentモードでファイル作成テスト）
+- [ ] Clineが正常に動作することを確認した（ファイル作成テスト）
 
 ## 🆘 トラブルシューティング
 
@@ -130,14 +135,14 @@ chmod +x scripts/*.sh
 - IAM権限が適切か確認
 - リージョンが正しいか確認
 
-### Continueが起動しない
+### Clineが起動しない
 1. 拡張機能が正しくインストールされているか確認
 2. VS Code/Cursorを再起動
-3. `.continue/config.json` が正しいか確認
+3. Clineの設定画面でAPI Provider, Region, Modelが正しいか確認
 
 ### AWS Bedrockへの接続エラー
-1. AWS認証情報が正しく設定されているか確認（`echo $AWS_ACCESS_KEY_ID`）
-2. AWSリージョンが正しいか確認（`us-east-1`）
+1. AWS認証情報が正しく設定されているか確認（`aws sts get-caller-identity`）
+2. AWSリージョンが正しいか確認（`ap-northeast-1`）
 3. AWS Bedrockへのアクセス権限があるか確認（IAMポリシー）
 
 ### 手動インストールが必要な場合
@@ -191,7 +196,7 @@ aws --version
 
 ## 📚 参考資料
 
-- [Continue セットアップガイド](CONTINUE_SETUP.md) — Continueの詳細設定
+- [Cline セットアップガイド](CLINE_SETUP.md) — Clineの詳細設定
 - [Terraform公式ドキュメント](https://www.terraform.io/docs)
 - [Ansible公式ドキュメント](https://docs.ansible.com/)
 

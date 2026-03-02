@@ -137,7 +137,7 @@ fi
 # 6. Pythonパッケージのインストール（スキップ）
 # ワークショップでは Terraform、Ansible、AWS CLI を直接使用するため、
 # 追加のPythonパッケージは不要です。
-# Continueはエディタ拡張機能なので、Pythonパッケージも不要です。
+# Clineはエディタ拡張機能なので、Pythonパッケージも不要です。
 log_info "Pythonパッケージのインストール: ワークショップでは不要のためスキップします"
 
 # 6-1. VS Code拡張機能のインストール（CLI経由）
@@ -155,9 +155,9 @@ done
 if [ -n "$CODE_CMD" ]; then
     log_info "VS Code CLIが見つかりました: $CODE_CMD"
     
-    # 必要な拡張機能のリスト（Continueのみ）
+    # 必要な拡張機能のリスト（Clineのみ）
     EXTENSIONS=(
-        "continue.continue"
+        "saoudrizwan.claude-dev"
     )
     
     INSTALLED_COUNT=0
@@ -212,105 +212,18 @@ if [ -n "$CODE_CMD" ]; then
     fi
 else
     log_warn "VS Code CLI (code-oss/code) が見つかりません。拡張機能は手動でインストールしてください。"
-    log_info "以下のコマンドでContinue拡張機能をインストールできます:"
-    log_info "  code-oss --install-extension continue.continue --force"
+    log_info "以下のコマンドでCline拡張機能をインストールできます:"
+    log_info "  code-oss --install-extension saoudrizwan.claude-dev --force"
 fi
 
-# 6-2. Continue設定ファイルの確認と作成
-log_info "Continue設定ファイルの確認中..."
-CONTINUE_CONFIG_DIR=".continue"
-CONTINUE_CONFIG_FILE="${CONTINUE_CONFIG_DIR}/config.json"
-
-# プロジェクトルートのパスを取得（スクリプトがどこから実行されても正しく動作）
-PROJECT_ROOT="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
-PROJECT_CONTINUE_CONFIG="${PROJECT_ROOT}/${CONTINUE_CONFIG_FILE}"
-
-# .continueディレクトリが存在しない場合は作成
-if [ ! -d "$CONTINUE_CONFIG_DIR" ]; then
-    mkdir -p "$CONTINUE_CONFIG_DIR"
-    log_info "✓ .continueディレクトリを作成しました"
-fi
-
-# config.jsonが存在しない、または内容が正しくない場合は作成/更新
-if [ ! -f "$CONTINUE_CONFIG_FILE" ] || ! grep -q '"openai.gpt-oss-120b-1:0"' "$CONTINUE_CONFIG_FILE" 2>/dev/null; then
-    log_info "Continue設定ファイル（config.json）を作成/更新中..."
-    cat > "$CONTINUE_CONFIG_FILE" << 'EOF'
-{
-  "models": [
-    {
-      "title": "GTP-OSS-120B (Bedrock)",
-      "provider": "bedrock",
-      "model": "openai.gpt-oss-120b-1:0",
-      "region": "us-east-1"
-    }
-  ],
-  "tabAutocompleteModel": {
-    "title": "GTP-OSS-120B (Autocomplete)",
-    "provider": "bedrock",
-    "model": "openai.gpt-oss-120b-1:0",
-    "region": "us-east-1"
-  },
-  "allowAnonymousTelemetry": false,
-  "disableIndexing": true,
-  "disableFormatting": true
-}
-EOF
-    log_info "✓ Continue設定ファイルを作成/更新しました: ${CONTINUE_CONFIG_FILE}"
-else
-    log_info "✓ Continue設定ファイルは既に存在し、正しく設定されています"
-fi
-
-# 6-3. Continue設定ファイルを$HOME/.continueにシンボリックリンクで反映
-log_info "Continue設定ファイルを$HOME/.continueにリンク中..."
-USER_CONTINUE_DIR="$HOME/.continue"
-USER_CONTINUE_CONFIG="${USER_CONTINUE_DIR}/config.json"
-
-# プロジェクトルートのconfig.jsonが存在することを確認
-if [ ! -f "$PROJECT_CONTINUE_CONFIG" ]; then
-    log_warn "プロジェクトルートの設定ファイルが見つかりません: ${PROJECT_CONTINUE_CONFIG}"
-    log_warn "シンボリックリンクの作成をスキップします"
-else
-    # $HOME/.continueディレクトリを作成（既に存在する場合は何もしない）
-    if [ ! -d "$USER_CONTINUE_DIR" ]; then
-        mkdir -p "$USER_CONTINUE_DIR"
-        log_info "✓ $HOME/.continueディレクトリを作成しました"
-    else
-        log_info "✓ $HOME/.continueディレクトリは既に存在しています"
-    fi
-
-    # シンボリックリンクを作成または更新
-    if [ -L "$USER_CONTINUE_CONFIG" ]; then
-        # 既存のシンボリックリンクを確認
-        LINK_TARGET="$(readlink -f "$USER_CONTINUE_CONFIG" 2>/dev/null || readlink "$USER_CONTINUE_CONFIG")"
-        if [ "$LINK_TARGET" != "$PROJECT_CONTINUE_CONFIG" ]; then
-            log_info "既存のシンボリックリンクを更新中..."
-            rm "$USER_CONTINUE_CONFIG"
-            if ln -s "$PROJECT_CONTINUE_CONFIG" "$USER_CONTINUE_CONFIG" 2>/dev/null; then
-                log_info "✓ シンボリックリンクを更新しました: ${USER_CONTINUE_CONFIG} -> ${PROJECT_CONTINUE_CONFIG}"
-            else
-                log_warn "シンボリックリンクの作成に失敗しました"
-            fi
-        else
-            log_info "✓ シンボリックリンクは既に正しく設定されています"
-        fi
-    elif [ -f "$USER_CONTINUE_CONFIG" ]; then
-        # 通常のファイルが存在する場合はバックアップしてからシンボリックリンクに置き換え
-        log_info "既存の設定ファイルをバックアップ中..."
-        mv "$USER_CONTINUE_CONFIG" "${USER_CONTINUE_CONFIG}.backup.$(date +%Y%m%d_%H%M%S)"
-        if ln -s "$PROJECT_CONTINUE_CONFIG" "$USER_CONTINUE_CONFIG" 2>/dev/null; then
-            log_info "✓ 既存の設定ファイルをバックアップし、シンボリックリンクを作成しました"
-        else
-            log_warn "シンボリックリンクの作成に失敗しました"
-        fi
-    else
-        # シンボリックリンクが存在しない場合は作成
-        if ln -s "$PROJECT_CONTINUE_CONFIG" "$USER_CONTINUE_CONFIG" 2>/dev/null; then
-            log_info "✓ シンボリックリンクを作成しました: ${USER_CONTINUE_CONFIG} -> ${PROJECT_CONTINUE_CONFIG}"
-        else
-            log_warn "シンボリックリンクの作成に失敗しました"
-        fi
-    fi
-fi
+# 6-2. Cline設定の案内
+log_info "Clineの設定について:"
+log_info "  Clineの初回起動時にAPIプロバイダーの設定画面が表示されます。"
+log_info "  以下の設定を入力してください:"
+log_info "    - API Provider: AWS Bedrock"
+log_info "    - Region: ap-northeast-1"
+log_info "    - Model: anthropic.claude-sonnet-4-6"
+log_info "  詳細は docs/setup/CLINE_SETUP.md を参照してください。"
 
 # 7. Gitの確認（通常は既にインストールされている）
 log_info "Gitの確認中..."
@@ -396,9 +309,9 @@ fi
 # 10-1. .envファイルの自動読み込み設定を~/.bashrcに追加
 log_info ".envファイルの自動読み込み設定を追加中..."
 ENV_AUTO_LOAD="# .envファイルを自動的に読み込む（プロジェクトディレクトリの場合のみ）
-if [ -f \"\$HOME/projects/ai_agentic/.env\" ]; then
+if [ -f \"${PROJECT_ROOT_DIR}/.env\" ]; then
     set -a
-    source \"\$HOME/projects/ai_agentic/.env\"
+    source \"${PROJECT_ROOT_DIR}/.env\"
     set +a
 fi"
 
@@ -413,7 +326,7 @@ else
 fi
 
 
-# 10-3. AWS CLI設定ファイルを作成（Continue拡張機能とAWS CLI用）
+# 10-3. AWS CLI設定ファイルを作成（Cline拡張機能とAWS CLI用）
 log_info "AWS CLI設定ファイルを作成中（.envファイルから自動設定）..."
 if [ -f ".env" ]; then
     # .envファイルからAWS認証情報を抽出

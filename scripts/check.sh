@@ -364,8 +364,7 @@ check_session4() {
     echo ""
     echo "📦 Step 2: 接続テスト"
     local ping_result
-    ping_result=$(cd ansible && ansible all -m ping 2>/dev/null | grep -c "SUCCESS" || echo "0")
-    cd - > /dev/null 2>&1
+    ping_result=$(ANSIBLE_CONFIG=ansible/ansible.cfg ansible -i ansible/inventory.ini all -m ping 2>/dev/null | grep -c "SUCCESS" || echo "0")
     if [ "$ping_result" -gt 0 ]; then
       pass "ansible ping 成功"
     else
@@ -440,20 +439,20 @@ check_session5() {
     echo ""
     echo "📦 Step 1: IAMロール"
     local role
-    role=$(aws iam get-role --role-name training-ec2-role --query 'Role.RoleName' --output text 2>/dev/null || echo "")
-    if [ "$role" = "training-ec2-role" ]; then
-      pass "IAMロール training-ec2-role が存在する"
+    role=$(aws iam get-role --role-name training-ec2-agent-role --query 'Role.RoleName' --output text 2>/dev/null || echo "")
+    if [ "$role" = "training-ec2-agent-role" ]; then
+      pass "IAMロール training-ec2-agent-role が存在する"
     else
-      fail "IAMロール training-ec2-role がありません" "Step 1のAWS CLIコマンドを実行してください"
+      fail "IAMロール training-ec2-agent-role がありません" "Step 1のAWS CLIコマンドを実行してください"
     fi
 
     local profile
-    profile=$(aws iam get-instance-profile --instance-profile-name training-ec2-profile \
+    profile=$(aws iam get-instance-profile --instance-profile-name training-ec2-agent-profile \
       --query 'InstanceProfile.InstanceProfileName' --output text 2>/dev/null || echo "")
-    if [ "$profile" = "training-ec2-profile" ]; then
-      pass "インスタンスプロファイル training-ec2-profile が存在する"
+    if [ "$profile" = "training-ec2-agent-profile" ]; then
+      pass "インスタンスプロファイル training-ec2-agent-profile が存在する"
     else
-      fail "インスタンスプロファイル training-ec2-profile がありません"
+      fail "インスタンスプロファイル training-ec2-agent-profile がありません"
     fi
   fi
 
