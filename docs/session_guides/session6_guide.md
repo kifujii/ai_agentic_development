@@ -43,18 +43,19 @@ Step 3: レポートを自動生成
 
 ### ゴール
 
-`ansible/playbooks/gather_info.yml` を作成して、以下の情報を収集する：
+サーバーの詳細情報（OS、CPU、メモリ、ディスク、サービス等）が JSON 形式でローカルの `reports/` フォルダに保存されている状態。次の Step でレポート生成に使うデータが揃っている。
 
-- OS情報（distribution, version, kernel）
-- CPU情報（コア数）
-- メモリ情報（合計、使用量、使用率）
-- ディスク使用量
-- 稼働時間
-- 実行中のサービス一覧
-- CloudWatch Agentのステータス（セッション5を実施した場合）
-- 最終ログイン情報
+### やること
 
-追加の要件：
+- `ansible/playbooks/gather_info.yml` を作成して、以下の情報を収集する：
+  - OS情報（distribution, version, kernel）
+  - CPU情報（コア数）
+  - メモリ情報（合計、使用量、使用率）
+  - ディスク使用量
+  - 稼働時間
+  - 実行中のサービス一覧
+  - CloudWatch Agentのステータス（セッション5を実施した場合）
+  - 最終ログイン情報
 - 収集した情報をJSON形式で `/tmp/server_info.json` に保存
 - JSONファイルをローカルの `reports/` フォルダに取得
 
@@ -96,18 +97,21 @@ ansible/playbooks/gather_info.yml を作成してください。
 
 ### ゴール
 
-`ansible/templates/server_report.md.j2` に Jinja2 テンプレートを作成する。
+収集データを読みやすい Markdown レポートに変換する Jinja2 テンプレートが完成している状態。リソース使用率が高い場合はアラートが自動表示される仕組みになっている。
 
-テンプレートに含める内容：
-- タイトル: サーバー運用レポート
-- 生成日時
-- サーバー概要テーブル（ホスト名、IP、OS、カーネル、稼働時間）
-- リソース使用状況（CPU、メモリ、ディスク）
-- メモリ使用率が80%超の場合のアラート表示
-- ディスク使用率が80%超の場合のアラート表示
-- 実行中サービス一覧（上位20件）
-- CloudWatch Agentの状態
-- サマリー（アラート件数）
+### やること
+
+- `ansible/templates/server_report.md.j2` に Jinja2 テンプレートを作成する
+- テンプレートに含める内容：
+  - タイトル: サーバー運用レポート
+  - 生成日時
+  - サーバー概要テーブル（ホスト名、IP、OS、カーネル、稼働時間）
+  - リソース使用状況（CPU、メモリ、ディスク）
+  - メモリ使用率が80%超の場合のアラート表示
+  - ディスク使用率が80%超の場合のアラート表示
+  - 実行中サービス一覧（上位20件）
+  - CloudWatch Agentの状態
+  - サマリー（アラート件数）
 
 > 💡 **ヒント**: Jinja2 では `{% if 条件 %}...{% endif %}` で条件分岐、`{% for item in list %}...{% endfor %}` でループを書けます。Ansible の変数がそのまま使えます。
 
@@ -137,8 +141,11 @@ Jinja2テンプレートの内容:
 
 ### ゴール
 
-`ansible/playbooks/generate_report.yml` を作成して、Step 1 の情報収集 + Step 2 のテンプレートを使ってレポートを自動生成する。
+Playbook を1回実行するだけで、情報収集からレポート生成までが自動で完了する状態。`reports/` フォルダにホスト名・日付入りの Markdown レポートが保存され、サーバーの現状を一目で把握できる。
 
+### やること
+
+- `ansible/playbooks/generate_report.yml` を作成して、Step 1 の情報収集 + Step 2 のテンプレートを使ってレポートを自動生成する
 - 保存先: `reports/server_report_<ホスト名>_<日付>.md`
 
 > 💡 **ヒント**: Ansible の `template` モジュールでJinja2テンプレートからファイルを生成できます。`delegate_to: localhost` を使えばローカルにファイルを保存できます。
