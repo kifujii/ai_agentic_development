@@ -65,7 +65,9 @@ aws sts get-caller-identity
 
 #### 2.2 Claude Code 設定ファイルの作成
 
-セットアップスクリプト（`./scripts/setup_devspaces.sh`）を実行すると、AWSアカウントIDを自動取得して `.claude/settings.local.json` が生成されます。
+セットアップスクリプト（`./scripts/setup_devspaces.sh`）を実行すると、`.env` の AWS認証情報を使ってAWSアカウントIDを自動取得し、`.claude/settings.local.json` が生成されます。
+
+> **ポイント**: `.env` ファイルを先に作成してからスクリプトを実行すると、ツールインストールからClaude Code設定まで1回で完了します。
 
 手動で作成する場合は、以下のコマンドでAWSアカウントIDを確認してから作成してください：
 

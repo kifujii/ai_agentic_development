@@ -17,70 +17,59 @@
 3. 新しいワークスペースを作成
    - **Import from Git**: このリポジトリのURLを指定
 
-### ステップ2: 環境セットアップスクリプトの実行
+### ステップ2: AWS認証情報の設定（.envファイルの作成）
 
-**重要**: セットアップスクリプトは **OpenShift DevSpaces環境内** で実行する必要があります。
+**先に `.env` ファイルを作成しておくと、ステップ3のスクリプト実行1回で全セットアップが完了します。**
 
 1. **ターミナルを開く**
    - VS Codeのメニューから「ターミナル」→「新しいターミナル」を選択
    - または、ショートカットキー（`Ctrl+Shift+C` / `Cmd+Shift+C`）を使用
 
-2. **セットアップスクリプトの実行**
+2. **`.env.template` から `.env` ファイルを作成**
    ```bash
-   ./scripts/setup_devspaces.sh
+   cp .env.template .env
    ```
 
-**インストールされるツール**:
-- Terraform 1.14.6（~/.local/binにインストール）
-- Ansible（pipでユーザー権限インストール）
-- AWS CLI（~/.local/binにインストール）
-- Claude Code（npm グローバルインストール）
+3. **`.env` ファイルを編集してAWS認証情報を設定**
 
-**インストール後の注意**:
-- スクリプト実行後、新しいターミナルを開くか、`source ~/.bashrc`を実行してPATHを更新してください
+   VS Codeで`.env`ファイルを開き、以下の値を実際のAWS認証情報に置き換えてください：
 
-### ステップ3: AWS認証情報の設定
+   ```bash
+   # AWS認証情報
+   AWS_ACCESS_KEY_ID=your-access-key-here
+   AWS_SECRET_ACCESS_KEY=your-secret-key-here
+   AWS_DEFAULT_REGION=ap-northeast-1
+   ```
 
-#### 3.1 .envファイルの作成と編集
+   **編集内容**:
+   - `your-access-key-here` → AWSアクセスキーID
+   - `your-secret-key-here` → AWSシークレットアクセスキー
 
-セットアップスクリプト（ステップ2）が`.env.template`ファイルを作成します。このテンプレートから`.env`ファイルを作成し、実際のAWS認証情報を設定します：
+### ステップ3: 環境セットアップスクリプトの実行
 
-```bash
-cp .env.template .env
-```
-
-VS Codeで`.env`ファイルを開き、以下の値を実際のAWS認証情報に置き換えてください：
-
-```bash
-# AWS認証情報
-AWS_ACCESS_KEY_ID=your-access-key-here
-AWS_SECRET_ACCESS_KEY=your-secret-key-here
-AWS_DEFAULT_REGION=ap-northeast-1
-```
-
-**編集内容**:
-- `your-access-key-here` → AWSアクセスキーID
-- `your-secret-key-here` → AWSシークレットアクセスキー
-
-#### 3.2 セットアップスクリプトの再実行（AWS CLI設定 & Claude Code設定の自動作成）
-
-**重要**: `.env`ファイルを編集した後、セットアップスクリプトを再実行してください。以下が自動的に作成されます：
-- AWS CLI設定ファイル（`~/.aws/credentials` と `~/.aws/config`）
-- Claude Code設定ファイル（`.claude/settings.local.json`）— AWSアカウントIDから自動生成
+**重要**: セットアップスクリプトは **OpenShift DevSpaces環境内** で実行する必要があります。
 
 ```bash
 ./scripts/setup_devspaces.sh
 ```
 
-#### 3.3 AWS認証情報の確認
+**スクリプトが行うこと**:
+- ツールのインストール（Terraform, Ansible, AWS CLI, Claude Code）
+- `.env` から AWS CLI 設定ファイル（`~/.aws/credentials`, `~/.aws/config`）を自動作成
+- AWSアカウントIDを取得して Claude Code Bedrock設定（`.claude/settings.local.json`）を自動生成
+
+**インストール後の注意**:
+- スクリプト実行後、新しいターミナルを開くか、`source ~/.bashrc`を実行してPATHを更新してください
+
+### ステップ4: AWS認証情報の確認
 
 ```bash
 aws sts get-caller-identity
 ```
 
-### ステップ4: 動作確認
+### ステップ5: 動作確認
 
-#### 4.1 ツールの確認
+#### 5.1 ツールの確認
 
 ```bash
 terraform version
@@ -94,7 +83,7 @@ ansible --version
 aws --version
 ```
 
-#### 4.2 Claude Codeの確認
+#### 5.2 Claude Codeの確認
 
 1. **Claude Codeを起動**
    ```bash
@@ -112,9 +101,8 @@ aws --version
 ## ✅ セットアップ完了チェックリスト
 
 - [ ] DevSpacesワークスペースを作成した
-- [ ] セットアップスクリプトを実行した
 - [ ] `.env`ファイルを作成し、AWS認証情報を入力した
-- [ ] セットアップスクリプトを再実行してAWS CLI設定 & Claude Code設定ファイルを作成した
+- [ ] セットアップスクリプトを実行した
 - [ ] AWS認証情報が正しく設定されていることを確認した（`aws sts get-caller-identity`）
 - [ ] Claude Codeが正常に動作することを確認した（ファイル作成テスト）
 

@@ -50,6 +50,104 @@ if [[ ":$PATH:" != *":$LOCAL_BIN:"* ]]; then
     log_info "PATHに ~/.local/bin を追加しました"
 fi
 
+# プロジェクトルートの取得
+PROJECT_ROOT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
+
+# ==============================================================
+# 0. .envファイルの確認と AWS認証情報の早期セットアップ
+# ==============================================================
+# .envファイルが先に作成されていれば、ツールインストール後の
+# Claude Code設定（AWSアカウントID取得）まで1回の実行で完結します。
+log_info ".envファイルの確認中..."
+AWS_CREDENTIALS_READY=false
+
+if [ ! -f ".env" ]; then
+    if [ -f ".env.template" ]; then
+        log_warn ".envファイルが見つかりません。"
+        log_info "先に .env ファイルを作成してからスクリプトを実行すると、1回で全セットアップが完了します。"
+        log_info "  コマンド: cp .env.template .env"
+        log_info "  その後、.env を編集してAWS認証情報を設定してください。"
+    else
+        log_warn ".env.templateファイルが見つかりません。"
+        log_info ".envファイルを手動で作成し、AWS認証情報を設定してください。"
+    fi
+else
+    log_info "✓ .envファイルが見つかりました。AWS認証情報を読み込みます..."
+
+    # .envファイルからAWS認証情報を抽出
+    AWS_ACCESS_KEY=$(grep "^AWS_ACCESS_KEY_ID=" .env | grep -v '^#' | cut -d'=' -f2 | sed "s/^['\"]//;s/['\"]$//" | head -1)
+    AWS_SECRET_KEY=$(grep "^AWS_SECRET_ACCESS_KEY=" .env | grep -v '^#' | cut -d'=' -f2 | sed "s/^['\"]//;s/['\"]$//" | head -1)
+    AWS_REGION_ENV=$(grep "^AWS_DEFAULT_REGION=" .env | grep -v '^#' | cut -d'=' -f2 | sed "s/^['\"]//;s/['\"]$//" | head -1)
+
+    if [ -n "$AWS_ACCESS_KEY" ] && [ -n "$AWS_SECRET_KEY" ] && [ "$AWS_ACCESS_KEY" != "your-access-key-here" ] && [ "$AWS_SECRET_KEY" != "your-secret-key-here" ]; then
+        # 環境変数にエクスポート（このスクリプト内で aws コマンドが使えるようにする）
+        export AWS_ACCESS_KEY_ID="$AWS_ACCESS_KEY"
+        export AWS_SECRET_ACCESS_KEY="$AWS_SECRET_KEY"
+        [ -n "$AWS_REGION_ENV" ] && export AWS_DEFAULT_REGION="$AWS_REGION_ENV"
+
+        # ~/.aws/credentials ファイルの作成・更新
+        mkdir -p ~/.aws
+        if [ ! -f ~/.aws/credentials ] || ! grep -q "\[default\]" ~/.aws/credentials 2>/dev/null; then
+            cat > ~/.aws/credentials << EOF
+[default]
+aws_access_key_id = ${AWS_ACCESS_KEY}
+aws_secret_access_key = ${AWS_SECRET_KEY}
+EOF
+            log_info "✓ AWS認証情報ファイルを作成しました: ~/.aws/credentials"
+        else
+            awk -v access_key="$AWS_ACCESS_KEY" -v secret_key="$AWS_SECRET_KEY" '
+                /\[default\]/ { in_default=1; print; next }
+                in_default && /^\[/ { in_default=0 }
+                in_default && /^aws_access_key_id/ { print "aws_access_key_id = " access_key; next }
+                in_default && /^aws_secret_access_key/ { print "aws_secret_access_key = " secret_key; next }
+                { print }
+            ' ~/.aws/credentials > ~/.aws/credentials.tmp && mv ~/.aws/credentials.tmp ~/.aws/credentials
+            log_info "✓ AWS認証情報ファイルを更新しました: ~/.aws/credentials"
+        fi
+
+        # ~/.aws/config ファイルの作成・更新
+        if [ -n "$AWS_REGION_ENV" ]; then
+            if [ ! -f ~/.aws/config ]; then
+                cat > ~/.aws/config << EOF
+[default]
+region = ${AWS_REGION_ENV}
+EOF
+                log_info "✓ AWS設定ファイルを作成しました: ~/.aws/config"
+            else
+                if ! grep -q "\[default\]" ~/.aws/config; then
+                    echo "" >> ~/.aws/config
+                    echo "[default]" >> ~/.aws/config
+                    echo "region = ${AWS_REGION_ENV}" >> ~/.aws/config
+                    log_info "✓ AWS設定ファイルにリージョンを追加しました: ~/.aws/config"
+                fi
+            fi
+        fi
+
+        AWS_CREDENTIALS_READY=true
+        log_info "✓ AWS認証情報のセットアップが完了しました"
+    else
+        log_warn ".envファイルに有効なAWS認証情報が設定されていません（テンプレートのままの可能性があります）"
+        log_info ".envファイルを編集してAWS認証情報を設定してください。"
+    fi
+fi
+
+# .envファイルの自動読み込み設定を~/.bashrcに追加
+log_info ".envファイルの自動読み込み設定を確認中..."
+ENV_AUTO_LOAD="# .envファイルを自動的に読み込む（プロジェクトディレクトリの場合のみ）
+if [ -f \"${PROJECT_ROOT_DIR}/.env\" ]; then
+    set -a
+    source \"${PROJECT_ROOT_DIR}/.env\"
+    set +a
+fi"
+
+if ! grep -q "# .envファイルを自動的に読み込む" ~/.bashrc 2>/dev/null; then
+    echo "" >> ~/.bashrc
+    echo "$ENV_AUTO_LOAD" >> ~/.bashrc
+    log_info "✓ .envファイルの自動読み込み設定を~/.bashrcに追加しました"
+else
+    log_info "✓ .envファイルの自動読み込み設定は既に存在します"
+fi
+
 # 1. システムパッケージの更新（sudoが使える場合のみ）
 if check_sudo; then
     log_info "システムパッケージの更新中..."
@@ -205,7 +303,7 @@ if [ -f "$CLAUDE_SETTINGS_FILE" ]; then
 else
     # AWSアカウントIDを取得して設定ファイルを自動生成
     AWS_ACCOUNT_ID=""
-    if command -v aws &> /dev/null; then
+    if [ "$AWS_CREDENTIALS_READY" = true ] && command -v aws &> /dev/null; then
         AWS_ACCOUNT_ID=$(aws sts get-caller-identity --query Account --output text 2>/dev/null)
     fi
 
@@ -292,104 +390,9 @@ fi
 
 # 9. 作業ディレクトリの作成（プロジェクトルート配下）
 log_info "作業ディレクトリの作成中..."
-PROJECT_ROOT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
 mkdir -p "${PROJECT_ROOT_DIR}/terraform"
 mkdir -p "${PROJECT_ROOT_DIR}/ansible"
 log_info "作業ディレクトリの作成完了（${PROJECT_ROOT_DIR}/terraform, ${PROJECT_ROOT_DIR}/ansible）"
-
-# 10. .envファイルの確認
-log_info ".envファイルの確認中..."
-if [ ! -f ".env" ]; then
-    if [ -f ".env.template" ]; then
-        log_info ".env.templateファイルが見つかりました。"
-        log_info "次のステップ: .env.templateをコピーして.envファイルを作成し、AWS認証情報を設定してください。"
-        log_info "  コマンド: cp .env.template .env"
-    else
-        log_warn ".env.templateファイルが見つかりません。"
-        log_info ".envファイルを手動で作成し、AWS認証情報を設定してください。"
-    fi
-else
-    log_info ".envファイルは既に存在します"
-fi
-
-# 10-1. .envファイルの自動読み込み設定を~/.bashrcに追加
-log_info ".envファイルの自動読み込み設定を追加中..."
-ENV_AUTO_LOAD="# .envファイルを自動的に読み込む（プロジェクトディレクトリの場合のみ）
-if [ -f \"${PROJECT_ROOT_DIR}/.env\" ]; then
-    set -a
-    source \"${PROJECT_ROOT_DIR}/.env\"
-    set +a
-fi"
-
-# 既に設定が存在するかチェック
-if ! grep -q "# .envファイルを自動的に読み込む" ~/.bashrc 2>/dev/null; then
-    echo "" >> ~/.bashrc
-    echo "$ENV_AUTO_LOAD" >> ~/.bashrc
-    log_info "✓ .envファイルの自動読み込み設定を~/.bashrcに追加しました"
-    log_info "  新しいターミナルを開くか、source ~/.bashrcを実行すると有効になります"
-else
-    log_warn ".envファイルの自動読み込み設定は既に存在します"
-fi
-
-
-# 10-3. AWS CLI設定ファイルを作成（Claude CodeとAWS CLI用）
-log_info "AWS CLI設定ファイルを作成中（.envファイルから自動設定）..."
-if [ -f ".env" ]; then
-    # .envファイルからAWS認証情報を抽出
-    AWS_ACCESS_KEY=$(grep "^AWS_ACCESS_KEY_ID=" .env | grep -v '^#' | cut -d'=' -f2 | sed "s/^['\"]//;s/['\"]$//" | head -1)
-    AWS_SECRET_KEY=$(grep "^AWS_SECRET_ACCESS_KEY=" .env | grep -v '^#' | cut -d'=' -f2 | sed "s/^['\"]//;s/['\"]$//" | head -1)
-    AWS_REGION=$(grep "^AWS_DEFAULT_REGION=" .env | grep -v '^#' | cut -d'=' -f2 | sed "s/^['\"]//;s/['\"]$//" | head -1)
-    
-    if [ -n "$AWS_ACCESS_KEY" ] && [ -n "$AWS_SECRET_KEY" ] && [ "$AWS_ACCESS_KEY" != "your-access-key-here" ] && [ "$AWS_SECRET_KEY" != "your-secret-key-here" ]; then
-        # ~/.awsディレクトリを作成
-        mkdir -p ~/.aws
-        
-        # credentialsファイルを作成または更新
-        if [ ! -f ~/.aws/credentials ] || ! grep -q "\[default\]" ~/.aws/credentials 2>/dev/null; then
-            cat > ~/.aws/credentials << EOF
-[default]
-aws_access_key_id = ${AWS_ACCESS_KEY}
-aws_secret_access_key = ${AWS_SECRET_KEY}
-EOF
-            log_info "✓ AWS認証情報ファイルを作成しました: ~/.aws/credentials"
-        else
-            # 既存の[default]セクションを更新
-            if grep -q "\[default\]" ~/.aws/credentials; then
-                # 一時ファイルに書き込んでから置き換え
-                awk -v access_key="$AWS_ACCESS_KEY" -v secret_key="$AWS_SECRET_KEY" '
-                    /\[default\]/ { in_default=1; print; next }
-                    in_default && /^\[/ { in_default=0 }
-                    in_default && /^aws_access_key_id/ { print "aws_access_key_id = " access_key; next }
-                    in_default && /^aws_secret_access_key/ { print "aws_secret_access_key = " secret_key; next }
-                    { print }
-                ' ~/.aws/credentials > ~/.aws/credentials.tmp && mv ~/.aws/credentials.tmp ~/.aws/credentials
-                log_info "✓ AWS認証情報ファイルを更新しました: ~/.aws/credentials"
-            fi
-        fi
-        
-        # configファイルを作成または更新
-        if [ -n "$AWS_REGION" ]; then
-            if [ ! -f ~/.aws/config ]; then
-                cat > ~/.aws/config << EOF
-[default]
-region = ${AWS_REGION}
-EOF
-                log_info "✓ AWS設定ファイルを作成しました: ~/.aws/config"
-            else
-                if ! grep -q "\[default\]" ~/.aws/config; then
-                    echo "" >> ~/.aws/config
-                    echo "[default]" >> ~/.aws/config
-                    echo "region = ${AWS_REGION}" >> ~/.aws/config
-                    log_info "✓ AWS設定ファイルにリージョンを追加しました: ~/.aws/config"
-                fi
-            fi
-        fi
-    else
-        log_warn ".envファイルに有効なAWS認証情報が設定されていません（テンプレートのままの可能性があります）"
-    fi
-else
-    log_warn ".envファイルが存在しないため、AWS CLI設定ファイルの作成をスキップします"
-fi
 
 # 11. 動作確認
 echo ""
@@ -433,7 +436,28 @@ else
     log_error "✗ Claude Code: インストールされていません"
 fi
 
+if [ -f ".claude/settings.local.json" ]; then
+    log_info "✓ Claude Code Bedrock設定: .claude/settings.local.json"
+else
+    log_warn "✗ Claude Code Bedrock設定: 未作成（AWS認証情報を設定後、スクリプトを再実行してください）"
+fi
+
+if [ -f ~/.aws/credentials ]; then
+    log_info "✓ AWS CLI設定: ~/.aws/credentials"
+else
+    log_warn "✗ AWS CLI設定: 未作成（.envファイルにAWS認証情報を設定後、スクリプトを再実行してください）"
+fi
+
 echo ""
 log_info "=========================================="
 log_info "セットアップ完了！"
 log_info "=========================================="
+
+if [ "$AWS_CREDENTIALS_READY" != true ]; then
+    echo ""
+    log_info "【次のステップ】"
+    log_info "  1. cp .env.template .env"
+    log_info "  2. .env を編集してAWS認証情報を設定"
+    log_info "  3. ./scripts/setup_devspaces.sh を再実行"
+    log_info "  → AWS CLI設定とClaude Code Bedrock設定が自動作成されます"
+fi
