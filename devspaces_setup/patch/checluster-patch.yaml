@@ -1,0 +1,23 @@
+spec:
+  devEnvironments:
+    defaultContainerResources:
+      limits:
+        memory: "6Gi"
+        cpu: "2"
+      requests:
+        memory: "2Gi"
+        cpu: "500m"
+    defaultComponents:
+      - name: universal-developer-image
+        container:
+          image: registry.redhat.io/devspaces/udi-rhel9:latest
+          memoryLimit: "6Gi"
+          memoryRequest: "2Gi"
+          cpuLimit: "2"
+          cpuRequest: "500m"
+          env:
+            - name: NODE_OPTIONS
+              value: "--max-old-space-size=4096"
+          sourceMapping: /projects
+          mountSources: true
+    secondsOfInactivityBeforeIdling: 1800
