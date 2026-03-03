@@ -61,7 +61,7 @@ Session 6: サーバー情報取得・レポート（任意）
 ## ディレクトリ構成
 
 ```
-ai_agentic/
+ai_agentic_development-2/
 ├── docs/
 │   ├── TRAINING_MENU.md         # トレーニングメニュー
 │   ├── images/                  # アーキテクチャ構成図
@@ -70,7 +70,9 @@ ai_agentic/
 ├── evaluation/                  # 評価チェックリスト
 ├── scripts/
 │   ├── setup_devspaces.sh       # 環境セットアップスクリプト
-│   └── check.sh                 # セッション完了チェックスクリプト
+│   ├── check.sh                 # セッション完了チェックスクリプト
+│   ├── generate_diagrams.py     # 構成図の自動生成（開発者向け）
+│   └── requirements.txt         # Python依存パッケージ（開発者向け）
 ├── terraform/                   # Terraformコード（セッション中に作成）
 ├── ansible/                     # Ansibleコード（セッション中に作成）
 ├── .claude/                     # Claude Code設定（.gitignore対象、スクリプトで自動生成）
@@ -88,7 +90,7 @@ ai_agentic/
 # 1. セッション5: IAMリソース（実施した場合のみ）
 # → Agentに「training-ec2-agent-role と training-ec2-agent-profile を削除して」と伝えてください
 
-# 2. セッション1〜2: VPC/EC2
+# 2. セッション1〜3: VPC/EC2（セッション3のHTTPS設定も含まれます）
 terraform -chdir=terraform/vpc-ec2 destroy
 ```
 
