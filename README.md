@@ -11,8 +11,8 @@ Claude CodeのAIエージェント機能を使って、TerraformやAnsibleのコ
 | セッション | 内容 | 時間 | 必須/任意 | ガイド |
 |-----------|------|------|-----------|--------|
 | **1** | VPC + EC2 を段階的に構築 | 2h | 必須 | [ガイド](docs/session_guides/session1_guide.md) |
-| **2** | Webアプリケーションを公開 | 2h | 必須 | [ガイド](docs/session_guides/session2_guide.md) |
-| **3** | HTTPS 対応 | 45min | 任意 | [ガイド](docs/session_guides/session3_guide.md) |
+| **2** | Terraform でインフラを構築・変更・再構築 | 2h | 必須 | [ガイド](docs/session_guides/session2_guide.md) |
+| **3** | EC2 を count でスケールアウト | 45min | 任意 | [ガイド](docs/session_guides/session3_guide.md) |
 | **4** | サーバー再起動の自動化 (Ansible) | 2h | 必須 | [ガイド](docs/session_guides/session4_guide.md) |
 | **5** | SSM Agent & CloudWatch Agent 導入 | 2h | 必須 | [ガイド](docs/session_guides/session5_guide.md) |
 | **6** | サーバー情報取得・運用レポート | 1h | 任意 | [ガイド](docs/session_guides/session6_guide.md) |
@@ -22,8 +22,8 @@ Claude CodeのAIエージェント機能を使って、TerraformやAnsibleのコ
 ```
 Day 1 (4h + 任意45min): インフラ構築 (Terraform)
 ├── Session 1: VPC + EC2 を段階的に構築 (2h)             [必須]
-├── Session 2: Webアプリケーションを公開 (2h)             [必須]
-└── Session 3: HTTPS 対応 (45min)                        [任意]
+├── Session 2: Terraform でインフラを構築・変更・再構築 (2h) [必須]
+└── Session 3: EC2 を count でスケールアウト (45min)       [任意]
 
 Day 2 (4h + 任意1h): システム運用 (Ansible)
 ├── Session 4: サーバー再起動の自動化 (2h)               [必須]
@@ -34,7 +34,7 @@ Day 2 (4h + 任意1h): システム運用 (Ansible)
 ### セッション間のつながり
 
 ```
-Session 1: VPC + EC2 構築  ──→  Session 2: Webアプリ公開  ──→  Session 3: HTTPS対応（任意）
+Session 1: VPC + EC2 構築  ──→  Session 2: 構築・変更・再構築  ──→  Session 3: countスケールアウト（任意）
     ↓（EC2をAnsibleの操作対象として使用）
 Session 4: サーバー再起動の自動化
     ↓

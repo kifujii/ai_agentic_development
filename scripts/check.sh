@@ -180,18 +180,18 @@ check_session1() {
 }
 
 # =============================================================================
-# セッション2: Webアプリケーションを公開
+# セッション2: Terraform でインフラを構築・変更・再構築
 # =============================================================================
 check_session2() {
   local step="${1:-all}"
   echo ""
-  echo "🔍 セッション2: Webアプリケーションを公開"
+  echo "🔍 セッション2: Terraform でインフラを構築・変更・再構築"
   echo "------------------------------"
 
   local ip
   ip=$(tf_output "instance_public_ip")
   if [ -z "$ip" ]; then
-    fail "EC2のIPが取得できません" "セッション1を完了してください"
+    fail "EC2のIPが取得できません" "セッション1を完了してください（またはStep 5の再構築を実行してください）"
     summary
     return
   fi
@@ -217,10 +217,10 @@ check_session2() {
     fi
   fi
 
-  # Step 2: nginx インストール
+  # Step 2: nginx 起動確認
   if [ "$step" = "all" ] || [ "$step" = "step2" ]; then
     echo ""
-    echo "📦 Step 2: nginxインストール"
+    echo "📦 Step 2: nginx起動確認"
     local nginx_status
     nginx_status=$(ssh_check_cmd "$ip" "systemctl is-active nginx" 2>/dev/null || echo "")
     if [ "$nginx_status" = "active" ]; then
@@ -230,10 +230,51 @@ check_session2() {
     fi
   fi
 
-  # Step 3: HTTP アクセス
+  # Step 3: タグ追加確認
   if [ "$step" = "all" ] || [ "$step" = "step3" ]; then
     echo ""
-    echo "📦 Step 3: ブラウザ確認（HTTPアクセス）"
+    echo "📦 Step 3: インフラ変更（タグ追加）"
+    local inst_id
+    inst_id=$(tf_output "instance_id")
+    if [ -n "$inst_id" ]; then
+      local env_tag
+      env_tag=$(aws ec2 describe-tags --filters "Name=resource-id,Values=$inst_id" "Name=key,Values=Environment" \
+        --query 'Tags[0].Value' --output text 2>/dev/null || echo "")
+      if [ -n "$env_tag" ] && [ "$env_tag" != "None" ]; then
+        pass "EC2 に Environment タグが設定されている ($env_tag)"
+      else
+        fail "EC2 に Environment タグがありません" "Step 3のプロンプトでタグ追加を実行してください"
+      fi
+    else
+      fail "インスタンスIDが取得できないためスキップ"
+    fi
+  fi
+
+  # Step 5: user_data による再構築確認
+  if [ "$step" = "all" ] || [ "$step" = "step5" ]; then
+    echo ""
+    echo "📦 Step 5: user_data による再構築"
+    # user_data が設定されているか確認
+    local inst_id
+    inst_id=$(tf_output "instance_id")
+    if [ -n "$inst_id" ]; then
+      local user_data
+      user_data=$(aws ec2 describe-instance-attribute --instance-id "$inst_id" --attribute userData \
+        --query 'UserData.Value' --output text 2>/dev/null || echo "")
+      if [ -n "$user_data" ] && [ "$user_data" != "None" ]; then
+        pass "EC2 に user_data が設定されている"
+      else
+        fail "EC2 に user_data がありません" "Step 5のプロンプトでuser_dataを追加して再構築してください"
+      fi
+    else
+      fail "インスタンスIDが取得できないためスキップ"
+    fi
+  fi
+
+  # Step 6: HTTP アクセス + カスタムページ
+  if [ "$step" = "all" ] || [ "$step" = "step6" ]; then
+    echo ""
+    echo "📦 Step 6: HTTPアクセス + カスタムページ"
     local http_code
     http_code=$(curl -s -o /dev/null -w "%{http_code}" --connect-timeout 5 "http://$ip" 2>/dev/null || echo "000")
     if [ "$http_code" = "200" ] || [ "$http_code" = "301" ] || [ "$http_code" = "302" ]; then
@@ -243,85 +284,72 @@ check_session2() {
     fi
   fi
 
-  # Step 4-5: カスタムページ
-  if [ "$step" = "all" ] || [ "$step" = "step4" ] || [ "$step" = "step5" ]; then
-    echo ""
-    echo "📦 Step 4-5: カスタムWebページ"
-    local body
-    body=$(curl -s --connect-timeout 5 "http://$ip" 2>/dev/null || echo "")
-    if echo "$body" | grep -qi "welcome to nginx\|test page\|Amazon Linux"; then
-      fail "デフォルトページのままです" "Agentに「HTMLページを作成してEC2にデプロイして」と指示してください"
-    elif [ -n "$body" ]; then
-      pass "カスタムWebページがデプロイされている"
-    else
-      fail "ページの内容を取得できませんでした"
-    fi
-  fi
-
   summary
 }
 
 # =============================================================================
-# セッション3: HTTPS 対応
+# セッション3: EC2 を count でスケールアウト
 # =============================================================================
 check_session3() {
   local step="${1:-all}"
   echo ""
-  echo "🔍 セッション3: HTTPS 対応"
+  echo "🔍 セッション3: EC2 を count でスケールアウト"
   echo "------------------------------"
 
   local ip
   ip=$(tf_output "instance_public_ip")
   if [ -z "$ip" ]; then
-    fail "EC2のIPが取得できません" "セッション1を完了してください"
+    fail "EC2のIPが取得できません" "セッション2を完了してください"
     summary
     return
   fi
 
-  # Step 1: SG に HTTPS(443)
-  if [ "$step" = "all" ] || [ "$step" = "step1" ]; then
+  # セッション3は最終的に1台構成に戻すため、完了後は以下を確認:
+  # - EC2が1台で running
+  # - nginx が動作中
+  # - terraform plan で差分なし
+
+  # Step 1-2: EC2の状態確認（最終状態は1台）
+  if [ "$step" = "all" ] || [ "$step" = "step1" ] || [ "$step" = "step2" ]; then
     echo ""
-    echo "📦 Step 1: セキュリティグループにHTTPS追加"
-    local sg_id
-    sg_id=$(tf_output "security_group_id")
-    if [ -n "$sg_id" ]; then
-      local https_rule
-      https_rule=$(aws ec2 describe-security-groups --group-ids "$sg_id" \
-        --query 'SecurityGroups[0].IpPermissions[?FromPort==`443`]' \
-        --output text 2>/dev/null || echo "")
-      if [ -n "$https_rule" ]; then
-        pass "HTTPS(443) のインバウンドルールがある ($sg_id)"
+    echo "📦 Step 1-2: EC2 状態確認"
+    local inst_id
+    inst_id=$(tf_output "instance_id")
+    if [ -n "$inst_id" ]; then
+      local state
+      state=$(aws ec2 describe-instances --instance-ids "$inst_id" \
+        --query 'Reservations[0].Instances[0].State.Name' --output text 2>/dev/null || echo "")
+      if [ "$state" = "running" ]; then
+        pass "EC2 インスタンスが running 状態 ($inst_id)"
       else
-        fail "HTTPS(443) のインバウンドルールがありません"
+        fail "EC2 の状態: ${state:-不明}" "terraform apply を実行してください"
       fi
     else
-      fail "セキュリティグループIDが取得できません"
+      fail "インスタンスIDが取得できません"
     fi
-  fi
 
-  # Step 2: HTTPS アクセス
-  if [ "$step" = "all" ] || [ "$step" = "step2" ]; then
-    echo ""
-    echo "📦 Step 2: SSL証明書 & nginx HTTPS設定"
-    local https_code
-    https_code=$(curl -sk -o /dev/null -w "%{http_code}" --connect-timeout 5 "https://$ip" 2>/dev/null || echo "000")
-    if [ "$https_code" = "200" ]; then
-      pass "HTTPS でアクセス可能 (ステータス: $https_code)"
+    # nginx アクセス確認
+    local http_code
+    http_code=$(curl -s -o /dev/null -w "%{http_code}" --connect-timeout 5 "http://$ip" 2>/dev/null || echo "000")
+    if [ "$http_code" = "200" ] || [ "$http_code" = "301" ] || [ "$http_code" = "302" ]; then
+      pass "HTTP でアクセス可能 (ステータス: $http_code)"
     else
-      fail "HTTPS でアクセスできません (ステータス: $https_code)" "SSL証明書とnginxのHTTPS設定を確認してください"
+      fail "HTTP でアクセスできません (ステータス: $http_code)"
     fi
   fi
 
-  # Step 3: リダイレクト
+  # Step 3: コードの整合性確認（terraform plan で差分なし）
   if [ "$step" = "all" ] || [ "$step" = "step3" ]; then
     echo ""
-    echo "📦 Step 3: HTTP→HTTPS リダイレクト"
-    local redirect_code
-    redirect_code=$(curl -s -o /dev/null -w "%{http_code}" --connect-timeout 5 "http://$ip" 2>/dev/null || echo "000")
-    if [ "$redirect_code" = "301" ] || [ "$redirect_code" = "302" ]; then
-      pass "HTTP→HTTPS リダイレクトが設定されている (ステータス: $redirect_code)"
+    echo "📦 Step 3: Terraform コードの整合性"
+    local plan_output
+    plan_output=$(terraform -chdir=terraform/vpc-ec2 plan -no-color 2>&1 || echo "ERROR")
+    if echo "$plan_output" | grep -q "No changes\|0 to add, 0 to change, 0 to destroy"; then
+      pass "terraform plan で差分なし（コードとインフラが一致）"
+    elif echo "$plan_output" | grep -q "ERROR"; then
+      fail "terraform plan の実行に失敗しました" "terraform init を実行してください"
     else
-      fail "HTTP→HTTPS リダイレクトがありません (ステータス: $redirect_code)" "nginxのリダイレクト設定を確認してください"
+      fail "terraform plan に差分があります" "countを1に戻してterraform applyを実行してください"
     fi
   fi
 
@@ -421,7 +449,7 @@ check_session4() {
 }
 
 # =============================================================================
-# セッション5: CloudWatch Agent & SSM Agent
+# セッション5: CloudWatch Agent & SSM Agent（トラブルシューティング体験付き）
 # =============================================================================
 check_session5() {
   local step="${1:-all}"
@@ -434,32 +462,10 @@ check_session5() {
   local inst_id
   inst_id=$(tf_output "instance_id")
 
-  # Step 1: IAMロール
+  # Step 1: SSM Agent インストール
   if [ "$step" = "all" ] || [ "$step" = "step1" ]; then
     echo ""
-    echo "📦 Step 1: IAMロール"
-    local role
-    role=$(aws iam get-role --role-name training-ec2-agent-role --query 'Role.RoleName' --output text 2>/dev/null || echo "")
-    if [ "$role" = "training-ec2-agent-role" ]; then
-      pass "IAMロール training-ec2-agent-role が存在する"
-    else
-      fail "IAMロール training-ec2-agent-role がありません" "Step 1のAWS CLIコマンドを実行してください"
-    fi
-
-    local profile
-    profile=$(aws iam get-instance-profile --instance-profile-name training-ec2-agent-profile \
-      --query 'InstanceProfile.InstanceProfileName' --output text 2>/dev/null || echo "")
-    if [ "$profile" = "training-ec2-agent-profile" ]; then
-      pass "インスタンスプロファイル training-ec2-agent-profile が存在する"
-    else
-      fail "インスタンスプロファイル training-ec2-agent-profile がありません"
-    fi
-  fi
-
-  # Step 2: SSM Agent
-  if [ "$step" = "all" ] || [ "$step" = "step2" ]; then
-    echo ""
-    echo "📦 Step 2: SSM Agent インストール"
+    echo "📦 Step 1: SSM Agent インストール"
     if [ -n "$ip" ]; then
       local ssm_status
       ssm_status=$(ssh_check_cmd "$ip" "systemctl is-active amazon-ssm-agent" 2>/dev/null || echo "")
@@ -473,10 +479,29 @@ check_session5() {
     fi
   fi
 
-  # Step 3: SSM フリートマネージャー
-  if [ "$step" = "all" ] || [ "$step" = "step3" ]; then
+  # Step 2: SSM Agent 動作確認 + トラブルシューティング（IAMロール）
+  if [ "$step" = "all" ] || [ "$step" = "step2" ]; then
     echo ""
-    echo "📦 Step 3: SSM Agent 動作確認"
+    echo "📦 Step 2: SSM Agent 動作確認（IAMロール + フリートマネージャー）"
+    # IAMロールの確認
+    local role
+    role=$(aws iam get-role --role-name training-ec2-agent-role --query 'Role.RoleName' --output text 2>/dev/null || echo "")
+    if [ "$role" = "training-ec2-agent-role" ]; then
+      pass "IAMロール training-ec2-agent-role が存在する"
+    else
+      fail "IAMロール training-ec2-agent-role がありません" "Step 2のトラブルシューティングでAgentに作成してもらってください"
+    fi
+
+    local profile
+    profile=$(aws iam get-instance-profile --instance-profile-name training-ec2-agent-profile \
+      --query 'InstanceProfile.InstanceProfileName' --output text 2>/dev/null || echo "")
+    if [ "$profile" = "training-ec2-agent-profile" ]; then
+      pass "インスタンスプロファイル training-ec2-agent-profile が存在する"
+    else
+      fail "インスタンスプロファイル training-ec2-agent-profile がありません"
+    fi
+
+    # フリートマネージャー確認
     if [ -n "$inst_id" ]; then
       local ssm_info
       ssm_info=$(aws ssm describe-instance-information \
@@ -485,17 +510,17 @@ check_session5() {
       if [ "$ssm_info" = "Online" ]; then
         pass "Systems Manager でインスタンスが Online"
       else
-        fail "Systems Manager にインスタンスが登録されていません（${ssm_info:-不明}）" "AWSコンソールのフリートマネージャーで確認してください"
+        fail "Systems Manager にインスタンスが登録されていません（${ssm_info:-不明}）" "IAMロールを関連付けてSSM Agentを再起動してください"
       fi
     else
       fail "インスタンスIDが取得できないためスキップ"
     fi
   fi
 
-  # Step 5-6: CloudWatch Agent
-  if [ "$step" = "all" ] || [ "$step" = "step5" ] || [ "$step" = "step6" ]; then
+  # Step 4-5: CloudWatch Agent インストール＆設定
+  if [ "$step" = "all" ] || [ "$step" = "step4" ] || [ "$step" = "step5" ]; then
     echo ""
-    echo "📦 Step 5-6: CloudWatch Agent インストール＆設定"
+    echo "📦 Step 4-5: CloudWatch Agent インストール＆設定"
     if [ -n "$ip" ]; then
       local cw_status
       cw_status=$(ssh_check_cmd "$ip" "sudo /opt/aws/amazon-cloudwatch-agent/bin/amazon-cloudwatch-agent-ctl -a status 2>/dev/null | grep -o 'running'" 2>/dev/null || echo "")
@@ -509,31 +534,31 @@ check_session5() {
     fi
   fi
 
-  # Step 7: CloudWatch メトリクス確認
-  if [ "$step" = "all" ] || [ "$step" = "step7" ]; then
+  # Step 6: CloudWatch メトリクス確認（トラブルシューティング後）
+  if [ "$step" = "all" ] || [ "$step" = "step6" ]; then
     echo ""
-    echo "📦 Step 7: CloudWatch 確認"
+    echo "📦 Step 6: CloudWatch メトリクス確認（Training/EC2 名前空間）"
     local metrics
     metrics=$(aws cloudwatch list-metrics --namespace "Training/EC2" \
       --query 'Metrics | length(@)' --output text 2>/dev/null || echo "0")
     if [ "$metrics" -gt 0 ] 2>/dev/null; then
       pass "Training/EC2 名前空間にメトリクスが存在する ($metrics 個)"
     else
-      fail "Training/EC2 名前空間にメトリクスがありません" "CloudWatch Agent の設定を確認してください"
+      fail "Training/EC2 名前空間にメトリクスがありません" "Step 6のトラブルシューティングで名前空間をTraining/EC2に修正してください"
     fi
   fi
 
-  # Step 8: CloudWatch Alarm
-  if [ "$step" = "all" ] || [ "$step" = "step8" ]; then
+  # Step 7: CloudWatch Alarm
+  if [ "$step" = "all" ] || [ "$step" = "step7" ]; then
     echo ""
-    echo "📦 Step 8: CloudWatch Alarm"
+    echo "📦 Step 7: CloudWatch Alarm"
     local alarm
     alarm=$(aws cloudwatch describe-alarms --alarm-names "training-cpu-alarm" \
       --query 'MetricAlarms[0].StateValue' --output text 2>/dev/null || echo "")
     if [ -n "$alarm" ] && [ "$alarm" != "None" ]; then
       pass "training-cpu-alarm が存在する (状態: $alarm)"
     else
-      fail "training-cpu-alarm が見つかりません" "Step 8のCloudWatch Alarm作成手順を実行してください"
+      fail "training-cpu-alarm が見つかりません" "Step 7のCloudWatch Alarm作成手順を実行してください"
     fi
   fi
 
@@ -600,8 +625,8 @@ usage() {
   echo ""
   echo "セッション:"
   echo "  session1   VPC + EC2 を段階的に構築"
-  echo "  session2   Webアプリケーションを公開"
-  echo "  session3   HTTPS 対応"
+  echo "  session2   Terraform でインフラを構築・変更・再構築"
+  echo "  session3   EC2 を count でスケールアウト"
   echo "  session4   サーバー再起動の自動化（Ansible）"
   echo "  session5   CloudWatch Agent & SSM Agent"
   echo "  session6   サーバー情報取得・運用レポート"
