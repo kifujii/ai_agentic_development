@@ -91,8 +91,8 @@ terraform/vpc-ec2/ フォルダに、以下の要件でVPCを作成するTerrafo
 terraform init と terraform apply まで実行してください。
 ```
 
-4. Agentが実行計画を提示します → **内容を確認して承認**
-5. `terraform apply` の確認が出たら → **`yes` を入力して承認**
+3. Agentが実行計画を提示します → **内容を確認して承認**
+4. `terraform apply` の確認が出たら → **`yes` を入力して承認**
 
 ### このプロンプトのポイント
 
