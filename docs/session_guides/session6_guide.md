@@ -392,8 +392,8 @@ ansible/
 | 1 | VPC/EC2 段階的構築、Agent開発入門 | Terraform |
 | 2 | Terraform ライフサイクル体験（構築・変更・再構築） | Terraform |
 | 3 | EC2 を count でスケールアウト（任意） | Terraform |
-| 4 | サーバー再起動の自動化 | Ansible |
-| 5 | SSM/CW Agent導入 + トラブルシューティング | Ansible + AWS CLI |
+| 4 | Ansible によるサーバー運用自動化 + 🔧 トラブルシューティング | Ansible |
+| 5 | SSM Agent & CloudWatch Agent 導入 | Ansible + AWS CLI |
 | 6 | サーバー情報収集・レポート生成（任意） | Ansible |
 
 ---

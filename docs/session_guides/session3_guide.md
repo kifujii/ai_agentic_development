@@ -294,4 +294,4 @@ terraform/
 
 ## ➡️ 次のステップ
 
-[セッション4：サーバー再起動の自動化（Ansible入門）](session4_guide.md) に進んでください。
+[セッション4：Ansible によるサーバー運用自動化](session4_guide.md) に進んでください。

@@ -1,8 +1,8 @@
-# セッション5：CloudWatch Agent & SSM Agent のインストール（必須・2時間）
+# セッション5：SSM Agent & CloudWatch Agent の導入（必須・2時間）
 
 ## 🎯 このセッションの到達状態
 
-EC2に SSM Agent と CloudWatch Agent がインストール・稼働し、AWSコンソールからリモート管理と CPU/メモリの監視ができる状態になっています。このセッションでは **Terraform は使わず、Ansible のみ** で実施します。
+EC2に SSM Agent と CloudWatch Agent がインストール・稼働し、AWSコンソールからリモート管理と CPU/メモリの監視ができる状態になっています。このセッションでは **Terraform は使わず、Ansible + AWS CLI** で実施します。
 
 ![目標構成](../images/session5_target.svg)
 
@@ -17,9 +17,7 @@ EC2に SSM Agent と CloudWatch Agent がインストール・稼働し、AWSコ
 >
 > ⚠️ **用語の注意**: ここでの「Agent」は **EC2上で動くAWSのソフトウェア**（SSM Agent, CloudWatch Agent）です。Claude Code（AIコーディングエージェント）とは別物です。
 
-> 🔧 **このセッションの特徴 — トラブルシューティング体験**
->
-> このセッションでは、**意図的にエラーが発生する手順** を含んでいます。エラーが出ても慌てず、Claude Code に原因を調べてもらいましょう。Agent が自動的にエラーを検知 → 原因を特定 → 修正 → 再実行する様子を観察してください。
+> 💡 **セッション4で学んだトラブルシューティングパターンを活用しましょう**: 何か問題が起きたら、エラーメッセージを Claude Code に共有して原因調査・修正を依頼してください。
 
 ---
 
@@ -46,42 +44,83 @@ ANSIBLE_CONFIG=ansible/ansible.cfg ansible -i ansible/inventory.ini all -m ping
 ## 構築の流れ
 
 ```
-Step 1: SSM Agent のインストール（15分）
+Step 1: IAM ロールの作成（15分）
     ↓
-Step 2: SSM Agent の動作確認 → トラブルシューティング（20分）  ← 🔧 Trap 1
+Step 2: SSM Agent のインストールと確認（20分）
     ↓
 Step 3: SSM Run Command の体験（15分）
     ↓
 Step 4: CloudWatch Agent のインストール（15分）
     ↓
-Step 5: CloudWatch Agent の設定・起動（20分）
+Step 5: CloudWatch Agent の設定・起動・確認（25分）
     ↓
-Step 6: CloudWatch での確認 → トラブルシューティング（15分）  ← 🔧 Trap 2
-    ↓
-Step 7: CloudWatch Alarm の作成（10分）
+Step 6: CloudWatch Alarm の作成（10分）
     ↓
 振り返り（10分）
 ```
 
 ---
 
-## Step 1: SSM Agent をインストールしよう（15分）
+## Step 1: IAM ロールを作成しよう（15分）
 
 ### やること
 
-Ansible Playbook で EC2 に SSM Agent をインストールします。
+SSM Agent と CloudWatch Agent が AWS サービスと通信するためには、EC2 に適切な **IAM ロール（権限）** が必要です。最初にこれを準備します。
 
-> ⚠️ **このステップではIAMロールは作成しません。** 先にSSM Agentをインストールして動作確認を行い、何が起こるか見てみましょう。
+> 💡 **なぜ IAM ロールが必要？**: EC2 上のソフトウェアが AWS サービス（Systems Manager, CloudWatch）と通信するには、「このEC2はこのサービスを使ってよい」という許可が必要です。それが IAM ロールです。
+
+### ゴール
+
+以下のリソースが AWS 上に作成されている：
+
+- IAMロール: `training-ec2-agent-role`（EC2 の AssumeRole）
+- アタッチ済みポリシー:
+  - `AmazonSSMManagedInstanceCore`（SSM Agent 用）
+  - `CloudWatchAgentServerPolicy`（CloudWatch Agent 用）
+- インスタンスプロファイル: `training-ec2-agent-profile`
+- EC2 にプロファイルが関連付けられている
+
+<details>
+<summary>📝 プロンプト例</summary>
+
+```
+AWS CLI を使って以下の IAM リソースを作成し、EC2 に関連付けてください。
+
+■ 作成するもの
+1. IAMロール: training-ec2-agent-role
+   - EC2 が AssumeRole できる信頼ポリシー
+2. ポリシーのアタッチ:
+   - AmazonSSMManagedInstanceCore
+   - CloudWatchAgentServerPolicy
+3. インスタンスプロファイル: training-ec2-agent-profile
+   - 上記ロールを追加
+4. EC2 にインスタンスプロファイルを関連付け
+   - インスタンスID: terraform -chdir=terraform/vpc-ec2 output -raw instance_id で確認できます
+
+作成後、IAMロールのポリシー一覧を表示して確認してください。
+```
+
+</details>
+
+IAMロールが作成され、EC2 に関連付けられれば OK ✅
+
+> 💡 IAMロールの反映に 1〜2分かかることがあります。
+
+---
+
+## Step 2: SSM Agent をインストール・確認しよう（20分）
+
+### やること
+
+Ansible Playbook で EC2 に SSM Agent をインストールし、フリートマネージャーで管理対象として表示されることを確認します。
 
 > 💡 Amazon Linux 2023 には SSM Agent が**プリインストール**されている場合があります。Playbook では「インストール確認 → 未インストールならインストール → 起動」の流れにすると安全です。
 
 ### ゴール
 
-`ansible/playbooks/install_ssm_agent.yml` が作成され、実行すると：
-
-- SSM Agent がインストールされている
-- SSM Agent が起動・有効化されている
-- ステータスが `active (running)` と表示される
+- `ansible/playbooks/install_ssm_agent.yml` が作成され、実行済み
+- SSM Agent が `active (running)` 状態
+- **AWSコンソールのフリートマネージャーに EC2 が表示されている**
 
 <details>
 <summary>📝 プロンプト例</summary>
@@ -101,102 +140,15 @@ ansible/playbooks/install_ssm_agent.yml を作成してください。
 
 </details>
 
-Agent が `active (running)` 状態になれば OK ✅
-
-> ⚠️ **Agent が IAMロールも一緒に作成してしまった場合**: Claude Code が SSM の要件を判断して、プロンプトに含まれていない IAMロールまで自動的に作成することがあります。その場合は Step 2 のトラブルシューティングは発生しません。Step 2 の「Agent が行うこと」を読んで流れを理解し、フリートマネージャーで EC2 が表示されることを確認したら Step 3 に進んでください。
-
----
-
-## Step 2: SSM Agent の動作確認 → トラブルシューティング 🔧（20分）
-
-### やること
-
-AWSコンソールで SSM Agent が正しく動作しているか確認します。
-
-### 手順
+### フリートマネージャーで確認
 
 1. **AWSコンソール**にログインし、上部の検索バーに `Systems Manager` と入力して開く
 2. 左メニューから **「ノード管理」→「フリートマネージャー」** をクリック
 3. EC2 インスタンスが **マネージドインスタンス** として表示されていることを確認
 
-### 🔧 あれ？ EC2 が表示されない！
+> 💡 表示されるまで **1〜2分** かかることがあります。表示されない場合はページをリロードしてください。
 
-フリートマネージャーを確認しても、**EC2 が表示されない** はずです。
-
-> 💡 SSM Agent はインストール・起動されていますが、AWS の Systems Manager と通信するための **権限（IAMロール）が EC2 に付与されていません**。これが原因です。
-
-### Agent にトラブルシューティングを依頼しよう
-
-ここで Claude Code に「なぜ表示されないのか」を調べてもらい、自動的に修正してもらいましょう。
-
-<details>
-<summary>📝 プロンプト例</summary>
-
-```
-SSM Agent をインストール・起動しましたが、AWS コンソールの Systems Manager フリートマネージャーに EC2 が表示されません。
-
-原因を調べて修正してください。
-
-■ ヒント
-- EC2 が AWS サービスと通信するには適切な権限が必要です
-- EC2 のインスタンスID: terraform -chdir=terraform/vpc-ec2 output instance_id で確認できます
-
-■ 修正後にやること
-- SSM Agent を再起動して、フリートマネージャーに表示されるか確認
-```
-
-</details>
-
-### Agent が行うこと（観察してください）
-
-Claude Code は以下のような流れで問題を解決するはずです：
-
-1. **原因の特定**: EC2 に IAM ロール（インスタンスプロファイル）がアタッチされていないことを発見
-2. **IAM ロールの作成**: `training-ec2-agent-role` を AWS CLI で作成
-3. **ポリシーのアタッチ**: `AmazonSSMManagedInstanceCore` ポリシーをアタッチ
-4. **インスタンスプロファイルの作成・関連付け**: EC2 にプロファイルを関連付け
-5. **SSM Agent の再起動**: 新しい権限を認識させる
-6. **確認**: フリートマネージャーで表示されるか確認
-
-> ⚠️ IAMロールの反映に 1〜2分かかることがあります。Agent が「まだ表示されない」と報告しても、少し待ってからリトライしてもらってください。
-
-### ゴール
-
-以下のリソースが AWS 上に作成されている：
-
-- IAMロール: `training-ec2-agent-role`（EC2 の AssumeRole）
-- アタッチ済みポリシー: `AmazonSSMManagedInstanceCore`（＋後で `CloudWatchAgentServerPolicy` も追加）
-- インスタンスプロファイル: `training-ec2-agent-profile`
-- EC2 にプロファイルが関連付けられている
-- **フリートマネージャーに EC2 が表示されている**
-
-<details>
-<summary>❓ Agent が IAM ロールの作成でエラーになった場合</summary>
-
-すでにプロファイルが関連付けられている場合は **このStepはスキップしてOK** です。
-
-関連付けを変更したい場合：
-
-現在の関連付けIDを確認：
-```bash
-aws ec2 describe-iam-instance-profile-associations --filters "Name=instance-id,Values=<インスタンスID>"
-```
-
-関連付けを解除：
-```bash
-aws ec2 disassociate-iam-instance-profile --association-id <association-id>
-```
-
-再度関連付け：
-```bash
-aws ec2 associate-iam-instance-profile --instance-id <ID> --iam-instance-profile Name=training-ec2-agent-profile
-```
-
-</details>
-
-SSM でインスタンスが管理対象として表示されれば OK ✅
-
-> 🎓 **学び**: 「ソフトウェアを入れただけではダメ」— AWS サービスと連携するには、適切な **IAM 権限** が必要です。Agent はエラーの原因を自動的に特定し、解決策を実行してくれました。
+フリートマネージャーに EC2 が表示されれば OK ✅
 
 ---
 
@@ -255,21 +207,10 @@ Ansible Playbook で CloudWatch Agent をインストールします。
 
 > 💡 **ヒント**: CloudWatch Agent のコマンドは `/opt/aws/amazon-cloudwatch-agent/bin/amazon-cloudwatch-agent-ctl` にあります。`-a status` でステータスを確認できます。
 
-### Agentへの指示
-
-CloudWatch Agent のインストール前に、IAM ロールに CloudWatch 用のポリシーも追加する必要があります。Agent にまとめて依頼しましょう。
-
 <details>
 <summary>📝 プロンプト例</summary>
 
 ```
-以下の2つの作業を実行してください。
-
-■ 1. IAMロールに CloudWatch ポリシーを追加
-training-ec2-agent-role に CloudWatchAgentServerPolicy をアタッチしてください。
-（Step 2 で SSM 用のポリシーは追加済みです）
-
-■ 2. CloudWatch Agent のインストール
 ansible/playbooks/install_cwagent.yml を作成してください。
 
 対象: webserversグループ
@@ -287,28 +228,20 @@ ansible/playbooks/install_cwagent.yml を作成してください。
 
 ---
 
-## Step 5: CloudWatch Agent を設定・起動しよう（20分）
+## Step 5: CloudWatch Agent を設定・起動・確認しよう（25分）
 
 ### やること
 
-CloudWatch Agent の設定ファイルを配置し、Agent を起動します。
-
-> ⚠️ **このステップのプロンプトでは、わざと設定要件を一部省略しています。** 何が起こるか、Step 6 で確認してみましょう。
+CloudWatch Agent の設定ファイルを配置し、Agent を起動します。起動後、AWSコンソールでメトリクスとログが正しく収集されていることを確認します。
 
 ### ゴール
 
-`ansible/playbooks/configure_cwagent.yml` が作成され、実行すると：
-
-1. 設定ファイル（JSON）が `/opt/aws/amazon-cloudwatch-agent/etc/` に配置されている
-2. CloudWatch Agent が `running` 状態で起動している
-3. ステータスが正常と表示される
-
-### Agentへの指示
-
-以下のプロンプトで設定してください（**あえて名前空間の指定を省略しています**）：
+- `ansible/playbooks/configure_cwagent.yml` が作成され、実行済み
+- CloudWatch Agent が `running` 状態で起動している
+- AWSコンソールの CloudWatch → メトリクス → **Training/EC2** 名前空間にメトリクスが表示されている
 
 <details>
-<summary>📝 プロンプト例（そのまま使ってください）</summary>
+<summary>📝 プロンプト例</summary>
 
 ```
 ansible/playbooks/configure_cwagent.yml を作成してください。
@@ -320,88 +253,36 @@ ansible/playbooks/configure_cwagent.yml を作成してください。
 3. ステータス確認
 
 設定内容:
+- メトリクス名前空間: Training/EC2
 - メトリクス収集間隔: 60秒
 - 収集するメトリクス: CPU使用率、メモリ使用率、ディスク使用率
-- 収集するログ: /var/log/messages, /var/log/secure
+- 収集するログ:
+  - /var/log/messages → ロググループ: /training/ec2/messages（retention: 7日）
+  - /var/log/secure → ロググループ: /training/ec2/secure（retention: 7日）
 
 作成後、Playbookを実行してください。
 ```
 
 </details>
 
-> 💡 上記のプロンプトでは **メトリクスの名前空間（namespace）を指定していません**。Agent がデフォルト値を使うか、独自に設定するかは Agent 次第です。
+### AWSコンソールで確認
 
-Agent が running 状態になれば OK ✅（ただし、Step 6 で問題が見つかるかもしれません）
+Agent 起動後、**数分待ってから** 以下を確認します：
 
-> ⚠️ **Agent が `Training/EC2` 名前空間を自動的に設定した場合**: Claude Code が CloudWatch のベストプラクティスを判断して、プロンプトに含まれていない名前空間を適切に設定することがあります。その場合は Step 6 のトラブルシューティングは発生しません。CloudWatch コンソールでメトリクスが正しく表示されることを確認し、Step 7 に進んでください。
+1. **CloudWatch → メトリクス → すべてのメトリクス** を開く
+2. **カスタム名前空間** の一覧から `Training/EC2` を探す
+3. メトリクス（CPU、メモリ、ディスク）が表示されていることを確認
 
----
+> 💡 メトリクスが表示されるまで **2〜5分** かかることがあります。表示されない場合はページをリロードしてしばらく待ってください。
 
-## Step 6: CloudWatch での確認 → トラブルシューティング 🔧（15分）
-
-### やること
-
-AWSコンソールで CloudWatch Agent のメトリクスを確認します。
-
-### 確認手順
-
-1. **AWSコンソール**の検索バーに `CloudWatch` と入力して開く
-2. 左メニューから **「メトリクス」→「すべてのメトリクス」** をクリック
-3. **カスタム名前空間** の一覧から `Training/EC2` を探す
-
-> 💡 メトリクスが表示されるまで **数分かかる** ことがあります。表示されない場合は2〜3分待ってからページをリロードしてください。
-
-### 🔧 あれ？ Training/EC2 が見つからない！
-
-`Training/EC2` 名前空間が**見つからない**はずです。代わりに `CWAgent` という名前空間が表示されているかもしれません。
-
-> 💡 これは Step 5 のプロンプトで **名前空間を `Training/EC2` に指定しなかった** ためです。CloudWatch Agent のデフォルト名前空間は `CWAgent` です。
-
-### Agent にトラブルシューティングを依頼しよう
-
-<details>
-<summary>📝 プロンプト例</summary>
-
-```
-CloudWatch Agent を設定しましたが、CloudWatch コンソールの「Training/EC2」名前空間にメトリクスが表示されません。
-「CWAgent」という名前空間にメトリクスが入っているようです。
-
-■ 修正内容
-1. CloudWatch Agent の設定ファイルを修正して、名前空間を「Training/EC2」に変更
-2. ログの収集先ロググループ名を以下に設定:
-   - /var/log/messages → /training/ec2/messages
-   - /var/log/secure → /training/ec2/secure
-   - retention_in_days: 7
-3. CloudWatch Agent を再起動して反映
-
-configure_cwagent.yml を更新して、Playbookを再実行してください。
-```
-
-</details>
-
-### Agent が行うこと（観察してください）
-
-1. **原因の特定**: 設定ファイルの namespace が指定されていない（またはデフォルトの `CWAgent`）
-2. **設定ファイルの修正**: namespace を `Training/EC2` に変更
-3. **ログ設定の追加**: ロググループ名と retention を設定
-4. **Playbook の更新・再実行**: 修正した設定を配置して CloudWatch Agent を再起動
-
-### 再確認
-
-修正後、数分待ってから：
-
-1. **CloudWatch → メトリクス → カスタム名前空間 → Training/EC2** でメトリクスを確認
-2. **CloudWatch → ロググループ → /training/ec2/** でログを確認
-
-> 💡 メトリクスとログが反映されるまで数分かかることがあります。
+4. **CloudWatch → ロググループ** を開く
+5. `/training/ec2/messages` と `/training/ec2/secure` が存在することを確認
 
 メトリクスまたはロググループが表示されれば OK ✅
 
-> 🎓 **学び**: プロンプトで要件を正確に伝えないと、Agent はデフォルト値を使って動くものを作ってしまいます。**要件の漏れはエラーにならないため気づきにくい** — 結果を確認して初めてわかることもあります。
-
 ---
 
-## Step 7: CloudWatch Alarm を作成しよう（10分）
+## Step 6: CloudWatch Alarm を作成しよう（10分）
 
 ### やること
 
@@ -444,32 +325,11 @@ AWS CLI で以下の CloudWatch Alarm を作成してください。
 
 | 作業 | ツール | 学び |
 |------|--------|------|
-| SSM Agent導入 | Ansible | パッケージ管理の自動化 |
-| 🔧 IAMロール問題の解決 | Claude Code | **権限不足のトラブルシューティング** |
+| IAMロール作成 | AWS CLI (Claude Code) | EC2がAWSサービスと通信するには **権限（IAM）** が必要 |
+| SSM Agent導入 | Ansible | パッケージ管理・サービス管理の自動化 |
 | SSM Run Command | AWSコンソール | SSH不要のリモート管理 |
-| CW Agent導入 | Ansible | パッケージ管理の自動化 |
-| 🔧 名前空間問題の解決 | Claude Code | **要件不備の発見と修正** |
-| CW Alarm | AWS CLI (Agent) | 監視設定もAgentで自動化 |
-
-### トラブルシューティングの学び
-
-| Trap | 原因 | 気づき |
-|------|------|--------|
-| **Trap 1**: SSM がフリートマネージャーに出ない | IAMロールがない | ソフトウェアだけでなく **権限（IAM）** も必要 |
-| **Trap 2**: メトリクスが Training/EC2 にない | namespace 未指定 | プロンプトの **要件漏れ** は動くけど結果が違う |
-
-### Agent のトラブルシューティング能力
-
-Claude Code は以下のパターンでトラブルを解決しました：
-
-```
-1. エラー/問題の検知（ログ確認、状態確認）
-2. 原因の特定（権限不足、設定不備など）
-3. 修正の実行（IAMロール作成、設定ファイル修正など）
-4. 再実行して確認
-```
-
-実務でもこのパターンは非常に有用です。エラーが出たときに **Agent にまず調べてもらう** ことで、解決までの時間を大幅に短縮できます。
+| CW Agent導入・設定 | Ansible | メトリクス・ログ収集の自動化 |
+| CW Alarm作成 | AWS CLI (Claude Code) | 監視設定もAgentで自動化 |
 
 ### ツールの使い分け
 
@@ -569,7 +429,7 @@ ansible/
       when: status.rc == 0
 ```
 
-### playbooks/configure_cwagent.yml（修正後の完成版）
+### playbooks/configure_cwagent.yml
 
 ```yaml
 ---

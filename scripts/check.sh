@@ -357,12 +357,12 @@ check_session3() {
 }
 
 # =============================================================================
-# セッション4: サーバー再起動の自動化（Ansible入門）
+# セッション4: Ansible によるサーバー運用自動化
 # =============================================================================
 check_session4() {
   local step="${1:-all}"
   echo ""
-  echo "🔍 セッション4: サーバー再起動の自動化（Ansible入門）"
+  echo "🔍 セッション4: Ansible によるサーバー運用自動化"
   echo "------------------------------"
 
   # Step 1: Ansible設定ファイル
@@ -436,12 +436,24 @@ check_session4() {
 
   if [ "$step" = "all" ] || [ "$step" = "step6" ]; then
     echo ""
-    echo "📦 Step 6: nginx管理"
+    echo "📦 Step 6: 🔧 障害対応シミュレーション"
     local pb="ansible/playbooks/maintain_nginx.yml"
     if [ -f "$pb" ] || ls ansible/playbooks/*nginx* 2>/dev/null | head -1 > /dev/null 2>&1; then
-      pass "maintain_nginx Playbook が存在する"
+      pass "maintain_nginx（診断・復旧）Playbook が存在する"
     else
-      fail "maintain_nginx Playbook がありません"
+      fail "maintain_nginx Playbook がありません" "Step 6の障害対応シミュレーションを実行してください"
+    fi
+    # nginx が起動していることを確認
+    local ip
+    ip=$(tf_output "instance_public_ip")
+    if [ -n "$ip" ]; then
+      local http_code
+      http_code=$(curl -s -o /dev/null -w "%{http_code}" --connect-timeout 5 "http://$ip" 2>/dev/null || echo "000")
+      if [ "$http_code" = "200" ] || [ "$http_code" = "301" ] || [ "$http_code" = "302" ]; then
+        pass "nginx が復旧済み（HTTP: $http_code）"
+      else
+        fail "nginx にアクセスできません（HTTP: $http_code）" "障害対応シミュレーションで復旧してください"
+      fi
     fi
   fi
 
@@ -449,12 +461,12 @@ check_session4() {
 }
 
 # =============================================================================
-# セッション5: CloudWatch Agent & SSM Agent（トラブルシューティング体験付き）
+# セッション5: SSM Agent & CloudWatch Agent 導入
 # =============================================================================
 check_session5() {
   local step="${1:-all}"
   echo ""
-  echo "🔍 セッション5: CloudWatch Agent & SSM Agent"
+  echo "🔍 セッション5: SSM Agent & CloudWatch Agent 導入"
   echo "------------------------------"
 
   local ip
@@ -462,10 +474,32 @@ check_session5() {
   local inst_id
   inst_id=$(tf_output "instance_id")
 
-  # Step 1: SSM Agent インストール
+  # Step 1: IAMロール
   if [ "$step" = "all" ] || [ "$step" = "step1" ]; then
     echo ""
-    echo "📦 Step 1: SSM Agent インストール"
+    echo "📦 Step 1: IAMロール"
+    local role
+    role=$(aws iam get-role --role-name training-ec2-agent-role --query 'Role.RoleName' --output text 2>/dev/null || echo "")
+    if [ "$role" = "training-ec2-agent-role" ]; then
+      pass "IAMロール training-ec2-agent-role が存在する"
+    else
+      fail "IAMロール training-ec2-agent-role がありません" "Step 1でIAMロールを作成してください"
+    fi
+
+    local profile
+    profile=$(aws iam get-instance-profile --instance-profile-name training-ec2-agent-profile \
+      --query 'InstanceProfile.InstanceProfileName' --output text 2>/dev/null || echo "")
+    if [ "$profile" = "training-ec2-agent-profile" ]; then
+      pass "インスタンスプロファイル training-ec2-agent-profile が存在する"
+    else
+      fail "インスタンスプロファイル training-ec2-agent-profile がありません"
+    fi
+  fi
+
+  # Step 2: SSM Agent インストール・確認
+  if [ "$step" = "all" ] || [ "$step" = "step2" ]; then
+    echo ""
+    echo "📦 Step 2: SSM Agent インストール・確認"
     if [ -n "$ip" ]; then
       local ssm_status
       ssm_status=$(ssh_check_cmd "$ip" "systemctl is-active amazon-ssm-agent" 2>/dev/null || echo "")
@@ -477,29 +511,6 @@ check_session5() {
     else
       fail "EC2のIPが取得できないためスキップ"
     fi
-  fi
-
-  # Step 2: SSM Agent 動作確認 + トラブルシューティング（IAMロール）
-  if [ "$step" = "all" ] || [ "$step" = "step2" ]; then
-    echo ""
-    echo "📦 Step 2: SSM Agent 動作確認（IAMロール + フリートマネージャー）"
-    # IAMロールの確認
-    local role
-    role=$(aws iam get-role --role-name training-ec2-agent-role --query 'Role.RoleName' --output text 2>/dev/null || echo "")
-    if [ "$role" = "training-ec2-agent-role" ]; then
-      pass "IAMロール training-ec2-agent-role が存在する"
-    else
-      fail "IAMロール training-ec2-agent-role がありません" "Step 2のトラブルシューティングでAgentに作成してもらってください"
-    fi
-
-    local profile
-    profile=$(aws iam get-instance-profile --instance-profile-name training-ec2-agent-profile \
-      --query 'InstanceProfile.InstanceProfileName' --output text 2>/dev/null || echo "")
-    if [ "$profile" = "training-ec2-agent-profile" ]; then
-      pass "インスタンスプロファイル training-ec2-agent-profile が存在する"
-    else
-      fail "インスタンスプロファイル training-ec2-agent-profile がありません"
-    fi
 
     # フリートマネージャー確認
     if [ -n "$inst_id" ]; then
@@ -510,14 +521,14 @@ check_session5() {
       if [ "$ssm_info" = "Online" ]; then
         pass "Systems Manager でインスタンスが Online"
       else
-        fail "Systems Manager にインスタンスが登録されていません（${ssm_info:-不明}）" "IAMロールを関連付けてSSM Agentを再起動してください"
+        fail "Systems Manager にインスタンスが登録されていません（${ssm_info:-不明}）" "IAMロールの関連付けとSSM Agentの再起動を確認してください"
       fi
     else
       fail "インスタンスIDが取得できないためスキップ"
     fi
   fi
 
-  # Step 4-5: CloudWatch Agent インストール＆設定
+  # Step 4-5: CloudWatch Agent インストール＆設定・確認
   if [ "$step" = "all" ] || [ "$step" = "step4" ] || [ "$step" = "step5" ]; then
     echo ""
     echo "📦 Step 4-5: CloudWatch Agent インストール＆設定"
@@ -532,33 +543,29 @@ check_session5() {
     else
       fail "EC2のIPが取得できないためスキップ"
     fi
-  fi
 
-  # Step 6: CloudWatch メトリクス確認（トラブルシューティング後）
-  if [ "$step" = "all" ] || [ "$step" = "step6" ]; then
-    echo ""
-    echo "📦 Step 6: CloudWatch メトリクス確認（Training/EC2 名前空間）"
+    # メトリクス確認
     local metrics
     metrics=$(aws cloudwatch list-metrics --namespace "Training/EC2" \
       --query 'Metrics | length(@)' --output text 2>/dev/null || echo "0")
     if [ "$metrics" -gt 0 ] 2>/dev/null; then
       pass "Training/EC2 名前空間にメトリクスが存在する ($metrics 個)"
     else
-      fail "Training/EC2 名前空間にメトリクスがありません" "Step 6のトラブルシューティングで名前空間をTraining/EC2に修正してください"
+      fail "Training/EC2 名前空間にメトリクスがありません" "数分待ってから再確認してください"
     fi
   fi
 
-  # Step 7: CloudWatch Alarm
-  if [ "$step" = "all" ] || [ "$step" = "step7" ]; then
+  # Step 6: CloudWatch Alarm
+  if [ "$step" = "all" ] || [ "$step" = "step6" ]; then
     echo ""
-    echo "📦 Step 7: CloudWatch Alarm"
+    echo "📦 Step 6: CloudWatch Alarm"
     local alarm
     alarm=$(aws cloudwatch describe-alarms --alarm-names "training-cpu-alarm" \
       --query 'MetricAlarms[0].StateValue' --output text 2>/dev/null || echo "")
     if [ -n "$alarm" ] && [ "$alarm" != "None" ]; then
       pass "training-cpu-alarm が存在する (状態: $alarm)"
     else
-      fail "training-cpu-alarm が見つかりません" "Step 7のCloudWatch Alarm作成手順を実行してください"
+      fail "training-cpu-alarm が見つかりません" "Step 6のCloudWatch Alarm作成手順を実行してください"
     fi
   fi
 
@@ -627,8 +634,8 @@ usage() {
   echo "  session1   VPC + EC2 を段階的に構築"
   echo "  session2   Terraform でインフラを構築・変更・再構築"
   echo "  session3   EC2 を count でスケールアウト"
-  echo "  session4   サーバー再起動の自動化（Ansible）"
-  echo "  session5   CloudWatch Agent & SSM Agent"
+  echo "  session4   Ansible によるサーバー運用自動化"
+  echo "  session5   SSM Agent & CloudWatch Agent 導入"
   echo "  session6   サーバー情報取得・運用レポート"
   echo ""
   echo "ステップ（任意）:"
