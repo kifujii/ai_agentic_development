@@ -85,8 +85,9 @@ ai_agentic/
 ```bash
 # プロジェクトルートから実行してください
 
-# 1. セッション5: IAMリソース（実施した場合のみ）
-# → Agentに「training-ec2-agent-role と training-ec2-agent-profile を削除して」と伝えてください
+# 1. セッション5: IAM/CloudWatchリソース（実施した場合のみ）
+# → Agentに「training-ec2-agent-role、training-ec2-agent-profile、
+#   training-cpu-alarm、ロググループ /training/ec2/* を削除して」と伝えてください
 
 # 2. セッション1〜2: VPC/EC2
 terraform -chdir=terraform/vpc-ec2 destroy

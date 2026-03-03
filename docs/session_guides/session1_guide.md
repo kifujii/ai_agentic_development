@@ -16,7 +16,7 @@
 | キーペア | SSH接続用 |
 | EC2インスタンス | t3.micro / Amazon Linux 2023 |
 
-> 💡 このEC2はセッション2でWebアプリケーションを公開し、セッション4以降でAnsibleの操作対象になります。
+> 💡 このEC2はセッション2でnginxをインストールしてWebページを公開し、セッション4以降でAnsibleの操作対象になります。
 
 ### 構築の流れ
 
@@ -562,4 +562,4 @@ terraform -chdir=terraform/vpc-ec2 destroy
 
 ## ➡️ 次のステップ
 
-[セッション2：Webアプリケーションを公開しよう](session2_guide.md) に進んでください。
+[セッション2：Terraform でインフラを構築・変更・再構築しよう](session2_guide.md) に進んでください。

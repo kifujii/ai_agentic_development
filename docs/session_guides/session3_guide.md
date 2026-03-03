@@ -65,6 +65,11 @@ Terraform の `count` パラメータを使って、既存の EC2 定義を 2台
 - `terraform apply` が成功し、EC2 が 2台 running になっている
 
 > 💡 **ヒント**: `count` を使うと、リソース名が `aws_instance.training` → `aws_instance.training[0]`, `aws_instance.training[1]` のようにインデックス付きになります。output もこれに合わせて変更が必要です。
+>
+> 📖 **用語解説**:
+> - `count = 2`: 同じ定義のリソースを2つ作る指定
+> - `count.index`: 0から始まる連番（1台目=0, 2台目=1）。タグ名の区別などに使う
+> - `[*]`（splat式）: 複数のリソースの値をまとめてリストにする書き方（例: `aws_instance.training[*].public_ip` → 全台のIPアドレスのリスト）
 
 ### Agentへの指示
 
@@ -195,7 +200,9 @@ terraform -chdir=terraform/vpc-ec2 destroy -target='aws_instance.training[1]'
 
 #### 3-2. コードを1台構成に戻す
 
-targeted destroy はリソースだけを削除するので、**コード上はまだ `count = 2` のまま** です。このままだと次の `terraform apply` で2台目が再作成されてしまいます。
+> ⚠️ **重要**: targeted destroy はリソースだけを削除するので、**コード上はまだ `count = 2` のまま** です。このままだと次の `terraform apply` で2台目が再作成されてしまいます。
+>
+> 必ずコードも合わせて修正しましょう。**コードとインフラの状態を一致させる** のが Terraform の基本です。
 
 <details>
 <summary>📝 プロンプト例</summary>

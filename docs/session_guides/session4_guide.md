@@ -297,11 +297,11 @@ nginx のヘルスチェックが成功し、サマリーが表示されれば O
 
 ### TerraformとAnsibleの使い分け
 
-| Terraform（セッション1-2） | Ansible（セッション4） |
+| Terraform（セッション1〜3） | Ansible（セッション4〜6） |
 |:---:|:---:|
-| リソースの **作成・管理** | サーバーの **設定・運用** |
-| AWSリソースを構築 | 構築済みサーバーを操作 |
-| `terraform apply` | `ansible-playbook` |
+| リソースの **作成・変更・削除** | サーバーの **設定・運用** |
+| AWSリソースを構築・管理 | 構築済みサーバーを操作 |
+| `terraform apply` / `destroy` | `ansible-playbook` |
 
 ### このセッションで作ったPlaybook
 
@@ -555,4 +555,4 @@ ansible_ssh_common_args='-o StrictHostKeyChecking=no'
 
 ## ➡️ 次のステップ
 
-[セッション5：CloudWatch Agent & SSM Agent のインストール](session5_guide.md) に進んでください。
+[セッション5：SSM Agent & CloudWatch Agent の導入](session5_guide.md) に進んでください。

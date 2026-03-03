@@ -390,10 +390,10 @@ ansible/
 | セッション | 学んだこと | ツール |
 |-----------|-----------|-------|
 | 1 | VPC/EC2 段階的構築、Agent開発入門 | Terraform |
-| 2 | Webアプリ公開、デプロイの流れ | Terraform + Agent |
-| 3 | HTTPS対応（任意） | nginx SSL + Terraform |
+| 2 | Terraform ライフサイクル体験（構築・変更・再構築） | Terraform |
+| 3 | EC2 を count でスケールアウト（任意） | Terraform |
 | 4 | サーバー再起動の自動化 | Ansible |
-| 5 | SSM/CW Agent導入 | Ansible + AWS CLI |
+| 5 | SSM/CW Agent導入 + トラブルシューティング | Ansible + AWS CLI |
 | 6 | サーバー情報収集・レポート生成（任意） | Ansible |
 
 ---
@@ -416,9 +416,13 @@ ansible/
 
 プロジェクトルートから実行：
 
-**1. セッション5: IAMリソース（実施した場合のみ）**
+**1. セッション5: IAMリソース・CloudWatch（実施した場合のみ）**
 
-Agentに「training-ec2-agent-role と training-ec2-agent-profile を削除して」と伝えてください。
+Agentに以下を伝えてください：
+```
+training-ec2-agent-role、training-ec2-agent-profile、training-cpu-alarm、
+ロググループ /training/ec2/messages と /training/ec2/secure を削除してください。
+```
 
 **2. セッション1〜2: VPC/EC2**
 
