@@ -9,7 +9,7 @@
 | `session1_target.drawio` | `session1_target.svg` | Session 1: VPC + EC2 構成 |
 | `session2_target.drawio` | `session2_target.svg` | Session 2: Terraform ライフサイクル体験 |
 | `session3_target.drawio` | `session3_target.svg` | Session 3: EC2 count スケールアウト（任意） |
-| `session4_target.drawio` | `session4_target.svg` | Session 4: Ansible 運用自動化 + トラブルシューティング |
+| `session4_target.drawio` | `session4_target.svg` | Session 4: Ansible 運用自動化 + ランダム障害対応 |
 | `session5_target.drawio` | `session5_target.svg` | Session 5: SSM + CloudWatch Agent |
 | `session6_target.drawio` | `session6_target.svg` | Session 6: 情報収集・レポート生成 |
 

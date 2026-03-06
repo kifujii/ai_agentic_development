@@ -21,12 +21,11 @@
 - [ ] サービスの状態変更が確認できた
 
 ## Step 6: 🔧 障害対応シミュレーション
-- [ ] nginx を意図的に停止・設定破壊した
-- [ ] ブラウザでWebサイトがダウンしていることを確認した
-- [ ] Claude Code に原因調査・復旧を依頼した
+- [ ] `./scripts/break_session.sh` でランダムな障害を発生させた
+- [ ] Claude Code に障害の調査・復旧を依頼した
 - [ ] Claude Code が原因を特定し、復旧させたプロセスを観察した
-- [ ] ブラウザでWebサイトが復旧していることを確認した
-- [ ] `maintain_nginx.yml`（診断・復旧Playbook）を作成した
+- [ ] すべての障害が修復されたことを確認した
+- [ ] `server_health_check.yml`（サーバー診断・復旧Playbook）を作成した
 
 ## 成果物
 - [ ] `ansible/` ディレクトリに設定ファイルとPlaybookが作成されている

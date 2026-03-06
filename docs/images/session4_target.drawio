@@ -1,5 +1,5 @@
 <mxfile host="app.diagrams.net" modified="2026-02-27T00:00:00.000Z" agent="5.0" version="24.0.0" type="device">
-  <diagram id="session4" name="Session 4: Ansible Server Operations + Troubleshooting">
+  <diagram id="session4" name="Session 4: Ansible 運用自動化 + ランダム障害対応">
     <mxGraphModel dx="1200" dy="680" grid="1" gridSize="10" guides="1" tooltips="1" connect="1" arrows="1" fold="1" page="1" pageScale="1" pageWidth="850" pageHeight="500" math="0" shadow="0">
       <root>
         <mxCell id="0"/>
@@ -19,7 +19,7 @@
         <mxCell id="pb3" value="manage_services.yml" style="text;html=1;strokeColor=#6c8ebf;fillColor=#dae8fc;align=center;verticalAlign=middle;whiteSpace=wrap;rounded=1;fontSize=11;" vertex="1" parent="local">
           <mxGeometry x="30" y="250" width="130" height="30" as="geometry"/>
         </mxCell>
-        <mxCell id="pb4" value="maintain_nginx.yml" style="text;html=1;strokeColor=#6c8ebf;fillColor=#dae8fc;align=center;verticalAlign=middle;whiteSpace=wrap;rounded=1;fontSize=11;" vertex="1" parent="local">
+        <mxCell id="pb4" value="server_health_check.yml" style="text;html=1;strokeColor=#6c8ebf;fillColor=#dae8fc;align=center;verticalAlign=middle;whiteSpace=wrap;rounded=1;fontSize=11;" vertex="1" parent="local">
           <mxGeometry x="30" y="290" width="130" height="30" as="geometry"/>
         </mxCell>
         <mxCell id="inv" value="inventory.ini&lt;br&gt;ansible.cfg" style="text;html=1;strokeColor=#82b366;fillColor=#d5e8d4;align=center;verticalAlign=middle;whiteSpace=wrap;rounded=1;fontSize=11;" vertex="1" parent="local">
@@ -37,7 +37,7 @@
         <mxCell id="ec2" value="EC2 Instance&lt;br&gt;(webservers group)" style="outlineConnect=0;fontColor=#232F3E;gradientColor=none;fillColor=#ED7100;strokeColor=none;dashed=0;verticalLabelPosition=bottom;verticalAlign=top;align=center;html=1;fontSize=11;fontStyle=0;aspect=fixed;pointerEvents=1;shape=mxgraph.aws4.resourceIcon;resIcon=mxgraph.aws4.ec2" vertex="1" parent="pubsub">
           <mxGeometry x="105" y="60" width="48" height="48" as="geometry"/>
         </mxCell>
-        <mxCell id="actions" value="&lt;b&gt;Ansible操作:&lt;/b&gt;&lt;br&gt;• 状態確認&lt;br&gt;• サーバー再起動&lt;br&gt;• サービス管理" style="text;html=1;strokeColor=#d6b656;fillColor=#fff2cc;align=left;verticalAlign=middle;whiteSpace=wrap;rounded=1;fontSize=11;spacingLeft=8;" vertex="1" parent="pubsub">
+        <mxCell id="actions" value="&lt;b&gt;Ansible操作:&lt;/b&gt;&lt;br&gt;• 状態確認&lt;br&gt;• サーバー再起動&lt;br&gt;• サービス管理&lt;br&gt;• 🔧 障害調査・復旧" style="text;html=1;strokeColor=#d6b656;fillColor=#fff2cc;align=left;verticalAlign=middle;whiteSpace=wrap;rounded=1;fontSize=11;spacingLeft=8;" vertex="1" parent="pubsub">
           <mxGeometry x="60" y="160" width="140" height="70" as="geometry"/>
         </mxCell>
         <mxCell id="e1" value="SSH (Port 22)" style="edgeStyle=orthogonalEdgeStyle;html=1;strokeColor=#ED7100;strokeWidth=2;fontSize=11;fontColor=#232F3E;" edge="1" source="ansible" target="ec2" parent="1">

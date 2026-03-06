@@ -437,23 +437,11 @@ check_session4() {
   if [ "$step" = "all" ] || [ "$step" = "step6" ]; then
     echo ""
     echo "📦 Step 6: 🔧 障害対応シミュレーション"
-    local pb="ansible/playbooks/maintain_nginx.yml"
-    if [ -f "$pb" ] || ls ansible/playbooks/*nginx* 2>/dev/null | head -1 > /dev/null 2>&1; then
-      pass "maintain_nginx（診断・復旧）Playbook が存在する"
+    local pb="ansible/playbooks/server_health_check.yml"
+    if [ -f "$pb" ] || ls ansible/playbooks/*health*check* 2>/dev/null | head -1 > /dev/null 2>&1; then
+      pass "server_health_check（診断・復旧）Playbook が存在する"
     else
-      fail "maintain_nginx Playbook がありません" "Step 6の障害対応シミュレーションを実行してください"
-    fi
-    # nginx が起動していることを確認
-    local ip
-    ip=$(tf_output "instance_public_ip")
-    if [ -n "$ip" ]; then
-      local http_code
-      http_code=$(curl -s -o /dev/null -w "%{http_code}" --connect-timeout 5 "http://$ip" 2>/dev/null || echo "000")
-      if [ "$http_code" = "200" ] || [ "$http_code" = "301" ] || [ "$http_code" = "302" ]; then
-        pass "nginx が復旧済み（HTTP: $http_code）"
-      else
-        fail "nginx にアクセスできません（HTTP: $http_code）" "障害対応シミュレーションで復旧してください"
-      fi
+      fail "server_health_check Playbook がありません" "Step 6の障害対応シミュレーションを実行してください"
     fi
   fi
 
