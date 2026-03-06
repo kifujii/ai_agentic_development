@@ -161,9 +161,9 @@ ansible/playbooks/generate_report.yml を作成してください。
 
 </details>
 
-### 確認
+### 確認（あなたがターミナルで実行）
 
-プロジェクトルートから確認します：
+あなたのターミナルで、プロジェクトルートから確認します：
 
 ```bash
 ls ansible/reports/
@@ -389,7 +389,7 @@ ansible/
 
 | セッション | 学んだこと | ツール |
 |-----------|-----------|-------|
-| 1 | VPC/EC2 段階的構築、Agent開発入門 | Terraform |
+| 1 | VPC/EC2 段階的構築、Claude Code 入門 | Terraform |
 | 2 | Terraform ライフサイクル体験（構築・変更・再構築） | Terraform |
 | 3 | EC2 を count でスケールアウト（任意） | Terraform |
 | 4 | Ansible によるサーバー運用自動化 + 🔧 トラブルシューティング | Ansible |
@@ -400,7 +400,7 @@ ansible/
 
 ## ✅ 完了チェック
 
-以下のコマンドで、このセッションの完了状態を確認できます：
+あなたのターミナルで以下のコマンドを実行して、このセッションの完了状態を確認できます：
 
 ```bash
 ./scripts/check.sh session6
@@ -414,17 +414,17 @@ ansible/
 
 > ⚠️ **必ず以下の順序で削除**してください（依存関係があるため逆順だとエラーになります）。
 
-プロジェクトルートから実行：
+プロジェクトルートから実行します：
 
 **1. セッション5: IAMリソース・CloudWatch（実施した場合のみ）**
 
-Agentに以下を伝えてください：
+Claude Code に以下のように伝えて、削除を実行してもらいます：
 ```
 training-ec2-agent-role、training-ec2-agent-profile、training-cpu-alarm、
 ロググループ /training/ec2/messages と /training/ec2/secure を削除してください。
 ```
 
-**2. セッション1〜2: VPC/EC2**
+**2. セッション1〜2: VPC/EC2**（あなたのターミナルで実行）
 
 ```bash
 terraform -chdir=terraform/vpc-ec2 destroy

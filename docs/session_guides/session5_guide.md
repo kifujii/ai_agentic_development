@@ -17,7 +17,7 @@ EC2に SSM Agent と CloudWatch Agent がインストール・稼働し、AWSコ
 >
 > ⚠️ **用語の注意**: ここでの「Agent」は **EC2上で動くAWSのソフトウェア**（SSM Agent, CloudWatch Agent）です。Claude Code（AIコーディングエージェント）とは別物です。
 
-> 💡 **セッション4で学んだトラブルシューティングパターンを活用しましょう**: 何か問題が起きたら、エラーメッセージを Claude Code に共有して原因調査・修正を依頼してください。
+> 💡 **セッション1で紹介したトラブルシューティングパターンを活用しましょう**: 何か問題が起きたら、エラーメッセージを Claude Code に共有して原因調査・修正を依頼してください。
 
 ---
 
@@ -31,7 +31,7 @@ EC2に SSM Agent と CloudWatch Agent がインストール・稼働し、AWSコ
 > プロジェクト内のファイル（SSH鍵、Terraformの状態、Ansibleの設定、生成したコード）は保持されています。
 
 - セッション4のAnsible環境が構築済みであること
-- 接続確認：
+- あなたのターミナルで接続確認：
 
 ```bash
 ANSIBLE_CONFIG=ansible/ansible.cfg ansible -i ansible/inventory.ini all -m ping
@@ -140,9 +140,9 @@ ansible/playbooks/install_ssm_agent.yml を作成してください。
 
 </details>
 
-### フリートマネージャーで確認
+### フリートマネージャーで確認（あなたがAWSコンソールで操作）
 
-1. **AWSコンソール**にログインし、上部の検索バーに `Systems Manager` と入力して開く
+1. **あなたが** AWSコンソールにログインし、上部の検索バーに `Systems Manager` と入力して開く
 2. 左メニューから **「ノード管理」→「フリートマネージャー」** をクリック
 3. EC2 インスタンスが **マネージドインスタンス** として表示されていることを確認
 
@@ -158,9 +158,9 @@ ansible/playbooks/install_ssm_agent.yml を作成してください。
 
 SSM Agent が入ったことで、**AWSコンソール から直接コマンドを実行** できるようになりました。SSH不要のリモート管理を体験します。
 
-### 手順
+### 手順（あなたがAWSコンソールで操作）
 
-1. **AWSコンソール**にログインし、上部の検索バーに `Systems Manager` と入力して開く
+1. **あなたが** AWSコンソールにログインし、上部の検索バーに `Systems Manager` と入力して開く
 2. 左メニューから **「ノード管理」→「Run Command」** をクリック
 3. オレンジ色の **「コマンドを実行」** ボタンをクリック
 4. 「コマンドドキュメント」の検索欄に `AWS-RunShellScript` と入力して選択
@@ -265,11 +265,11 @@ ansible/playbooks/configure_cwagent.yml を作成してください。
 
 </details>
 
-### AWSコンソールで確認
+### AWSコンソールで確認（あなたがAWSコンソールで操作）
 
-Agent 起動後、**数分待ってから** 以下を確認します：
+CloudWatch Agent 起動後、**数分待ってから** 以下を確認します：
 
-1. **CloudWatch → メトリクス → すべてのメトリクス** を開く
+1. **あなたが** CloudWatch → メトリクス → すべてのメトリクス を開く
 2. **カスタム名前空間** の一覧から `Training/EC2` を探す
 3. メトリクス（CPU、メモリ、ディスク）が表示されていることを確認
 
@@ -286,13 +286,13 @@ Agent 起動後、**数分待ってから** 以下を確認します：
 
 ### やること
 
-CloudWatch Agent が収集したメトリクスに対してアラームを設定します。Agentに AWS CLI で作成してもらいます。
+CloudWatch Agent が収集したメトリクスに対してアラームを設定します。Claude Code に AWS CLI で作成してもらいます。
 
 ### ゴール
 
 CPU使用率が80%を超えたらアラーム状態になる CloudWatch Alarm `training-cpu-alarm` が作成されている。
 
-> 💡 **ヒント**: Agentに「CloudWatch Alarmを作成して」と伝えると、必要なAWS CLIコマンドを実行してくれます。
+> 💡 **ヒント**: Claude Code に「CloudWatch Alarmを作成して」と伝えると、Claude Code が必要なAWS CLIコマンドを実行してくれます。
 
 <details>
 <summary>📝 プロンプト例</summary>
@@ -311,9 +311,9 @@ AWS CLI で以下の CloudWatch Alarm を作成してください。
 
 </details>
 
-### 確認
+### 確認（あなたがAWSコンソールで確認）
 
-**AWS コンソール** → **CloudWatch → アラーム** で `training-cpu-alarm` が表示されていれば OK ✅
+**あなたが** AWSコンソール → CloudWatch → アラーム で `training-cpu-alarm` が表示されていれば OK ✅
 
 > 💡 現時点ではCPU使用率が低いため、ステータスは「OK」のはずです。
 
@@ -329,7 +329,7 @@ AWS CLI で以下の CloudWatch Alarm を作成してください。
 | SSM Agent導入 | Ansible | パッケージ管理・サービス管理の自動化 |
 | SSM Run Command | AWSコンソール | SSH不要のリモート管理 |
 | CW Agent導入・設定 | Ansible | メトリクス・ログ収集の自動化 |
-| CW Alarm作成 | AWS CLI (Claude Code) | 監視設定もAgentで自動化 |
+| CW Alarm作成 | AWS CLI (Claude Code) | 監視設定も Claude Code で自動化 |
 
 ### ツールの使い分け
 
@@ -496,7 +496,7 @@ ansible/
 
 ## ⚠️ リソースの削除
 
-ワークショップ終了後に IAM リソースを削除してください：
+ワークショップ終了後にあなたのターミナルで IAM リソースを削除してください：
 
 インスタンスプロファイルからロールを削除：
 ```bash
@@ -521,7 +521,7 @@ aws iam delete-instance-profile --instance-profile-name training-ec2-agent-profi
 aws iam delete-role --role-name training-ec2-agent-role
 ```
 
-> 💡 Agentに「training-ec2-agent-role と training-ec2-agent-profile を削除して」と伝えれば、上記コマンドを実行してくれます。
+> 💡 Claude Code に「training-ec2-agent-role と training-ec2-agent-profile を削除して」と伝えれば、Claude Code が上記コマンドを実行してくれます。
 
 CloudWatch Alarm の削除：
 ```bash
@@ -543,7 +543,7 @@ aws logs delete-log-group --log-group-name /training/ec2/secure
 
 ## ✅ 完了チェック
 
-以下のコマンドで、このセッションの完了状態を確認できます：
+あなたのターミナルで以下のコマンドを実行して、このセッションの完了状態を確認できます：
 
 ```bash
 ./scripts/check.sh session5
