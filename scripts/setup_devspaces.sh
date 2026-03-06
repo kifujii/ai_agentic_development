@@ -61,8 +61,11 @@ PROJECT_ROOT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
 log_info ".envファイルの確認中..."
 AWS_CREDENTIALS_READY=false
 
-if [ ! -f ".env" ]; then
-    if [ -f ".env.template" ]; then
+ENV_FILE="${PROJECT_ROOT_DIR}/.env"
+ENV_TEMPLATE="${PROJECT_ROOT_DIR}/.env.template"
+
+if [ ! -f "$ENV_FILE" ]; then
+    if [ -f "$ENV_TEMPLATE" ]; then
         log_warn ".envファイルが見つかりません。"
         log_info "先に .env ファイルを作成してからスクリプトを実行すると、1回で全セットアップが完了します。"
         log_info "  コマンド: cp .env.template .env"
@@ -75,9 +78,9 @@ else
     log_info "✓ .envファイルが見つかりました。AWS認証情報を読み込みます..."
 
     # .envファイルからAWS認証情報を抽出
-    AWS_ACCESS_KEY=$(grep "^AWS_ACCESS_KEY_ID=" .env | grep -v '^#' | cut -d'=' -f2 | sed "s/^['\"]//;s/['\"]$//" | head -1)
-    AWS_SECRET_KEY=$(grep "^AWS_SECRET_ACCESS_KEY=" .env | grep -v '^#' | cut -d'=' -f2 | sed "s/^['\"]//;s/['\"]$//" | head -1)
-    AWS_REGION_ENV=$(grep "^AWS_DEFAULT_REGION=" .env | grep -v '^#' | cut -d'=' -f2 | sed "s/^['\"]//;s/['\"]$//" | head -1)
+    AWS_ACCESS_KEY=$(grep "^AWS_ACCESS_KEY_ID=" "$ENV_FILE" | grep -v '^#' | cut -d'=' -f2 | sed "s/^['\"]//;s/['\"]$//" | head -1)
+    AWS_SECRET_KEY=$(grep "^AWS_SECRET_ACCESS_KEY=" "$ENV_FILE" | grep -v '^#' | cut -d'=' -f2 | sed "s/^['\"]//;s/['\"]$//" | head -1)
+    AWS_REGION_ENV=$(grep "^AWS_DEFAULT_REGION=" "$ENV_FILE" | grep -v '^#' | cut -d'=' -f2 | sed "s/^['\"]//;s/['\"]$//" | head -1)
 
     if [ -n "$AWS_ACCESS_KEY" ] && [ -n "$AWS_SECRET_KEY" ] && [ "$AWS_ACCESS_KEY" != "your-access-key-here" ] && [ "$AWS_SECRET_KEY" != "your-secret-key-here" ]; then
         # 環境変数にエクスポート（このスクリプト内で aws コマンドが使えるようにする）
@@ -293,7 +296,7 @@ fi
 
 # 6-3. Claude Code の Bedrock 設定ファイル作成
 log_info "Claude Code の Bedrock 設定ファイルを確認中..."
-CLAUDE_SETTINGS_DIR=".claude"
+CLAUDE_SETTINGS_DIR="${PROJECT_ROOT_DIR}/.claude"
 CLAUDE_SETTINGS_FILE="${CLAUDE_SETTINGS_DIR}/settings.local.json"
 
 mkdir -p "$CLAUDE_SETTINGS_DIR"
@@ -400,8 +403,8 @@ else
     log_error "✗ Claude Code: インストールされていません"
 fi
 
-if [ -f ".claude/settings.local.json" ]; then
-    log_info "✓ Claude Code Bedrock設定: .claude/settings.local.json"
+if [ -f "$CLAUDE_SETTINGS_FILE" ]; then
+    log_info "✓ Claude Code Bedrock設定: ${CLAUDE_SETTINGS_FILE}"
 else
     log_warn "✗ Claude Code Bedrock設定: 未作成（AWS認証情報を設定後、スクリプトを再実行してください）"
 fi
@@ -420,7 +423,7 @@ log_info "=========================================="
 if [ "$AWS_CREDENTIALS_READY" != true ]; then
     echo ""
     log_info "【次のステップ】"
-    log_info "  1. cp .env.template .env"
+    log_info "  1. cd ${PROJECT_ROOT_DIR} && cp .env.template .env"
     log_info "  2. .env を編集してAWS認証情報を設定"
     log_info "  3. ./scripts/setup_devspaces.sh を再実行"
     log_info "  → AWS CLI設定とClaude Code Bedrock設定が自動作成されます"

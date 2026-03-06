@@ -13,8 +13,10 @@
 """
 
 import os
+import sys
 
-OUTPUT_DIR = os.path.join(os.path.dirname(__file__), "..", "docs", "images")
+SCRIPT_DIR = os.path.dirname(os.path.abspath(__file__))
+OUTPUT_DIR = os.path.join(SCRIPT_DIR, "..", "docs", "images")
 
 
 def session1_diagram():
@@ -122,19 +124,45 @@ def session4_diagram():
         iam >> ec2 >> Edge(label="メトリクス/ログ送信") >> cw
 
 
-if __name__ == "__main__":
+def main():
+    try:
+        from diagrams import Diagram  # noqa: F401
+    except ImportError:
+        print(
+            "エラー: diagrams ライブラリが見つかりません。\n"
+            "  pip install diagrams\n"
+            "また、Graphviz もインストールされている必要があります。\n"
+            "  https://graphviz.org/download/",
+            file=sys.stderr,
+        )
+        sys.exit(1)
+
     os.makedirs(OUTPUT_DIR, exist_ok=True)
 
-    print("Session 1: VPC + EC2 構成図を生成中...")
-    session1_diagram()
+    generators = [
+        ("Session 1: VPC + EC2 構成図", session1_diagram),
+        ("Session 2: Web System 構成図", session2_diagram),
+        ("Session 3: Ansible ワークフロー図", session3_diagram),
+        ("Session 4: CloudWatch Agent 構成図", session4_diagram),
+    ]
 
-    print("Session 2: Web System 構成図を生成中...")
-    session2_diagram()
+    failed = []
+    for label, func in generators:
+        print(f"{label}を生成中...")
+        try:
+            func()
+        except Exception as e:
+            print(f"  ⚠ {label}の生成に失敗しました: {e}", file=sys.stderr)
+            failed.append(label)
 
-    print("Session 3: Ansible ワークフロー図を生成中...")
-    session3_diagram()
-
-    print("Session 4: CloudWatch Agent 構成図を生成中...")
-    session4_diagram()
+    if failed:
+        print(f"\n⚠ {len(failed)} 件の図の生成に失敗しました:", file=sys.stderr)
+        for name in failed:
+            print(f"  - {name}", file=sys.stderr)
+        sys.exit(1)
 
     print(f"\n✅ 画像が {OUTPUT_DIR}/ に生成されました。")
+
+
+if __name__ == "__main__":
+    main()
