@@ -49,6 +49,8 @@ Step 3: targeted destroy で1台だけ削除しよう（15分）
 振り返り（5分）
 ```
 
+> ⏱️ **時間配分について**: 各 Step の所要時間は目安です。Claude Code の応答速度やエラー対応で前後することがあります。
+
 ---
 
 ## Step 1: count で EC2 を2台に増やそう（15分）
@@ -258,6 +260,34 @@ terraform -chdir=terraform/vpc-ec2 plan
 | 負荷テスト | 一時的にサーバーを10台に増やす → テスト後に戻す |
 | 障害対応 | 壊れたサーバーを削除 → count を維持して自動再作成 |
 | コスト削減 | 夜間はサーバーを減らして費用を抑える |
+
+### 📖 コードを理解しよう — count と splat 式を説明できるようになる
+
+`count` や `[*]`（splat式）は Terraform の重要な機能です。Claude Code に解説を作ってもらい、理解を深めましょう：
+
+<details>
+<summary>📝 プロンプト例</summary>
+
+```
+このセッションで使った Terraform の count と splat 式について、初心者向けの解説ドキュメントを作成してください。
+保存先: docs/session3_design.md
+
+■ 含めてほしい内容
+1. count = 2 を指定したとき、Terraform 内部で何が起きるかの図解
+2. count.index の使い方と具体例（Name タグの付け方など）
+3. splat 式 [*] の意味と使用例
+4. terraform destroy -target の仕組みと注意点
+5. count を使ったときと使わないときの outputs.tf の違い
+6. 実務で count の代わりに for_each を使うケースの紹介（発展）
+```
+
+</details>
+
+生成されたドキュメントを読んで、以下を確認しましょう：
+
+- [ ] `count = 2` を指定するとリソースにインデックスが付く仕組みが説明できる
+- [ ] `aws_instance.training[*].public_ip` が何を返すか説明できる
+- [ ] `terraform destroy -target` を使った後にコードも修正する理由が説明できる
 
 ---
 

@@ -37,6 +37,8 @@ Step 6: 🔧 障害対応シミュレーション — EC2に障害発生！（30
 振り返り（10分）
 ```
 
+> ⏱️ **時間配分について**: 各 Step の所要時間は目安です。特に Step 6 の障害対応シミュレーションは障害の内容によって所要時間が変わります。時間が足りない場合は講師に相談してください。
+
 ---
 
 ## 📚 事前準備
@@ -390,6 +392,36 @@ Playbook が実行されて各チェック項目が表示されれば OK ✅
 | Claude Code の調査・復旧 → Playbook 化 | **一度対応した作業を次回のために自動化する** |
 
 > 🎓 **このパターンを覚えておきましょう**: 何か問題が起きたら → **あなたが状況を Claude Code に伝える** → Claude Code が調査・原因特定・修復。このパターンはセッション5以降でも使えます。
+
+### 📖 コードを理解しよう — Playbook の構造を読み解く
+
+Ansible の Playbook は YAML で書かれた「手順書」です。各 Playbook の **処理の流れと各タスクの役割** を人に説明できるようになりましょう：
+
+<details>
+<summary>📝 プロンプト例</summary>
+
+```
+ansible/playbooks/ にある全 Playbook について、以下の内容を含む解説ドキュメントを作成してください。
+保存先: docs/session4_design.md
+
+■ 含めてほしい内容
+1. 各 Playbook の処理フロー図（テキストベース）
+2. Playbook の基本構造の解説（hosts, become, vars, tasks の役割）
+3. 使用しているモジュール一覧と各モジュールの機能
+   （例: systemd → サービス管理、command → コマンド実行、debug → 結果表示）
+4. register と changed_when の仕組みと使い分け
+5. ignore_errors の意味と使いどころ
+6. server_health_check.yml の条件分岐（when句）がどう動くかの詳細解説
+```
+
+</details>
+
+生成されたドキュメントを読んで、以下を確認しましょう：
+
+- [ ] Playbook の `hosts`, `become`, `tasks` が何を意味するか説明できる
+- [ ] `register` で取得した値を `debug` で表示する仕組みが説明できる
+- [ ] `systemd` モジュールと `command` モジュールの使い分けが説明できる
+- [ ] server_health_check.yml の条件分岐（`when`）がどう動くか説明できる
 
 ---
 

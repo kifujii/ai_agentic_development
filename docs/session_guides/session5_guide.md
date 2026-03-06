@@ -59,6 +59,8 @@ Step 6: CloudWatch Alarm の作成（10分）
 振り返り（10分）
 ```
 
+> ⏱️ **時間配分について**: 各 Step の所要時間は目安です。IAMロールの反映やメトリクスの表示に数分かかることがあります。時間が足りない場合は講師に相談してください。
+
 ---
 
 ## Step 1: IAM ロールを作成しよう（15分）
@@ -343,6 +345,37 @@ AWS CLI で以下の CloudWatch Alarm を作成してください。
 | Ansible | サーバー内の設定・ソフトウェア管理 | SSM/CW Agentのインストール・設定 |
 | AWS CLI | AWSリソースの操作 | IAMロール、CloudWatch Alarm |
 | SSM | 緊急時のリモート管理 | Run Commandでサーバー操作 |
+
+### 📖 コードを理解しよう — AWS サービス連携の全体像を把握する
+
+このセッションでは IAM、SSM、CloudWatch と多くの AWS サービスが登場しました。これらの **関係性と設定の意味** を理解しましょう：
+
+<details>
+<summary>📝 プロンプト例</summary>
+
+```
+このセッションで構築した AWS サービス連携について、以下の内容を含む解説ドキュメントを作成してください。
+保存先: docs/session5_design.md
+
+■ 含めてほしい内容
+1. EC2 → IAM ロール → SSM / CloudWatch の関係図（テキストベース）
+2. IAM ロール・インスタンスプロファイル・ポリシーの関係と、それぞれが何を許可しているか
+3. SSM Agent の仕組み（EC2 と Systems Manager がどう通信するか）
+4. CloudWatch Agent の設定ファイル（JSON）の各項目の意味
+   - metrics セクション: 何を収集しているか
+   - logs セクション: 何を送信しているか
+5. CloudWatch Alarm の仕組み（メトリクス → 評価 → 状態遷移）
+6. ansible/playbooks/ の各 Playbook が行っている処理の要約
+```
+
+</details>
+
+生成されたドキュメントを読んで、以下を確認しましょう：
+
+- [ ] IAMロールとインスタンスプロファイルの違いが説明できる
+- [ ] CloudWatch Agent の設定ファイルで何を収集しているか説明できる
+- [ ] SSM の Run Command が SSH と何が違うか説明できる
+- [ ] CloudWatch Alarm がどの条件で発火するか説明できる
 
 ---
 
