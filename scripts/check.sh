@@ -9,6 +9,17 @@
 
 set -euo pipefail
 
+# --- プレフィックス取得 ---
+if [ -z "${TF_VAR_prefix:-}" ]; then
+  if [ -f ".env" ]; then
+    PREFIX_VAL=$(grep '^PREFIX=' .env 2>/dev/null | cut -d'=' -f2 | tr -d '[:space:]' || echo "")
+    if [ -n "$PREFIX_VAL" ]; then
+      TF_VAR_prefix="$PREFIX_VAL"
+    fi
+  fi
+fi
+TF_VAR_prefix="${TF_VAR_prefix:-training}"
+
 # --- 色定義 ---
 GREEN='\033[0;32m'
 RED='\033[0;31m'
@@ -466,21 +477,23 @@ check_session5() {
   if [ "$step" = "all" ] || [ "$step" = "step1" ]; then
     echo ""
     echo "📦 Step 1: IAMロール"
+    local role_name="${TF_VAR_prefix}-ec2-agent-role"
+    local profile_name="${TF_VAR_prefix}-ec2-agent-profile"
     local role
-    role=$(aws iam get-role --role-name training-ec2-agent-role --query 'Role.RoleName' --output text 2>/dev/null || echo "")
-    if [ "$role" = "training-ec2-agent-role" ]; then
-      pass "IAMロール training-ec2-agent-role が存在する"
+    role=$(aws iam get-role --role-name "$role_name" --query 'Role.RoleName' --output text 2>/dev/null || echo "")
+    if [ "$role" = "$role_name" ]; then
+      pass "IAMロール $role_name が存在する"
     else
-      fail "IAMロール training-ec2-agent-role がありません" "Step 1でIAMロールを作成してください"
+      fail "IAMロール $role_name がありません" "Step 1でIAMロールを作成してください"
     fi
 
     local profile
-    profile=$(aws iam get-instance-profile --instance-profile-name training-ec2-agent-profile \
+    profile=$(aws iam get-instance-profile --instance-profile-name "$profile_name" \
       --query 'InstanceProfile.InstanceProfileName' --output text 2>/dev/null || echo "")
-    if [ "$profile" = "training-ec2-agent-profile" ]; then
-      pass "インスタンスプロファイル training-ec2-agent-profile が存在する"
+    if [ "$profile" = "$profile_name" ]; then
+      pass "インスタンスプロファイル $profile_name が存在する"
     else
-      fail "インスタンスプロファイル training-ec2-agent-profile がありません"
+      fail "インスタンスプロファイル $profile_name がありません"
     fi
   fi
 
@@ -533,13 +546,14 @@ check_session5() {
     fi
 
     # メトリクス確認
+    local cw_namespace="${TF_VAR_prefix}/EC2"
     local metrics
-    metrics=$(aws cloudwatch list-metrics --namespace "Training/EC2" \
+    metrics=$(aws cloudwatch list-metrics --namespace "$cw_namespace" \
       --query 'Metrics | length(@)' --output text 2>/dev/null || echo "0")
     if [ "$metrics" -gt 0 ] 2>/dev/null; then
-      pass "Training/EC2 名前空間にメトリクスが存在する ($metrics 個)"
+      pass "$cw_namespace 名前空間にメトリクスが存在する ($metrics 個)"
     else
-      fail "Training/EC2 名前空間にメトリクスがありません" "数分待ってから再確認してください"
+      fail "$cw_namespace 名前空間にメトリクスがありません" "数分待ってから再確認してください"
     fi
   fi
 
@@ -547,13 +561,14 @@ check_session5() {
   if [ "$step" = "all" ] || [ "$step" = "step6" ]; then
     echo ""
     echo "📦 Step 6: CloudWatch Alarm"
+    local alarm_name="${TF_VAR_prefix}-cpu-alarm"
     local alarm
-    alarm=$(aws cloudwatch describe-alarms --alarm-names "training-cpu-alarm" \
+    alarm=$(aws cloudwatch describe-alarms --alarm-names "$alarm_name" \
       --query 'MetricAlarms[0].StateValue' --output text 2>/dev/null || echo "")
     if [ -n "$alarm" ] && [ "$alarm" != "None" ]; then
-      pass "training-cpu-alarm が存在する (状態: $alarm)"
+      pass "$alarm_name が存在する (状態: $alarm)"
     else
-      fail "training-cpu-alarm が見つかりません" "Step 6のCloudWatch Alarm作成手順を実行してください"
+      fail "$alarm_name が見つかりません" "Step 6のCloudWatch Alarm作成手順を実行してください"
     fi
   fi
 

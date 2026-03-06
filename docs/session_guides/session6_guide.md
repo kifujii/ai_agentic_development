@@ -418,10 +418,10 @@ ansible/
 
 **1. セッション5: IAMリソース・CloudWatch（実施した場合のみ）**
 
-Claude Code に以下のように伝えて、削除を実行してもらいます：
+Claude Code に以下のように伝えて、削除を実行してもらいます（`<PREFIX>` は自分のプレフィックス）：
 ```
-training-ec2-agent-role、training-ec2-agent-profile、training-cpu-alarm、
-ロググループ /training/ec2/messages と /training/ec2/secure を削除してください。
+${TF_VAR_prefix}-ec2-agent-role、${TF_VAR_prefix}-ec2-agent-profile、${TF_VAR_prefix}-cpu-alarm、
+ロググループ /${TF_VAR_prefix}/ec2/messages と /${TF_VAR_prefix}/ec2/secure を削除してください。
 ```
 
 **2. セッション1〜2: VPC/EC2**（あなたのターミナルで実行）

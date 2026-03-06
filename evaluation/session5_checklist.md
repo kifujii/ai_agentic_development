@@ -1,7 +1,7 @@
 # セッション5：SSM Agent & CloudWatch Agent 導入 評価チェックリスト
 
 ## Step 1: IAMロール作成
-- [ ] IAMロール `training-ec2-agent-role` が作成された
+- [ ] IAMロール `<PREFIX>-ec2-agent-role` が作成された
 - [ ] `AmazonSSMManagedInstanceCore` ポリシーがアタッチされた
 - [ ] `CloudWatchAgentServerPolicy` ポリシーがアタッチされた
 - [ ] インスタンスプロファイルがEC2に関連付けられた
@@ -22,11 +22,11 @@
 ## Step 5: CloudWatch Agent 設定・起動・確認
 - [ ] `configure_cwagent.yml` を作成した
 - [ ] CloudWatch Agent が running 状態になった
-- [ ] Training/EC2 名前空間にメトリクスが表示された
+- [ ] `<PREFIX>/EC2` 名前空間にメトリクスが表示された
 - [ ] ロググループにログが表示された
 
 ## Step 6: CloudWatch Alarm
-- [ ] `training-cpu-alarm` が作成された
+- [ ] `<PREFIX>-cpu-alarm` が作成された
 - [ ] アラームがOK状態で表示された
 
 ## 成果物
