@@ -54,6 +54,7 @@ summary() {
     echo -e "${YELLOW}結果: ${PASS}/${total} 完了${NC}"
   fi
   echo "=============================="
+  return $FAIL
 }
 
 # --- Terraform output ヘルパー ---
@@ -78,6 +79,69 @@ ssh_check_cmd() {
   fi
   ssh -o StrictHostKeyChecking=no -o ConnectTimeout=5 -o BatchMode=yes \
     -i "$key" ec2-user@"$ip" "$cmd" 2>/dev/null
+}
+
+# =============================================================================
+# セッション0: Claude Code に慣れよう
+# =============================================================================
+check_session0() {
+  local step="${1:-all}"
+  echo ""
+  echo "🔍 セッション0: Claude Code に慣れよう"
+  echo "------------------------------"
+
+  # Step 1-3: practice/ フォルダの確認
+  if [ "$step" = "all" ] || [ "$step" = "step1" ] || [ "$step" = "step2" ] || [ "$step" = "step3" ]; then
+    echo ""
+    echo "📦 Step 1-3: Claude Code でのファイル作成"
+    if [ -d "practice" ]; then
+      local file_count
+      file_count=$(find practice -type f 2>/dev/null | wc -l | tr -d ' ')
+      if [ "$file_count" -gt 0 ]; then
+        pass "practice/ フォルダにファイルが存在する ($file_count ファイル)"
+      else
+        fail "practice/ フォルダは存在するがファイルがありません" "Claude Code にファイル作成を依頼してください"
+      fi
+    else
+      fail "practice/ フォルダがありません" "Step 2 のプロンプトを実行してください"
+    fi
+  fi
+
+  # Step 4: 環境確認
+  if [ "$step" = "all" ] || [ "$step" = "step4" ]; then
+    echo ""
+    echo "📦 Step 4: ワークショップ環境"
+
+    if command -v terraform &> /dev/null; then
+      local tf_ver
+      tf_ver=$(terraform version -json 2>/dev/null | grep -o '"terraform_version":"[^"]*"' | head -1 || terraform version 2>/dev/null | head -1)
+      pass "terraform がインストールされている ($tf_ver)"
+    else
+      fail "terraform がインストールされていません" "./scripts/setup_devspaces.sh を再実行してください"
+    fi
+
+    if command -v ansible &> /dev/null; then
+      pass "ansible がインストールされている"
+    else
+      fail "ansible がインストールされていません" "./scripts/setup_devspaces.sh を再実行してください"
+    fi
+
+    if command -v aws &> /dev/null; then
+      pass "aws cli がインストールされている"
+    else
+      fail "aws cli がインストールされていません" "./scripts/setup_devspaces.sh を再実行してください"
+    fi
+
+    local caller
+    caller=$(aws sts get-caller-identity --query 'Account' --output text 2>/dev/null || echo "")
+    if [ -n "$caller" ]; then
+      pass "AWS認証が通っている (Account: $caller)"
+    else
+      fail "AWS認証が通りません" ".env の認証情報を確認してください"
+    fi
+  fi
+
+  summary
 }
 
 # =============================================================================
@@ -416,7 +480,7 @@ check_session4() {
     echo ""
     echo "📦 Step 3: サーバー状態確認"
     local pb="ansible/playbooks/check_status.yml"
-    if [ -f "$pb" ] || ls ansible/playbooks/*check*status* 2>/dev/null | head -1 > /dev/null 2>&1; then
+    if [ -f "$pb" ] || compgen -G "ansible/playbooks/*check*status*" > /dev/null 2>&1; then
       pass "check_status Playbook が存在する"
     else
       fail "check_status Playbook がありません"
@@ -427,7 +491,7 @@ check_session4() {
     echo ""
     echo "📦 Step 4: サーバー再起動"
     local pb="ansible/playbooks/restart_server.yml"
-    if [ -f "$pb" ] || ls ansible/playbooks/*restart* 2>/dev/null | head -1 > /dev/null 2>&1; then
+    if [ -f "$pb" ] || compgen -G "ansible/playbooks/*restart*" > /dev/null 2>&1; then
       pass "restart_server Playbook が存在する"
     else
       fail "restart_server Playbook がありません"
@@ -438,7 +502,7 @@ check_session4() {
     echo ""
     echo "📦 Step 5: サービス管理"
     local pb="ansible/playbooks/manage_services.yml"
-    if [ -f "$pb" ] || ls ansible/playbooks/*manage*service* 2>/dev/null | head -1 > /dev/null 2>&1; then
+    if [ -f "$pb" ] || compgen -G "ansible/playbooks/*manage*service*" > /dev/null 2>&1; then
       pass "manage_services Playbook が存在する"
     else
       fail "manage_services Playbook がありません"
@@ -449,7 +513,7 @@ check_session4() {
     echo ""
     echo "📦 Step 6: 🔧 障害対応シミュレーション"
     local pb="ansible/playbooks/server_health_check.yml"
-    if [ -f "$pb" ] || ls ansible/playbooks/*health*check* 2>/dev/null | head -1 > /dev/null 2>&1; then
+    if [ -f "$pb" ] || compgen -G "ansible/playbooks/*health*check*" > /dev/null 2>&1; then
       pass "server_health_check（診断・復旧）Playbook が存在する"
     else
       fail "server_health_check Playbook がありません" "Step 6の障害対応シミュレーションを実行してください"
@@ -588,7 +652,7 @@ check_session6() {
   if [ "$step" = "all" ] || [ "$step" = "step1" ]; then
     echo ""
     echo "📦 Step 1: サーバー情報収集"
-    if [ -f "ansible/playbooks/gather_info.yml" ] || ls ansible/playbooks/*gather* 2>/dev/null | head -1 > /dev/null 2>&1; then
+    if [ -f "ansible/playbooks/gather_info.yml" ] || compgen -G "ansible/playbooks/*gather*" > /dev/null 2>&1; then
       pass "gather_info Playbook が存在する"
     else
       fail "gather_info Playbook がありません"
@@ -599,7 +663,7 @@ check_session6() {
   if [ "$step" = "all" ] || [ "$step" = "step2" ]; then
     echo ""
     echo "📦 Step 2: レポートテンプレート"
-    if [ -f "ansible/templates/server_report.md.j2" ] || ls ansible/templates/*.j2 2>/dev/null | head -1 > /dev/null 2>&1; then
+    if [ -f "ansible/templates/server_report.md.j2" ] || compgen -G "ansible/templates/*.j2" > /dev/null 2>&1; then
       pass "Jinja2 テンプレートが存在する"
     else
       fail "ansible/templates/ にテンプレートがありません"
@@ -610,13 +674,13 @@ check_session6() {
   if [ "$step" = "all" ] || [ "$step" = "step3" ]; then
     echo ""
     echo "📦 Step 3: レポート自動生成"
-    if [ -f "ansible/playbooks/generate_report.yml" ] || ls ansible/playbooks/*report* 2>/dev/null | head -1 > /dev/null 2>&1; then
+    if [ -f "ansible/playbooks/generate_report.yml" ] || compgen -G "ansible/playbooks/*report*" > /dev/null 2>&1; then
       pass "generate_report Playbook が存在する"
     else
       fail "generate_report Playbook がありません"
     fi
     local report_count
-    report_count=$(ls ansible/reports/*.md 2>/dev/null | wc -l || echo "0")
+    report_count=$(compgen -G "ansible/reports/*.md" 2>/dev/null | wc -l || echo "0")
     if [ "$report_count" -gt 0 ]; then
       pass "レポートが生成されている ($report_count ファイル)"
     else
@@ -634,6 +698,7 @@ usage() {
   echo "使い方: $0 <session> [step]"
   echo ""
   echo "セッション:"
+  echo "  session0   Claude Code に慣れよう"
   echo "  session1   VPC + EC2 を段階的に構築"
   echo "  session2   Terraform でインフラを構築・変更・再構築"
   echo "  session3   EC2 を count でスケールアウト"
@@ -658,19 +723,25 @@ main() {
   local session="$1"
   local step="${2:-all}"
 
+  local result=0
   case "$session" in
-    session1) check_session1 "$step" ;;
-    session2) check_session2 "$step" ;;
-    session3) check_session3 "$step" ;;
-    session4) check_session4 "$step" ;;
-    session5) check_session5 "$step" ;;
-    session6) check_session6 "$step" ;;
+    session0) check_session0 "$step" || result=$? ;;
+    session1) check_session1 "$step" || result=$? ;;
+    session2) check_session2 "$step" || result=$? ;;
+    session3) check_session3 "$step" || result=$? ;;
+    session4) check_session4 "$step" || result=$? ;;
+    session5) check_session5 "$step" || result=$? ;;
+    session6) check_session6 "$step" || result=$? ;;
     *)
       echo "エラー: 不明なセッション '$session'"
       usage
       exit 1
       ;;
   esac
+
+  if [ "$result" -gt 0 ]; then
+    exit 1
+  fi
 }
 
 main "$@"

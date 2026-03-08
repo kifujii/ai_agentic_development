@@ -132,6 +132,8 @@ Claude Codeが正しく動作しているか確認します：
 
 ## Claude Codeの使い方
 
+> 💡 Claude Code の操作方法は **[セッション0：Claude Code に慣れよう](../session_guides/session0_guide.md)** でハンズオン形式で学びます。以下はリファレンスとしてご利用ください。
+
 ### 基本的な使い方
 
 Claude Codeはターミナルに指示を入力するだけで、必要な操作を自動的に行います：

@@ -58,6 +58,9 @@ ansible.cfg.local
 *.log
 logs/
 
+# Session 0 練習用
+practice/
+
 # 一時ファイル
 tmp/
 temp/

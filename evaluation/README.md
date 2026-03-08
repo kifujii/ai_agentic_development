@@ -4,6 +4,7 @@
 
 ## チェックリスト一覧
 
+- [セッション0](session0_checklist.md) - Claude Code に慣れよう
 - [セッション1](session1_checklist.md) - VPC + EC2 を段階的に構築
 - [セッション2](session2_checklist.md) - Terraform でインフラを構築・変更・再構築
 - [セッション3](session3_checklist.md) - EC2 を count でスケールアウト（任意）
