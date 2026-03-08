@@ -15,7 +15,7 @@ EC2に SSM Agent と CloudWatch Agent がインストール・稼働し、AWSコ
 > - **SSM Agent**: AWSコンソールからEC2にリモートアクセス（Session Manager）。SSHなしで管理できる。
 > - **CloudWatch Agent**: CPU/メモリ/ディスクのメトリクスやログをCloudWatchに送信。監視に必須。
 >
-> ⚠️ **用語の注意**: ここでの「Agent」は **EC2上で動くAWSのソフトウェア**（SSM Agent, CloudWatch Agent）です。Claude Code（AIコーディングエージェント）とは別物です。
+> ⚠️ **用語の注意**: このセッションに登場する「SSM Agent」「CloudWatch Agent」は **EC2上で動くAWSのソフトウェア** です。Claude Code（AI Agent）とは別物です。
 
 > 💡 **セッション1で紹介したトラブルシューティングパターンを活用しましょう**: 何か問題が起きたら、エラーメッセージを Claude Code に共有して原因調査・修正を依頼してください。
 
@@ -237,7 +237,7 @@ ansible/playbooks/install_cwagent.yml を作成してください。
 
 ### やること
 
-CloudWatch Agent の設定ファイルを配置し、Agent を起動します。起動後、AWSコンソールでメトリクスとログが正しく収集されていることを確認します。
+CloudWatch Agent の設定ファイルを配置し、CloudWatch Agent を起動します。起動後、AWSコンソールでメトリクスとログが正しく収集されていることを確認します。
 
 ### ゴール
 
@@ -334,7 +334,7 @@ AWS CLI で以下の CloudWatch Alarm を作成してください。
 | IAMロール作成 | AWS CLI (Claude Code) | EC2がAWSサービスと通信するには **権限（IAM）** が必要 |
 | SSM Agent導入 | Ansible | パッケージ管理・サービス管理の自動化 |
 | SSM Run Command | AWSコンソール | SSH不要のリモート管理 |
-| CW Agent導入・設定 | Ansible | メトリクス・ログ収集の自動化 |
+| CloudWatch Agent導入・設定 | Ansible | メトリクス・ログ収集の自動化 |
 | CW Alarm作成 | AWS CLI (Claude Code) | 監視設定も Claude Code で自動化 |
 
 ### ツールの使い分け
@@ -342,7 +342,7 @@ AWS CLI で以下の CloudWatch Alarm を作成してください。
 | ツール | 用途 | このセッションでの使い方 |
 |--------|------|------------------------|
 | Terraform | インフラの構築 | 今回は使わなかった |
-| Ansible | サーバー内の設定・ソフトウェア管理 | SSM/CW Agentのインストール・設定 |
+| Ansible | サーバー内の設定・ソフトウェア管理 | SSM Agent / CloudWatch Agent のインストール・設定 |
 | AWS CLI | AWSリソースの操作 | IAMロール、CloudWatch Alarm |
 | SSM | 緊急時のリモート管理 | Run Commandでサーバー操作 |
 
