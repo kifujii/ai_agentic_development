@@ -4,7 +4,7 @@
 
 ## 概要
 
-Claude CodeのAIエージェント機能を使って、TerraformやAnsibleのコードを自動生成・実行しながら、AWSインフラの構築と運用を実践的に学びます。
+Claude Code の AI Agent 機能を使って、Terraform や Ansible のコードを自動生成・実行しながら、AWS インフラの構築と運用を実践的に学びます。
 
 ## セッション構成
 

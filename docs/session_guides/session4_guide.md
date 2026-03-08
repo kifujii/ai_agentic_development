@@ -122,7 +122,7 @@ Claude Code に `プロジェクトルートから Ansible の接続テスト（
 <details>
 <summary>❓ 接続できない場合</summary>
 
-接続に失敗した場合は、**エラーメッセージをそのまま Claude Code に共有** してみましょう。Claude Code がエラーの原因を分析し、修正してくれます。
+接続に失敗した場合は、**エラーメッセージをそのまま Claude Code に共有** してみましょう。AI Agent がエラーの原因を分析し、修正してくれます。
 
 よくある原因：
 - `inventory.ini` のIPアドレスが正しいか確認（プレースホルダー `<EC2のIP>` のままになっていませんか？）
@@ -176,7 +176,7 @@ ansible/playbooks/check_status.yml を作成してください。
 
 サーバー情報が表示されれば OK ✅
 
-> 💡 **Playbookの実行方法**: Claude Code に「作成後、Playbookを実行してください」と指示すると Claude Code が自動で実行してくれます。あなたが手動で実行する場合は `ANSIBLE_CONFIG=ansible/ansible.cfg ansible-playbook -i ansible/inventory.ini ansible/playbooks/check_status.yml` です。
+> 💡 **Playbookの実行方法**: Claude Code に「作成後、Playbookを実行してください」と指示すると AI Agent が自動で実行してくれます。あなたが手動で実行する場合は `ANSIBLE_CONFIG=ansible/ansible.cfg ansible-playbook -i ansible/inventory.ini ansible/playbooks/check_status.yml` です。
 
 ---
 
@@ -387,9 +387,9 @@ Playbook が実行されて各チェック項目が表示されれば OK ✅
 
 | 体験 | 学んだこと |
 |------|-----------|
-| ランダムな障害が発生し、Claude Code が調査・復旧 | Claude Code は「症状確認 → 仮説 → 調査 → 原因特定 → 修復 → 確認」を自動で繰り返す |
+| ランダムな障害が発生し、AI Agent が調査・復旧 | AI Agent は「症状確認 → 仮説 → 調査 → 原因特定 → 修復 → 確認」を自動で繰り返す |
 | 何が起きたかわからない状態から調査開始 | **実務と同じ「予測不能な障害」に対する対応力が身につく** |
-| Claude Code の調査・復旧 → Playbook 化 | **一度対応した作業を次回のために自動化する** |
+| AI Agent の調査・復旧 → Playbook 化 | **一度対応した作業を次回のために自動化する** |
 
 > 🎓 **このパターンを覚えておきましょう**: 何か問題が起きたら → **あなたが状況を Claude Code に伝える** → Claude Code が調査・原因特定・修復。このパターンはセッション5以降でも使えます。
 

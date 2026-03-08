@@ -297,7 +297,7 @@ CloudWatch Agent が収集したメトリクスに対してアラームを設定
 
 CPU使用率が80%を超えたらアラーム状態になる CloudWatch Alarm `<PREFIX>-cpu-alarm` が作成されている。
 
-> 💡 **ヒント**: Claude Code に「CloudWatch Alarmを作成して」と伝えると、Claude Code が必要なAWS CLIコマンドを実行してくれます。
+> 💡 **ヒント**: Claude Code に「CloudWatch Alarmを作成して」と伝えると、AI Agent が必要なAWS CLIコマンドを実行してくれます。
 
 <details>
 <summary>📝 プロンプト例</summary>
@@ -537,7 +537,7 @@ ansible/
 ワークショップ終了後にあなたのターミナルで IAM リソースを削除してください。
 `<PREFIX>` の部分は自分のプレフィックスに置き換えてください（`echo $TF_VAR_prefix` で確認できます）。
 
-> 💡 Claude Code に「セッション5で作成したIAMリソース、CloudWatch Alarm、ロググループをすべて削除して。プレフィックスは ${TF_VAR_prefix} です」と伝えれば、Claude Code がまとめて実行してくれます。
+> 💡 Claude Code に「セッション5で作成したIAMリソース、CloudWatch Alarm、ロググループをすべて削除して。プレフィックスは ${TF_VAR_prefix} です」と伝えれば、AI Agent がまとめて実行してくれます。
 
 インスタンスプロファイルからロールを削除：
 ```bash
