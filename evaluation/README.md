@@ -4,6 +4,7 @@
 
 ## チェックリスト一覧
 
+- [セッション0](session0_checklist.md) - Claude Code に慣れよう
 - [セッション1](session1_checklist.md) - VPC + EC2 を段階的に構築
 - [セッション2](session2_checklist.md) - Webアプリケーションを公開
 - [セッション3](session3_checklist.md) - HTTPS 対応（任意）

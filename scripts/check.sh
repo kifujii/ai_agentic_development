@@ -71,6 +71,69 @@ ssh_check_cmd() {
 }
 
 # =============================================================================
+# セッション0: Claude Code に慣れよう
+# =============================================================================
+check_session0() {
+  local step="${1:-all}"
+  echo ""
+  echo "🔍 セッション0: Claude Code に慣れよう"
+  echo "------------------------------"
+
+  # Step 1-3: practice/ フォルダの確認
+  if [ "$step" = "all" ] || [ "$step" = "step1" ] || [ "$step" = "step2" ] || [ "$step" = "step3" ]; then
+    echo ""
+    echo "📦 Step 1-3: Claude Code でのファイル作成"
+    if [ -d "practice" ]; then
+      local file_count
+      file_count=$(find practice -type f 2>/dev/null | wc -l | tr -d ' ')
+      if [ "$file_count" -gt 0 ]; then
+        pass "practice/ フォルダにファイルが存在する ($file_count ファイル)"
+      else
+        fail "practice/ フォルダは存在するがファイルがありません" "Claude Code にファイル作成を依頼してください"
+      fi
+    else
+      fail "practice/ フォルダがありません" "Step 2 のプロンプトを実行してください"
+    fi
+  fi
+
+  # Step 4: 環境確認
+  if [ "$step" = "all" ] || [ "$step" = "step4" ]; then
+    echo ""
+    echo "📦 Step 4: ワークショップ環境"
+
+    if command -v terraform &> /dev/null; then
+      local tf_ver
+      tf_ver=$(terraform version -json 2>/dev/null | grep -o '"terraform_version":"[^"]*"' | head -1 || terraform version 2>/dev/null | head -1)
+      pass "terraform がインストールされている ($tf_ver)"
+    else
+      fail "terraform がインストールされていません" "./scripts/setup_devspaces.sh を再実行してください"
+    fi
+
+    if command -v ansible &> /dev/null; then
+      pass "ansible がインストールされている"
+    else
+      fail "ansible がインストールされていません" "./scripts/setup_devspaces.sh を再実行してください"
+    fi
+
+    if command -v aws &> /dev/null; then
+      pass "aws cli がインストールされている"
+    else
+      fail "aws cli がインストールされていません" "./scripts/setup_devspaces.sh を再実行してください"
+    fi
+
+    local caller
+    caller=$(aws sts get-caller-identity --query 'Account' --output text 2>/dev/null || echo "")
+    if [ -n "$caller" ]; then
+      pass "AWS認証が通っている (Account: $caller)"
+    else
+      fail "AWS認証が通りません" ".env の認証情報を確認してください"
+    fi
+  fi
+
+  summary
+}
+
+# =============================================================================
 # セッション1: VPC + EC2 を段階的に構築
 # =============================================================================
 check_session1() {
@@ -600,6 +663,7 @@ usage() {
   echo "使い方: $0 <session> [step]"
   echo ""
   echo "セッション:"
+  echo "  session0   Claude Code に慣れよう"
   echo "  session1   VPC + EC2 を段階的に構築"
   echo "  session2   Webアプリケーションを公開"
   echo "  session3   HTTPS 対応"
@@ -626,6 +690,7 @@ main() {
 
   local result=0
   case "$session" in
+    session0) check_session0 "$step" || result=$? ;;
     session1) check_session1 "$step" || result=$? ;;
     session2) check_session2 "$step" || result=$? ;;
     session3) check_session3 "$step" || result=$? ;;
