@@ -22,6 +22,8 @@ Step 2: レポートテンプレートを作成
 Step 3: レポートを自動生成
 ```
 
+> ⏱️ **時間配分について**: 各 Step の所要時間は目安です。Claude Code の応答速度やエラー対応で前後することがあります。
+
 ---
 
 ## 📚 事前準備
@@ -160,9 +162,9 @@ ansible/playbooks/generate_report.yml を作成してください。
 
 </details>
 
-### 確認
+### 確認（あなたがターミナルで実行）
 
-プロジェクトルートから確認します：
+あなたのターミナルで、プロジェクトルートから確認します：
 
 ```bash
 ls ansible/reports/
@@ -382,24 +384,57 @@ ansible/
 
 ---
 
+## 📖 コードを理解しよう — Jinja2 テンプレートと Ansible の応用技法
+
+このセッションでは Jinja2 テンプレートや `delegate_to`、`fetch` など Ansible の応用的な機能を使いました。これらを理解しましょう：
+
+<details>
+<summary>📝 プロンプト例</summary>
+
+```
+このセッションで作成した Ansible Playbook とテンプレートについて、以下の内容を含む解説ドキュメントを作成してください。
+保存先: docs/session6_design.md
+
+■ 含めてほしい内容
+1. gather_info.yml の処理フロー（情報収集 → JSON保存 → ローカル取得）
+2. Jinja2 テンプレート（server_report.md.j2）の構文解説
+   - 変数の展開 {{ }}、条件分岐 {% if %}、ループ {% for %} の使い方
+   - Ansible 変数がテンプレート内でどう参照されるか
+3. delegate_to: localhost の意味と使いどころ
+4. fetch モジュールの使い方（リモート → ローカルへのファイル取得）
+5. gather_facts: yes で取得できる情報一覧（主要なもの）
+6. このレポート自動生成を実務で活用するシーン（例: 定期監査レポート）
+```
+
+</details>
+
+生成されたドキュメントを読んで、以下を確認しましょう：
+
+- [ ] Jinja2 の `{{ }}`, `{% if %}`, `{% for %}` の違いが説明できる
+- [ ] `delegate_to: localhost` を使う場面とその理由が説明できる
+- [ ] Ansible の `gather_facts` が何をしているか説明できる
+- [ ] このレポート生成の仕組みを他の人に説明できる
+
+---
+
 ## 🎉 ワークショップ完了
 
 お疲れ様でした！全セッションの振り返り：
 
 | セッション | 学んだこと | ツール |
 |-----------|-----------|-------|
-| 1 | VPC/EC2 段階的構築、Agent開発入門 | Terraform |
-| 2 | Webアプリ公開、デプロイの流れ | Terraform + Agent |
-| 3 | HTTPS対応（任意） | nginx SSL + Terraform |
-| 4 | サーバー再起動の自動化 | Ansible |
-| 5 | SSM/CW Agent導入 | Ansible + AWS CLI |
+| 1 | VPC/EC2 段階的構築、Claude Code 入門 | Terraform |
+| 2 | Terraform ライフサイクル体験（構築・変更・再構築） | Terraform |
+| 3 | EC2 を count でスケールアウト（任意） | Terraform |
+| 4 | Ansible によるサーバー運用自動化 + 🔧 トラブルシューティング | Ansible |
+| 5 | SSM Agent & CloudWatch Agent 導入 | Ansible + AWS CLI |
 | 6 | サーバー情報収集・レポート生成（任意） | Ansible |
 
 ---
 
 ## ✅ 完了チェック
 
-以下のコマンドで、このセッションの完了状態を確認できます：
+あなたのターミナルで以下のコマンドを実行して、このセッションの完了状態を確認できます：
 
 ```bash
 ./scripts/check.sh session6
@@ -413,13 +448,17 @@ ansible/
 
 > ⚠️ **必ず以下の順序で削除**してください（依存関係があるため逆順だとエラーになります）。
 
-プロジェクトルートから実行：
+プロジェクトルートから実行します：
 
-**1. セッション5: IAMリソース（実施した場合のみ）**
+**1. セッション5: IAMリソース・CloudWatch（実施した場合のみ）**
 
-Agentに「training-ec2-agent-role と training-ec2-agent-profile を削除して」と伝えてください。
+Claude Code に以下のように伝えて、削除を実行してもらいます（`<PREFIX>` は自分のプレフィックス）：
+```
+${TF_VAR_prefix}-ec2-agent-role、${TF_VAR_prefix}-ec2-agent-profile、${TF_VAR_prefix}-cpu-alarm、
+ロググループ /${TF_VAR_prefix}/ec2/messages と /${TF_VAR_prefix}/ec2/secure を削除してください。
+```
 
-**2. セッション1〜2: VPC/EC2**
+**2. セッション1〜2: VPC/EC2**（あなたのターミナルで実行）
 
 ```bash
 terraform -chdir=terraform/vpc-ec2 destroy

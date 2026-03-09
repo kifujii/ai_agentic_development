@@ -41,7 +41,7 @@
           <mxGeometry x="111" y="50" width="48" height="48" as="geometry"/>
         </mxCell>
         <!-- Info collected -->
-        <mxCell id="info" value="&lt;b&gt;収集する情報:&lt;/b&gt;&lt;br&gt;• OS / カーネル&lt;br&gt;• CPU / メモリ / ディスク&lt;br&gt;• 稼働時間&lt;br&gt;• サービス一覧&lt;br&gt;• CW Agent 状態&lt;br&gt;• ログイン履歴" style="text;html=1;strokeColor=#d6b656;fillColor=#fff2cc;align=left;verticalAlign=top;whiteSpace=wrap;rounded=1;fontSize=10;spacingLeft=5;spacingTop=3;" vertex="1" parent="pubsub">
+        <mxCell id="info" value="&lt;b&gt;収集する情報:&lt;/b&gt;&lt;br&gt;• OS / カーネル&lt;br&gt;• CPU / メモリ / ディスク&lt;br&gt;• 稼働時間&lt;br&gt;• サービス一覧&lt;br&gt;• CloudWatch Agent 状態&lt;br&gt;• ログイン履歴" style="text;html=1;strokeColor=#d6b656;fillColor=#fff2cc;align=left;verticalAlign=top;whiteSpace=wrap;rounded=1;fontSize=10;spacingLeft=5;spacingTop=3;" vertex="1" parent="pubsub">
           <mxGeometry x="40" y="130" width="150" height="110" as="geometry"/>
         </mxCell>
         <!-- Arrows -->
