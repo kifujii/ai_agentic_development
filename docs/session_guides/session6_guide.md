@@ -55,7 +55,7 @@ Step 3: レポートを自動生成
 
 追加の要件：
 - 収集した情報をJSON形式で `/tmp/server_info.json` に保存
-- JSONファイルをローカルの `reports/` フォルダに取得
+- JSONファイルをローカルの `ansible/reports/` フォルダに取得
 
 > 💡 **ヒント**: Ansible の `gather_facts: yes` で OS 情報やメモリ情報が自動的に取得されます（`ansible_memtotal_mb` などの変数で参照可能）。`fetch` モジュールでリモートファイルをローカルに取得できます。
 
@@ -80,7 +80,7 @@ ansible/playbooks/gather_info.yml を作成してください。
 - gather_facts: yes を使用
 - コマンド実行のタスクには changed_when: false を設定
 - 収集した情報をJSON形式で /tmp/server_info.json に保存
-- JSON情報をローカルの reports/ フォルダに取得
+- JSON情報をローカルの ansible/reports/ フォルダに取得
 
 作成後、実行してください。
 ```
@@ -138,7 +138,7 @@ Jinja2テンプレートの内容:
 
 `ansible/playbooks/generate_report.yml` が作成され、実行すると Step 1 の情報収集 + Step 2 のテンプレートを使ってレポートが自動生成されている。
 
-- 保存先: `reports/server_report_<ホスト名>_<日付>.md`
+- 保存先: `ansible/reports/server_report_<ホスト名>_<日付>.md`
 
 > 💡 **ヒント**: Ansible の `template` モジュールでJinja2テンプレートからファイルを生成できます。`delegate_to: localhost` を使えばローカルにファイルを保存できます。
 
@@ -151,9 +151,9 @@ ansible/playbooks/generate_report.yml を作成してください。
 対象: webserversグループ
 処理:
 1. uptime, df, サービス一覧, CloudWatch Agent状態, 最終ログインを収集
-2. ローカルに reports/ フォルダを作成
+2. ローカルに ansible/reports/ フォルダを作成
 3. ansible/templates/server_report.md.j2 テンプレートを使ってレポート生成
-4. 保存先: reports/server_report_<ホスト名>_<日付>.md
+4. 保存先: ansible/reports/server_report_<ホスト名>_<日付>.md
 
 作成後、実行してください。
 ```

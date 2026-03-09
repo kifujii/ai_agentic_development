@@ -219,8 +219,8 @@ practice/ フォルダに system_info.sh というシェルスクリプトを作
 <details>
 <summary>❓ AWS認証が通らない場合</summary>
 
-- `.env` ファイルに AWS 認証情報が正しく設定されているか確認してください
-- 詳しくは[環境セットアップガイド](../setup/ENVIRONMENT_SETUP.md)を参照
+- AWS 認証情報は環境に事前設定済みです。`aws sts get-caller-identity` で確認してください
+- 問題がある場合は講師に確認してください
 
 </details>
 

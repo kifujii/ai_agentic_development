@@ -34,14 +34,14 @@
 
 1. **ターミナルを開く**
    - VSCode のメニューから「ターミナル」→「新しいターミナル」を選択
-   - またはショートカットキー `Ctrl+Shift+@`（バッククォート）を使用
+   - またはショートカットキー `Ctrl+Shift+C` もしくは `` Ctrl+Shift+` ``（バッククォート）を使用
 
-2. **ハンズオン資材をクローン**
+2. **ハンズオン資材をクローン**（ターミナルに以下をコピー＆ペーストして実行）
    ```bash
    git clone --depth 1 https://github.com/kifujii/ai_agentic_development.git tmp && cp -rn tmp/. . && rm -rf tmp
    ```
 
-   > 💡 このコマンドは、GitHub からハンズオン資材を取得し、現在のディレクトリ（Claude Code の設定が既にある場所）にコピーします。
+   > 💡 このコマンドは、GitHub からハンズオン資材を取得し、現在のワークスペースディレクトリ（`.claude/settings.local.json` が既にある場所）にコピーします。既存の設定ファイルは上書きされません。
 
 ### ステップ3: PREFIX の設定
 
@@ -153,7 +153,7 @@ PREFIX が表示されない場合は、`.env` ファイルの内容を確認し
 ## 📚 参考資料
 
 - [Claude Code セットアップガイド](CLAUDE_CODE_SETUP.md) — Claude Code の詳細設定
-- [Terraform公式ドキュメント](https://www.terraform.io/docs)
+- [Terraform公式ドキュメント](https://developer.hashicorp.com/terraform/docs)
 - [Ansible公式ドキュメント](https://docs.ansible.com/)
 
 ## ➡️ 次のステップ

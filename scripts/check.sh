@@ -233,7 +233,7 @@ check_session1() {
       if [ "$result" = "ok" ]; then
         pass "SSH接続に成功 ($ip)"
       else
-        fail "SSH接続できません ($ip)" "鍵の権限を確認してください: chmod 600 keys/training-key"
+        fail "SSH接続できません ($ip)" "鍵の権限を確認してください: chmod 400 keys/training-key"
       fi
     else
       fail "IPアドレスが取得できないため SSH チェックをスキップしました"
@@ -503,20 +503,22 @@ check_session5() {
     echo ""
     echo "📦 Step 1: IAMロール"
     local role
-    role=$(aws iam get-role --role-name training-ec2-agent-role --query 'Role.RoleName' --output text 2>/dev/null || echo "")
-    if [ "$role" = "training-ec2-agent-role" ]; then
-      pass "IAMロール training-ec2-agent-role が存在する"
+    local role_name="${TF_VAR_prefix}-ec2-agent-role"
+    role=$(aws iam get-role --role-name "$role_name" --query 'Role.RoleName' --output text 2>/dev/null || echo "")
+    if [ "$role" = "$role_name" ]; then
+      pass "IAMロール $role_name が存在する"
     else
-      fail "IAMロール training-ec2-agent-role がありません" "Step 1のAWS CLIコマンドを実行してください"
+      fail "IAMロール $role_name がありません" "Step 1のAWS CLIコマンドを実行してください"
     fi
 
+    local profile_name="${TF_VAR_prefix}-ec2-agent-profile"
     local profile
-    profile=$(aws iam get-instance-profile --instance-profile-name training-ec2-agent-profile \
+    profile=$(aws iam get-instance-profile --instance-profile-name "$profile_name" \
       --query 'InstanceProfile.InstanceProfileName' --output text 2>/dev/null || echo "")
-    if [ "$profile" = "training-ec2-agent-profile" ]; then
-      pass "インスタンスプロファイル training-ec2-agent-profile が存在する"
+    if [ "$profile" = "$profile_name" ]; then
+      pass "インスタンスプロファイル $profile_name が存在する"
     else
-      fail "インスタンスプロファイル training-ec2-agent-profile がありません"
+      fail "インスタンスプロファイル $profile_name がありません"
     fi
   fi
 
@@ -592,12 +594,13 @@ check_session5() {
     echo ""
     echo "📦 Step 8: CloudWatch Alarm"
     local alarm
-    alarm=$(aws cloudwatch describe-alarms --alarm-names "training-cpu-alarm" \
+    local alarm_name="${TF_VAR_prefix}-cpu-alarm"
+    alarm=$(aws cloudwatch describe-alarms --alarm-names "$alarm_name" \
       --query 'MetricAlarms[0].StateValue' --output text 2>/dev/null || echo "")
     if [ -n "$alarm" ] && [ "$alarm" != "None" ]; then
-      pass "training-cpu-alarm が存在する (状態: $alarm)"
+      pass "$alarm_name が存在する (状態: $alarm)"
     else
-      fail "training-cpu-alarm が見つかりません" "Step 8のCloudWatch Alarm作成手順を実行してください"
+      fail "$alarm_name が見つかりません" "Step 8のCloudWatch Alarm作成手順を実行してください"
     fi
   fi
 

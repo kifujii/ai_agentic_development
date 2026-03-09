@@ -43,14 +43,14 @@ git clone --depth 1 https://github.com/kifujii/ai_agentic_development.git tmp &&
 
 **A: AWS リソース名の接頭辞です。複数人が同じ AWS 環境を使用するため、リソース名の衝突を防ぎます。**
 
-`.env` ファイルの `PREFIX=` に、講師から指示された自分のユーザー名（例: `user03`）を設定してください。Terraform では `var.prefix`、AWS CLI では `$TF_VAR_prefix` として利用されます。
+`.env` ファイルの `PREFIX=` に、講師から指示された自分のユーザー名（例: `user03`）を設定してください。Terraform では `var.prefix`、AWS CLI では `$PREFIX`（または `$TF_VAR_prefix`）として利用されます。
 
 ## Q: ブラウザで VSCode にアクセスできません
 
 **A: 以下を確認してください。**
 
 1. URL とポート番号が正しいか確認
-2. `https://`（HTTPSではなく）でアクセスしているか確認
+2. `https://` で始まるURLでアクセスしているか確認（`http://` ではアクセスできません）
 3. 自己署名証明書の警告を受け入れたか確認
 4. 別のブラウザで試す
 5. 解決しない場合は講師に確認
@@ -63,7 +63,7 @@ git clone --depth 1 https://github.com/kifujii/ai_agentic_development.git tmp &&
 2. 手順に従って進める
 3. 各セッションのガイドを順番に参照
 
-詳細は `docs/TRAINING_MENU.md` を参照してください。
+詳細は [トレーニングメニュー](../TRAINING_MENU.md) を参照してください。
 
 ## Q: 環境が正しく設定されているか確認する方法は？
 

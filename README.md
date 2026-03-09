@@ -49,36 +49,18 @@ Session 6: サーバー情報取得・レポート（任意）
 
 ## クイックスタート
 
-### 1. ハンズオン環境にアクセス
+### 1. 環境セットアップ
 
-講師から配布された URL とパスワードでブラウザ版 VSCode にアクセスしてください。
+[環境セットアップガイド](docs/setup/ENVIRONMENT_SETUP.md) の手順に従って、ハンズオン環境へのアクセスと初期設定を行ってください。
 
-### 2. ハンズオン資材の取得
-
-ターミナルを開いて以下を実行します：
-
-```bash
-git clone --depth 1 https://github.com/kifujii/ai_agentic_development.git tmp && cp -rn tmp/. . && rm -rf tmp
-```
-
-### 3. 環境セットアップ
-
-[環境セットアップガイド](docs/setup/ENVIRONMENT_SETUP.md) の手順に従って PREFIX を設定してください。
-
-```bash
-cp .env.template .env
-# .env の PREFIX を自分のユーザー名に変更
-./scripts/setup.sh
-```
-
-### 4. ワークショップ開始
+### 2. ワークショップ開始
 
 環境セットアップ完了後、[セッション0](docs/session_guides/session0_guide.md) から開始してください。
 
 ## ディレクトリ構成
 
 ```
-ai_agentic_development-2/
+ai_agentic/
 ├── docs/
 │   ├── TRAINING_MENU.md         # トレーニングメニュー
 │   ├── images/                  # アーキテクチャ構成図
@@ -105,7 +87,8 @@ ai_agentic_development-2/
 # プロジェクトルートから実行してください
 
 # 1. セッション5: IAMリソース（実施した場合のみ）
-# → Agentに「training-ec2-agent-role と training-ec2-agent-profile を削除して」と伝えてください
+# → Claude Code に「${TF_VAR_prefix}-ec2-agent-role、${TF_VAR_prefix}-ec2-agent-profile、
+#   ${TF_VAR_prefix}-cpu-alarm、ロググループ /${TF_VAR_prefix}/ec2/* を削除して」と伝えてください
 
 # 2. セッション1〜3: VPC/EC2（セッション3のHTTPS設定も含まれます）
 terraform -chdir=terraform/vpc-ec2 destroy

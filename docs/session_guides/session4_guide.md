@@ -61,6 +61,7 @@ terraform -chdir=terraform/vpc-ec2 output instance_public_ip
 ### やること
 
 EC2に接続するための設定ファイル（`ansible.cfg` と `inventory.ini`）を作成します。
+`inventory.ini` は Ansible が操作対象とするサーバーの一覧を定義するファイル（インベントリ）です。
 
 ### ゴール
 

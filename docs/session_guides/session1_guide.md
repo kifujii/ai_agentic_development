@@ -63,6 +63,8 @@ chmod 400 keys/training-key
 
 > ⚠️ **作業ディレクトリについて**: Claude Codeへのプロンプトは **プロジェクトルート**（このREADMEがあるフォルダ）から実行してください。
 
+> 💡 **リソース名のPREFIXについて**: プロンプト例では `training-vpc` のような名前を使っていますが、Claude Code は CLAUDE.md の規則に従い、Terraform コードでは自動的に `var.prefix`（セットアップで設定した自分のユーザー名）をリソース名の先頭に付けます。例: `training-vpc` → `${var.prefix}-vpc`。これにより、他の受講者とリソース名が衝突しません。
+
 ---
 
 ## Step 1: VPCを作ろう — 🟢 お手本（25分）
