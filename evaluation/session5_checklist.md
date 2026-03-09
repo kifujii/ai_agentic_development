@@ -1,34 +1,32 @@
-# セッション5：CloudWatch Agent & SSM Agent 評価チェックリスト
+# セッション5：SSM Agent & CloudWatch Agent 導入 評価チェックリスト
 
 ## Step 1: IAMロール作成
-- [ ] AWS CLIでIAMロール・インスタンスプロファイルを作成した
-- [ ] EC2にプロファイルを関連付けた
+- [ ] IAMロール `<PREFIX>-ec2-agent-role` が作成された
+- [ ] `AmazonSSMManagedInstanceCore` ポリシーがアタッチされた
+- [ ] `CloudWatchAgentServerPolicy` ポリシーがアタッチされた
+- [ ] インスタンスプロファイルがEC2に関連付けられた
 
-## Step 2: SSM Agent インストール
+## Step 2: SSM Agent インストール・確認
 - [ ] `install_ssm_agent.yml` を作成した
 - [ ] SSM Agent が active (running) 状態になった
+- [ ] フリートマネージャーにEC2が表示された
 
-## Step 3: SSM Agent 動作確認
-- [ ] Systems Manager フリートマネージャーにインスタンスが表示された
-
-## Step 4: SSM Run Command
+## Step 3: SSM Run Command
 - [ ] AWSコンソールから Run Command を実行した
 - [ ] サーバー情報が出力された
 
-## Step 5: CloudWatch Agent インストール
+## Step 4: CloudWatch Agent インストール
 - [ ] `install_cwagent.yml` を作成した
 - [ ] インストールが成功した
 
-## Step 6: CloudWatch Agent 設定・起動
+## Step 5: CloudWatch Agent 設定・起動・確認
 - [ ] `configure_cwagent.yml` を作成した
 - [ ] CloudWatch Agent が running 状態になった
-
-## Step 7: CloudWatch 確認
-- [ ] カスタム名前空間（Training/EC2）にメトリクスが表示された
+- [ ] `<PREFIX>/EC2` 名前空間にメトリクスが表示された
 - [ ] ロググループにログが表示された
 
-## Step 8: CloudWatch Alarm
-- [ ] `training-cpu-alarm` が作成された
+## Step 6: CloudWatch Alarm
+- [ ] `<PREFIX>-cpu-alarm` が作成された
 - [ ] アラームがOK状態で表示された
 
 ## 成果物
@@ -42,14 +40,14 @@
   - A: _______________
 - [ ] Q: CloudWatch Agent でメトリクスとログを収集する目的は？
   - A: _______________
-- [ ] Q: CloudWatch Alarm はどんな場面で役立ちますか？
-  - A: _______________
 - [ ] Q: IAMロール（インスタンスプロファイル）はなぜ必要ですか？
+  - A: _______________
+- [ ] Q: CloudWatch Alarm はどのような場面で活用できますか？
   - A: _______________
 
 ## プロンプトの振り返り
 
-- [ ] Ansible Playbook 作成で工夫したプロンプトを1つ記録した
+- [ ] Claude Code への指示で工夫した点を記録した
   - 工夫した点: _______________
-- [ ] エラーが発生した場面とその対処を記録した
-  - 状況と対処: _______________
+- [ ] うまくいかなかった場合にどう対応したか記録した
+  - 対応内容: _______________

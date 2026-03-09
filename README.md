@@ -4,7 +4,7 @@
 
 ## 概要
 
-Claude CodeのAIエージェント機能を使って、TerraformやAnsibleのコードを自動生成・実行しながら、AWSインフラの構築と運用を実践的に学びます。
+Claude Code の AI Agent 機能を使って、Terraform や Ansible のコードを自動生成・実行しながら、AWS インフラの構築と運用を実践的に学びます。
 
 ## セッション構成
 
@@ -12,9 +12,9 @@ Claude CodeのAIエージェント機能を使って、TerraformやAnsibleのコ
 |-----------|------|------|-----------|--------|
 | **0** | Claude Code に慣れよう | 45min | 必須 | [ガイド](docs/session_guides/session0_guide.md) |
 | **1** | VPC + EC2 を段階的に構築 | 2h | 必須 | [ガイド](docs/session_guides/session1_guide.md) |
-| **2** | Webアプリケーションを公開 | 2h | 必須 | [ガイド](docs/session_guides/session2_guide.md) |
-| **3** | HTTPS 対応 | 45min | 任意 | [ガイド](docs/session_guides/session3_guide.md) |
-| **4** | サーバー再起動の自動化 (Ansible) | 2h | 必須 | [ガイド](docs/session_guides/session4_guide.md) |
+| **2** | Terraform でインフラを構築・変更・再構築 | 2h | 必須 | [ガイド](docs/session_guides/session2_guide.md) |
+| **3** | EC2 を count でスケールアウト | 45min | 任意 | [ガイド](docs/session_guides/session3_guide.md) |
+| **4** | Ansible によるサーバー運用自動化 | 2h | 必須 | [ガイド](docs/session_guides/session4_guide.md) |
 | **5** | SSM Agent & CloudWatch Agent 導入 | 2h | 必須 | [ガイド](docs/session_guides/session5_guide.md) |
 | **6** | サーバー情報取得・運用レポート | 1h | 任意 | [ガイド](docs/session_guides/session6_guide.md) |
 
@@ -24,13 +24,13 @@ Claude CodeのAIエージェント機能を使って、TerraformやAnsibleのコ
 Day 1 (4h45min + 任意45min): Claude Code 入門 & インフラ構築 (Terraform)
 ├── Session 0: Claude Code に慣れよう (45min)              [必須]
 ├── Session 1: VPC + EC2 を段階的に構築 (2h)              [必須]
-├── Session 2: Webアプリケーションを公開 (2h)              [必須]
-└── Session 3: HTTPS 対応 (45min)                         [任意]
+├── Session 2: Terraform でインフラを構築・変更・再構築 (2h) [必須]
+└── Session 3: EC2 を count でスケールアウト (45min)       [任意]
 
 Day 2 (4h + 任意1h): システム運用 (Ansible)
-├── Session 4: サーバー再起動の自動化 (2h)                [必須]
-├── Session 5: SSM Agent & CloudWatch Agent 導入 (2h)     [必須]
-└── Session 6: サーバー情報取得・レポート (1h)             [任意]
+├── Session 4: Ansible によるサーバー運用自動化 (2h)      [必須]
+├── Session 5: SSM Agent & CloudWatch Agent 導入 (2h)    [必須]
+└── Session 6: サーバー情報取得・レポート (1h)            [任意]
 ```
 
 ### セッション間のつながり
@@ -38,9 +38,9 @@ Day 2 (4h + 任意1h): システム運用 (Ansible)
 ```
 Session 0: Claude Code 入門（操作スキルを習得）
     ↓
-Session 1: VPC + EC2 構築  ──→  Session 2: Webアプリ公開  ──→  Session 3: HTTPS対応（任意）
+Session 1: VPC + EC2 構築  ──→  Session 2: 構築・変更・再構築  ──→  Session 3: countスケールアウト（任意）
     ↓（EC2をAnsibleの操作対象として使用）
-Session 4: サーバー再起動の自動化
+Session 4: Ansible によるサーバー運用自動化 + 🔧 トラブルシューティング
     ↓
 Session 5: SSM Agent & CloudWatch Agent 導入
     ↓
@@ -65,7 +65,7 @@ Session 6: サーバー情報取得・レポート（任意）
 ## ディレクトリ構成
 
 ```
-ai_agentic_development-2/
+ai_agentic/
 ├── docs/
 │   ├── TRAINING_MENU.md         # トレーニングメニュー
 │   ├── images/                  # アーキテクチャ構成図
@@ -91,10 +91,11 @@ ai_agentic_development-2/
 ```bash
 # プロジェクトルートから実行してください
 
-# 1. セッション5: IAMリソース（実施した場合のみ）
-# → Agentに「training-ec2-agent-role と training-ec2-agent-profile を削除して」と伝えてください
+# 1. セッション5: IAM/CloudWatchリソース（実施した場合のみ）
+# → Claude Code に「${TF_VAR_prefix}-ec2-agent-role、${TF_VAR_prefix}-ec2-agent-profile、
+#   ${TF_VAR_prefix}-cpu-alarm、ロググループ /${TF_VAR_prefix}/ec2/* を削除して」と伝えてください
 
-# 2. セッション1〜3: VPC/EC2（セッション3のHTTPS設定も含まれます）
+# 2. セッション1〜3: VPC/EC2
 terraform -chdir=terraform/vpc-ec2 destroy
 ```
 

@@ -81,6 +81,7 @@ else
     AWS_ACCESS_KEY=$(grep "^AWS_ACCESS_KEY_ID=" "$ENV_FILE" | grep -v '^#' | cut -d'=' -f2 | sed "s/^['\"]//;s/['\"]$//" | head -1)
     AWS_SECRET_KEY=$(grep "^AWS_SECRET_ACCESS_KEY=" "$ENV_FILE" | grep -v '^#' | cut -d'=' -f2 | sed "s/^['\"]//;s/['\"]$//" | head -1)
     AWS_REGION_ENV=$(grep "^AWS_DEFAULT_REGION=" "$ENV_FILE" | grep -v '^#' | cut -d'=' -f2 | sed "s/^['\"]//;s/['\"]$//" | head -1)
+    PREFIX_ENV=$(grep "^PREFIX=" "$ENV_FILE" | grep -v '^#' | cut -d'=' -f2 | sed "s/^['\"]//;s/['\"]$//" | head -1)
 
     if [ -n "$AWS_ACCESS_KEY" ] && [ -n "$AWS_SECRET_KEY" ] && [ "$AWS_ACCESS_KEY" != "your-access-key-here" ] && [ "$AWS_SECRET_KEY" != "your-secret-key-here" ]; then
         # 環境変数にエクスポート（このスクリプト内で aws コマンドが使えるようにする）
@@ -132,6 +133,20 @@ EOF
         log_warn ".envファイルに有効なAWS認証情報が設定されていません（テンプレートのままの可能性があります）"
         log_info ".envファイルを編集してAWS認証情報を設定してください。"
     fi
+
+    # PREFIXの設定（TerraformのTF_VAR_prefixとして利用）
+    if [ -n "$PREFIX_ENV" ] && [ "$PREFIX_ENV" != "user01" ]; then
+        export PREFIX="$PREFIX_ENV"
+        export TF_VAR_prefix="$PREFIX_ENV"
+        log_info "✓ PREFIX が設定されました: $PREFIX_ENV"
+        log_info "  → Terraform 変数 TF_VAR_prefix=$PREFIX_ENV"
+    elif [ -n "$PREFIX_ENV" ]; then
+        export PREFIX="$PREFIX_ENV"
+        export TF_VAR_prefix="$PREFIX_ENV"
+        log_warn "PREFIX がデフォルト値（user01）のままです。他の受講者と区別するために変更してください。"
+    else
+        log_warn "PREFIX が設定されていません。.envファイルにPREFIXを設定してください。"
+    fi
 fi
 
 # .envファイルの自動読み込み設定を~/.bashrcに追加
@@ -141,6 +156,8 @@ if [ -f \"${PROJECT_ROOT_DIR}/.env\" ]; then
     set -a
     source \"${PROJECT_ROOT_DIR}/.env\"
     set +a
+    # PREFIXをTerraform変数としてもエクスポート
+    [ -n \"\${PREFIX:-}\" ] && export TF_VAR_prefix=\"\$PREFIX\"
 fi"
 
 if ! grep -q "# .envファイルを自動的に読み込む" ~/.bashrc 2>/dev/null; then
@@ -413,6 +430,12 @@ if [ -f ~/.aws/credentials ]; then
     log_info "✓ AWS CLI設定: ~/.aws/credentials"
 else
     log_warn "✗ AWS CLI設定: 未作成（.envファイルにAWS認証情報を設定後、スクリプトを再実行してください）"
+fi
+
+if [ -n "${PREFIX:-}" ]; then
+    log_info "✓ PREFIX: $PREFIX（TF_VAR_prefix=$PREFIX）"
+else
+    log_warn "✗ PREFIX: 未設定（.envファイルにPREFIXを設定してください）"
 fi
 
 echo ""
