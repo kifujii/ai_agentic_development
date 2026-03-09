@@ -106,19 +106,19 @@ check_session0() {
       tf_ver=$(terraform version -json 2>/dev/null | grep -o '"terraform_version":"[^"]*"' | head -1 || terraform version 2>/dev/null | head -1)
       pass "terraform がインストールされている ($tf_ver)"
     else
-      fail "terraform がインストールされていません" "./scripts/setup_devspaces.sh を再実行してください"
+      fail "terraform がインストールされていません" "講師に確認してください"
     fi
 
     if command -v ansible &> /dev/null; then
       pass "ansible がインストールされている"
     else
-      fail "ansible がインストールされていません" "./scripts/setup_devspaces.sh を再実行してください"
+      fail "ansible がインストールされていません" "講師に確認してください"
     fi
 
     if command -v aws &> /dev/null; then
       pass "aws cli がインストールされている"
     else
-      fail "aws cli がインストールされていません" "./scripts/setup_devspaces.sh を再実行してください"
+      fail "aws cli がインストールされていません" "講師に確認してください"
     fi
 
     local caller

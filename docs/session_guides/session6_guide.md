@@ -26,12 +26,11 @@ Step 3: レポートを自動生成
 
 ## 📚 事前準備
 
-> ⚠️ **DevSpacesのワークスペースを再構築した場合**:
-> 休憩後のタイムアウトや翌日の作業開始時にワークスペースを再構築した場合は、環境セットアップスクリプトを再実行してください。
+> ⚠️ **環境変数が未設定の場合**:
+> 新しいターミナルを開いた際に `$TF_VAR_prefix` が未設定の場合は、セットアップスクリプトを再実行してください。
 > ```bash
-> ./scripts/setup_devspaces.sh
+> ./scripts/setup.sh
 > ```
-> プロジェクト内のファイル（SSH鍵、Terraformの状態、Ansibleの設定、生成したコード）は保持されています。
 
 - セッション4のAnsible環境が構築済みであること（`ANSIBLE_CONFIG=ansible/ansible.cfg ansible -i ansible/inventory.ini all -m ping` で確認）
 

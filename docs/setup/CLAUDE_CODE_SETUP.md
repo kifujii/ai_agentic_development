@@ -2,80 +2,29 @@
 
 ## 概要
 
-このワークショップでは、Claude Code（CLIベースのAIコーディングエージェント）を使用します。Claude CodeはAWS Bedrockをモデルプロバイダーとして使用し、Claude Sonnet 4.6 でコード生成・ファイル操作・ターミナル実行などを自律的に行います。
+このワークショップでは、Claude Code（CLIベースの AI コーディング Agent）を使用します。Claude Code は AWS Bedrock をモデルプロバイダーとして使用し、Claude Sonnet 4.6 でコード生成・ファイル操作・ターミナル実行などを自律的に行います。
 
 ## Claude Codeとは
 
-Claude Codeは、ターミナルから直接利用できる自律型AIコーディングエージェントです。ファイルの作成・編集、ターミナルコマンドの実行など、開発に必要な操作をAIが自動で行います。各操作の実行前に承認を求めるため、安全に利用できます。
+Claude Code は、ターミナルから直接利用できる自律型 AI コーディング Agent です。ファイルの作成・編集、ターミナルコマンドの実行など、開発に必要な操作を AI Agent が自動で行います。各操作の実行前に承認を求めるため、安全に利用できます。
 
 - **公式ドキュメント**: https://docs.anthropic.com/en/docs/claude-code
 
-## セットアップ手順
+## セットアップ状況
 
-### 1. Claude Codeのインストール
+### ハンズオン環境（ブラウザ版 VSCode）の場合
 
-**重要**: DevSpacesワークスペースでは、セットアップスクリプト（`./scripts/setup_devspaces.sh`）を実行するとClaude Codeが自動インストールされます。
+ハンズオン環境では、以下がすべて**事前設定済み**です：
 
-#### DevSpacesワークスペースを使用する場合（推奨）
+- Claude Code のインストール
+- AWS Bedrock の認証情報（IAM ユーザーのクレデンシャル）
+- Claude Code の設定ファイル（`.claude/settings.local.json`）
 
-1. ワークスペース起動後、セットアップスクリプトを実行：
-   ```bash
-   ./scripts/setup_devspaces.sh
-   ```
+受講者が追加で設定する必要はありません。
 
-2. このスクリプトでClaude Codeが自動インストールされます。
+### 設定ファイルの内容
 
-**手動インストールが必要な場合**:
-
-```bash
-npm config set prefix "$HOME/.local"
-npm install -g @anthropic-ai/claude-code
-```
-
-### 2. AWS Bedrockの設定
-
-Claude CodeはAWS Bedrockを経由してClaude Sonnet 4.6を使用します。認証やモデル指定はプロジェクトルートの `.claude/settings.local.json` で管理します。
-
-#### 2.1 AWS認証情報の確認
-
-`.env` ファイルにAWS認証情報が設定済みであることを確認してください：
-
-```bash
-aws sts get-caller-identity
-```
-
-**重要**: AWS Bedrockを使用するには、IAMユーザーに以下のポリシーが必要です：
-
-```json
-{
-  "Version": "2012-10-17",
-  "Statement": [
-    {
-      "Effect": "Allow",
-      "Action": [
-        "bedrock:InvokeModel",
-        "bedrock:InvokeModelWithResponseStream",
-        "bedrock:ListFoundationModels"
-      ],
-      "Resource": "*"
-    }
-  ]
-}
-```
-
-#### 2.2 Claude Code 設定ファイルの作成
-
-セットアップスクリプト（`./scripts/setup_devspaces.sh`）を実行すると、`.env` の AWS認証情報を使ってAWSアカウントIDを自動取得し、`.claude/settings.local.json` が生成されます。
-
-> **ポイント**: `.env` ファイルを先に作成してからスクリプトを実行すると、ツールインストールからClaude Code設定まで1回で完了します。
-
-手動で作成する場合は、以下のコマンドでAWSアカウントIDを確認してから作成してください：
-
-```bash
-aws sts get-caller-identity --query Account --output text
-```
-
-`.claude/settings.local.json` を以下の内容で作成します（`<ACCOUNT_ID>` を実際のAWSアカウントIDに置き換え）：
+Claude Code は `.claude/settings.local.json` で Bedrock 接続を管理しています。ハンズオン環境には以下の設定が配置済みです：
 
 ```json
 {
@@ -95,9 +44,9 @@ aws sts get-caller-identity --query Account --output text
 | `AWS_REGION` | Bedrockのリージョン |
 | `ANTHROPIC_MODEL` | Bedrock inference profile の ARN（アカウントID含む） |
 
-> **注意**: `.claude/settings.local.json` は `.gitignore` で無視されるため、各受講者が個別に作成する必要があります。セットアップスクリプトを実行すれば自動生成されます。
+> **注意**: `.claude/settings.local.json` は `.gitignore` で無視されるため、Git 管理対象外です。ハンズオン環境では環境構築時に自動配置されています。
 
-### 3. Claude Codeの起動
+## Claude Codeの起動
 
 ターミナルで以下のコマンドを実行します：
 
@@ -115,7 +64,7 @@ claude
 | `claude "指示内容"` | 初期プロンプト付きで起動 |
 | `claude -c` | 前回のセッションを続行 |
 
-### 4. 動作確認
+## 動作確認
 
 Claude Codeが正しく動作しているか確認します：
 
@@ -164,14 +113,8 @@ Claude Codeは操作を実行する前に承認を求めます：
 ### 問題1: Claude Codeが起動しない
 
 **解決方法**:
-1. Node.js / npm がインストールされているか確認（`node --version`）
-2. Claude Codeがインストールされているか確認（`which claude`）
-3. npm prefix が正しいか確認（`npm config get prefix` → `~/.local` であること）
-4. 再インストール:
-   ```bash
-   npm config set prefix "$HOME/.local"
-   npm install -g @anthropic-ai/claude-code
-   ```
+1. Claude Code がインストールされているか確認（`which claude`）
+2. 見つからない場合は講師に確認してください
 
 ### 問題2: ログイン画面が表示される（Bedrockに接続できない）
 
@@ -182,26 +125,22 @@ Claude Codeは操作を実行する前に承認を求めます：
    ```bash
    cat .claude/settings.local.json
    ```
-2. 存在しない場合はセットアップスクリプトを再実行：
-   ```bash
-   ./scripts/setup_devspaces.sh
-   ```
-3. または手動で作成（上記「2.2 Claude Code 設定ファイルの作成」を参照）
+2. 存在しない場合はハンズオン資材のクローン手順を再実行してください
+3. それでも解決しない場合は講師に確認してください
 
 ### 問題3: AWS Bedrockへの接続エラー
 
 **解決方法**:
 1. AWS認証情報が正しく設定されているか確認（`aws sts get-caller-identity`）
 2. `.claude/settings.local.json` の `AWS_REGION` が `ap-northeast-1` になっているか確認
-3. IAMポリシーに `bedrock:InvokeModel` 権限があるか確認
-4. `ANTHROPIC_MODEL` のARNに正しいAWSアカウントIDが含まれているか確認
+3. 上記に問題がない場合は講師に確認してください
 
 ### 問題4: モデルが応答しない
 
 **解決方法**:
 1. `.claude/settings.local.json` の `ANTHROPIC_MODEL` が正しいARN形式か確認
 2. ネットワーク接続を確認
-3. AWS Bedrockのサービス状態を確認
+3. 講師に確認してください
 
 ## 参考リンク
 

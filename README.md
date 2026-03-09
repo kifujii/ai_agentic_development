@@ -49,16 +49,29 @@ Session 6: サーバー情報取得・レポート（任意）
 
 ## クイックスタート
 
-### 1. 環境セットアップ
+### 1. ハンズオン環境にアクセス
 
-[環境セットアップガイド](docs/setup/ENVIRONMENT_SETUP.md) の手順に従ってください。
+講師から配布された URL とパスワードでブラウザ版 VSCode にアクセスしてください。
+
+### 2. ハンズオン資材の取得
+
+ターミナルを開いて以下を実行します：
 
 ```bash
-# DevSpaces環境でセットアップスクリプトを実行
-./scripts/setup_devspaces.sh
+git clone --depth 1 https://github.com/kifujii/ai_agentic_development.git tmp && cp -rn tmp/. . && rm -rf tmp
 ```
 
-### 2. ワークショップ開始
+### 3. 環境セットアップ
+
+[環境セットアップガイド](docs/setup/ENVIRONMENT_SETUP.md) の手順に従って PREFIX を設定してください。
+
+```bash
+cp .env.template .env
+# .env の PREFIX を自分のユーザー名に変更
+./scripts/setup.sh
+```
+
+### 4. ワークショップ開始
 
 環境セットアップ完了後、[セッション0](docs/session_guides/session0_guide.md) から開始してください。
 
@@ -73,14 +86,14 @@ ai_agentic_development-2/
 │   └── setup/                   # セットアップ手順（Claude Code, 環境構築, FAQ）
 ├── evaluation/                  # 評価チェックリスト
 ├── scripts/
-│   ├── setup_devspaces.sh       # 環境セットアップスクリプト
+│   ├── setup.sh                 # 環境セットアップスクリプト
 │   ├── check.sh                 # セッション完了チェックスクリプト
 │   ├── generate_diagrams.py     # 構成図の自動生成（開発者向け）
 │   └── requirements.txt         # Python依存パッケージ（開発者向け）
 ├── terraform/                   # Terraformコード（セッション中に作成）
 ├── ansible/                     # Ansibleコード（セッション中に作成）
-├── .claude/                     # Claude Code設定（.gitignore対象、スクリプトで自動生成）
-├── .env.template                # AWS認証情報テンプレート
+├── .claude/                     # Claude Code設定（.gitignore対象、環境構築時に自動配置）
+├── .env.template                # PREFIX設定テンプレート
 └── README.md
 ```
 
