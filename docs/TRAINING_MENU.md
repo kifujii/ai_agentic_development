@@ -152,6 +152,8 @@ Ansibleを使ってSSM AgentとCloudWatch Agentをインストール・設定し
 
 Ansibleでサーバー情報を自動収集し、Jinja2テンプレートで運用レポートを生成します。
 
+**学ぶこと**: Ansible の情報収集（facts, command）、Jinja2 テンプレート、`delegate_to: localhost` によるローカルファイル生成
+
 **構築ステップ**:
 1. サーバー情報収集Playbook
 2. Jinja2レポートテンプレート

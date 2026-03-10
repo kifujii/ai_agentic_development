@@ -45,7 +45,7 @@ ANSIBLE_CONFIG=ansible/ansible.cfg ansible -i ansible/inventory.ini all -m ping
 ```
 Step 1: IAM ロールの作成（15分）
     ↓
-Step 2: SSM Agent のインストールと確認（20分）
+Step 2: SSM Agent のインストールと確認（30分）
     ↓
 Step 3: SSM Run Command の体験（15分）
     ↓
@@ -114,7 +114,7 @@ AWS CLI を使って以下の IAM リソースを作成し、EC2 に関連付け
 
 ---
 
-## Step 2: SSM Agent をインストール・確認しよう（20分）
+## Step 2: SSM Agent をインストール・確認しよう（30分）
 
 ### やること
 
@@ -137,7 +137,7 @@ ansible/playbooks/install_ssm_agent.yml を作成してください。
 対象: webserversグループ
 タスク:
 - amazon-ssm-agent がインストール済みか確認
-- 未インストールの場合は yum でインストール
+- 未インストールの場合は dnf でインストール
 - amazon-ssm-agent サービスを起動・有効化（systemd）
 - ステータスを確認して表示
 
@@ -221,7 +221,7 @@ ansible/playbooks/install_cwagent.yml を作成してください。
 
 対象: webserversグループ
 タスク:
-- amazon-cloudwatch-agent パッケージをyumでインストール
+- amazon-cloudwatch-agent パッケージをdnfでインストール
 - インストール結果を表示
 - バージョン確認（/opt/aws/amazon-cloudwatch-agent/bin/amazon-cloudwatch-agent-ctl -a status）
 
@@ -415,7 +415,7 @@ ansible/
         msg: "{{ '既にインストール済み' if ssm_installed.rc == 0 else '未インストール → インストールします' }}"
 
     - name: SSM Agentインストール
-      yum:
+      dnf:
         name: amazon-ssm-agent
         state: present
       when: ssm_installed.rc != 0
@@ -446,7 +446,7 @@ ansible/
 
   tasks:
     - name: CloudWatch Agentインストール
-      yum:
+      dnf:
         name: amazon-cloudwatch-agent
         state: present
       register: install_result
@@ -468,6 +468,8 @@ ansible/
 ```
 
 ### playbooks/configure_cwagent.yml
+
+> 💡 `vars` 内の `{{ prefix }}` は Ansible のタスク実行時に展開されるため、`to_nice_json` で生成される JSON には展開済みの値（例: `user01/EC2`）が正しく入ります。
 
 ```yaml
 ---
@@ -588,6 +590,8 @@ aws logs delete-log-group --log-group-name /${TF_VAR_prefix}/ec2/secure
 ```bash
 ./scripts/check.sh session5
 ```
+
+> 💡 Step 3（SSM Run Command）はAWSコンソールでの手動操作のため、自動チェックの対象外です。フリートマネージャーでの確認は各自で行ってください。
 
 ---
 

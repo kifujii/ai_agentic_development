@@ -60,7 +60,7 @@ Session 6: サーバー情報取得・レポート（任意）
 ## ディレクトリ構成
 
 ```
-ai_agentic/
+ai_agentic_development/
 ├── docs/
 │   ├── TRAINING_MENU.md         # トレーニングメニュー
 │   ├── images/                  # アーキテクチャ構成図

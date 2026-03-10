@@ -244,7 +244,7 @@ check_session1() {
       if [ "$result" = "ok" ]; then
         pass "SSH接続に成功 ($ip)"
       else
-        fail "SSH接続できません ($ip)" "鍵の権限を確認してください: chmod 600 keys/training-key"
+        fail "SSH接続できません ($ip)" "鍵の権限を確認してください: chmod 400 keys/training-key"
       fi
     else
       fail "IPアドレスが取得できないため SSH チェックをスキップしました"
