@@ -44,7 +44,8 @@
 
 ## 接続情報
 
-- SSH鍵: `keys/training-key`
+- SSH鍵: `keys/training-key`（プロジェクトルートからの相対パス）
+- SSH鍵（絶対パス）: `~/workspace/keys/training-key`（Ansible の設定ファイルではこちらを使用）
 - SSHユーザー: `ec2-user`
 - EC2のIPアドレスは受講者から指示されます
 

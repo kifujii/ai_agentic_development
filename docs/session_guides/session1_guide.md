@@ -421,6 +421,8 @@ terraform/
 <details>
 <summary>📝 完成形のコード例（クリックで展開）</summary>
 
+> 💡 **パスの解決について**: Terraform の `file()` 関数は、`.tf` ファイルがあるディレクトリを起点にパスを解決します。`terraform -chdir=terraform/vpc-ec2` で実行しても、`file("../../keys/training-key.pub")` は `terraform/vpc-ec2/` から `../../` = プロジェクトルートの `keys/training-key.pub` を正しく参照します。
+
 ### variables.tf
 
 ```hcl

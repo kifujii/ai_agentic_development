@@ -591,6 +591,8 @@ aws logs delete-log-group --log-group-name /${TF_VAR_prefix}/ec2/secure
 ./scripts/check.sh session5
 ```
 
+> 💡 Step 3（SSM Run Command）はAWSコンソールでの手動操作のため、自動チェックの対象外です。フリートマネージャーでの確認は各自で行ってください。
+
 ---
 
 ## ➡️ 次のステップ
