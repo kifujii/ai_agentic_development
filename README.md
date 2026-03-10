@@ -51,12 +51,7 @@ Session 6: サーバー情報取得・レポート（任意）
 
 ### 1. 環境セットアップ
 
-[環境セットアップガイド](docs/setup/ENVIRONMENT_SETUP.md) の手順に従ってください。
-
-```bash
-# DevSpaces環境でセットアップスクリプトを実行
-./scripts/setup_devspaces.sh
-```
+[環境セットアップガイド](docs/setup/ENVIRONMENT_SETUP.md) の手順に従って、ハンズオン環境へのアクセスと初期設定を行ってください。
 
 ### 2. ワークショップ開始
 
@@ -73,14 +68,14 @@ ai_agentic/
 │   └── setup/                   # セットアップ手順（Claude Code, 環境構築, FAQ）
 ├── evaluation/                  # 評価チェックリスト
 ├── scripts/
-│   ├── setup_devspaces.sh       # 環境セットアップスクリプト
+│   ├── setup.sh                 # 環境セットアップスクリプト
 │   ├── check.sh                 # セッション完了チェックスクリプト
 │   ├── generate_diagrams.py     # 構成図の自動生成（開発者向け）
 │   └── requirements.txt         # Python依存パッケージ（開発者向け）
 ├── terraform/                   # Terraformコード（セッション中に作成）
 ├── ansible/                     # Ansibleコード（セッション中に作成）
-├── .claude/                     # Claude Code設定（.gitignore対象、スクリプトで自動生成）
-├── .env.template                # AWS認証情報テンプレート
+├── .claude/                     # Claude Code設定（.gitignore対象、環境構築時に自動配置）
+├── .env.template                # PREFIX設定テンプレート
 └── README.md
 ```
 

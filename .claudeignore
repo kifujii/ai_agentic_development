@@ -17,3 +17,6 @@ scripts/break_session.sh
 
 # トレーニングメニュー（全体構成のネタバレ防止）
 docs/TRAINING_MENU.md
+
+# アーキテクチャ構成図（目標構成のネタバレ防止）
+docs/images/

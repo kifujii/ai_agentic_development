@@ -6,7 +6,7 @@
 |------|------|
 | 期間 | 2日間（必須8h45min + 任意1.75h） |
 | 形式 | ハンズオン形式のバイブコーディング |
-| 環境 | OpenShift DevSpaces + AWS |
+| 環境 | ブラウザ版 VSCode（code-server on AWS EC2）+ AWS |
 | 技術 | Terraform, Ansible, Claude Code（AWS Bedrock） |
 | 前提 | 事前勉強会で生成AIとIaCの基礎を学習済み |
 
@@ -185,9 +185,9 @@ Session 6: サーバー情報取得・レポート（任意）
 - Ansibleの基本概念とPlaybook構造
 
 ### 必要な環境
-- AWSアカウント（トレーニング用）
-- OpenShift DevSpacesへのアクセス
-- Claude Code（AWS Bedrock使用）
+- AWSアカウント（トレーニング用、事前設定済み）
+- ブラウザ版 VSCode（code-server）へのアクセス（URL とパスワードは講師から配布）
+- Claude Code（AWS Bedrock使用、事前設定済み）
 
 ### 必要なスキル
 - 基本的なLinuxコマンド

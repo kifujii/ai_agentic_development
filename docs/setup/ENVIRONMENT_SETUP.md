@@ -4,68 +4,74 @@
 
 ## 📋 前提条件
 
-- **GitHub アカウント**: リポジトリへのアクセス用
-- **AWS アカウント**: トレーニング用（アクセスキー/シークレットキー）
-- **OpenShift DevSpaces へのアクセス**: 開発環境
+- **講師から配布された接続情報**: URL とパスワード
+- ブラウザ（Chrome / Edge / Firefox 推奨）
+
+## 🖥️ ハンズオン環境について
+
+本ワークショップでは、AWS EC2 上に構築されたブラウザ版 VSCode（code-server）を使用します。参加者ごとに独立した環境が用意されており、以下のツールがプリインストールされています：
+
+| ツール | 用途 |
+|--------|------|
+| Terraform | AWSインフラの構築・管理 |
+| Ansible | サーバーの設定・運用自動化 |
+| AWS CLI | AWSリソースの操作 |
+| Claude Code | AI Agent によるコード生成・実行 |
+| Git | バージョン管理 |
+
+また、AWS 認証情報（IAM ユーザーの AccessKey / SecretKey）と Claude Code の Bedrock 設定は**環境構築時に設定済み**です。
 
 ## 🚀 セットアップ手順
 
-### ステップ1: DevSpaces環境への資材の持ち込み
+### ステップ1: ブラウザから VSCode にアクセス
 
-1. OpenShift DevSpacesのURLにアクセス
-2. ログイン
-3. 新しいワークスペースを作成
-   - **Import from Git**: このリポジトリのURLを指定
+1. 講師から配布された **URL**（`https://<IP>:<ポート>/`）をブラウザで開く
+2. 自己署名証明書の警告が表示されるため「**詳細設定**」→「**安全でないサイトへ進む**」を選択
+3. 配布された **パスワード** を入力してログイン
+4. ブラウザ上に VSCode が表示されます
 
-### ステップ2: AWS認証情報の設定（.envファイルの作成）
-
-**先に `.env` ファイルを作成しておくと、ステップ3のスクリプト実行1回で全セットアップが完了します。**
+### ステップ2: ハンズオン資材の取得
 
 1. **ターミナルを開く**
-   - VS Codeのメニューから「ターミナル」→「新しいターミナル」を選択
-   - または、ショートカットキー（`Ctrl+Shift+C` / `Cmd+Shift+C`）を使用
+   - VSCode のメニューから「ターミナル」→「新しいターミナル」を選択
+   - またはショートカットキー `Ctrl+Shift+C` もしくは `` Ctrl+Shift+` ``（バッククォート）を使用
 
-2. **`.env.template` から `.env` ファイルを作成**
+2. **ハンズオン資材をクローン**（ターミナルに以下をコピー＆ペーストして実行）
+   ```bash
+   git clone --depth 1 https://github.com/kifujii/ai_agentic_development.git tmp && cp -rn tmp/. . && rm -rf tmp
+   ```
+
+   > 💡 このコマンドは、GitHub からハンズオン資材を取得し、現在のワークスペースディレクトリ（`.claude/settings.local.json` が既にある場所）にコピーします。既存の設定ファイルは上書きされません。
+
+### ステップ3: PREFIX の設定
+
+複数の受講者が同じ AWS 環境を使用するため、リソース名の衝突を防ぐ **PREFIX** を設定します。
+
+1. **`.env.template` から `.env` ファイルを作成**
    ```bash
    cp .env.template .env
    ```
 
-3. **`.env` ファイルを編集してAWS認証情報を設定**
+2. **`.env` ファイルを編集して PREFIX を自分のユーザー名に変更**
 
-   VS Codeで`.env`ファイルを開き、以下の値を実際のAWS認証情報に置き換えてください：
+   VSCode で `.env` ファイルを開き、`PREFIX=` の値を講師から指示された自分のユーザー名に変更します：
 
    ```bash
-   # AWS認証情報
-   AWS_ACCESS_KEY_ID=your-access-key-here
-   AWS_SECRET_ACCESS_KEY=your-secret-key-here
-   AWS_DEFAULT_REGION=ap-northeast-1
+   # 受講者固有の設定
+   PREFIX=user01   ← ここを自分のユーザー名に変更（例: user03）
    ```
 
-   **編集内容**:
-   - `your-access-key-here` → AWSアクセスキーID
-   - `your-secret-key-here` → AWSシークレットアクセスキー
-
-### ステップ3: 環境セットアップスクリプトの実行
-
-**重要**: セットアップスクリプトは **OpenShift DevSpaces環境内** で実行する必要があります。
+### ステップ4: セットアップスクリプトの実行
 
 ```bash
-./scripts/setup_devspaces.sh
+./scripts/setup.sh
 ```
 
 **スクリプトが行うこと**:
-- ツールのインストール（Terraform, Ansible, AWS CLI, Claude Code）
-- `.env` から AWS CLI 設定ファイル（`~/.aws/credentials`, `~/.aws/config`）を自動作成
-- AWSアカウントIDを取得して Claude Code Bedrock設定（`.claude/settings.local.json`）を自動生成
-
-**インストール後の注意**:
-- スクリプト実行後、新しいターミナルを開くか、`source ~/.bashrc`を実行してPATHを更新してください
-
-### ステップ4: AWS認証情報の確認
-
-```bash
-aws sts get-caller-identity
-```
+- `.env` から PREFIX を読み取り、環境変数 `TF_VAR_prefix` として設定
+- ターミナル起動時に `.env` を自動読み込みする設定を `~/.bashrc` に追加
+- 作業ディレクトリ（`terraform/`, `ansible/`, `keys/`）の作成
+- インストール済みツールと AWS 認証の動作確認
 
 ### ステップ5: 動作確認
 
@@ -83,9 +89,17 @@ ansible --version
 aws --version
 ```
 
-#### 5.2 Claude Codeの確認
+#### 5.2 AWS 認証情報の確認
 
-1. **Claude Codeを起動**
+```bash
+aws sts get-caller-identity
+```
+
+アカウントID と ARN が表示されれば OK です。
+
+#### 5.3 Claude Code の確認
+
+1. **Claude Code を起動**
    ```bash
    claude
    ```
@@ -95,113 +109,51 @@ aws --version
      ```
      testフォルダに「hello.txt」というファイルを作成して、その中に「Hello, Claude Code!」と書き込んでください
      ```
-   - Claude Codeがファイル作成の承認を求めてくるので確認して承認
+   - Claude Code がファイル作成の承認を求めてくるので確認して承認
    - `test/hello.txt` が作成されれば、設定は成功です
 
 ## ✅ セットアップ完了チェックリスト
 
-- [ ] DevSpacesワークスペースを作成した
-- [ ] `.env`ファイルを作成し、AWS認証情報を入力した
+- [ ] ブラウザから VSCode にアクセスできた
+- [ ] ハンズオン資材をクローンした
+- [ ] `.env` ファイルを作成し、PREFIX を自分のユーザー名に変更した
 - [ ] セットアップスクリプトを実行した
-- [ ] AWS認証情報が正しく設定されていることを確認した（`aws sts get-caller-identity`）
-- [ ] Claude Codeが正常に動作することを確認した（ファイル作成テスト）
+- [ ] AWS 認証情報が正しく設定されていることを確認した（`aws sts get-caller-identity`）
+- [ ] Claude Code が正常に動作することを確認した（ファイル作成テスト）
 
 ## 🆘 トラブルシューティング
 
-### 権限エラー
-```bash
-chmod +x scripts/*.sh
-```
+### ブラウザで VSCode にアクセスできない
+- URL とポート番号が正しいか確認してください
+- 自己署名証明書の警告を受け入れたか確認してください
+- 講師に確認してください
 
-### AWS認証エラー
-- 認証情報が正しく設定されているか確認
-- IAM権限が適切か確認
-- リージョンが正しいか確認
+### AWS 認証エラー
+- 環境には認証情報が事前設定されています。エラーが出る場合は講師に確認してください
 
-### Claude Codeが起動しない
-1. Node.js / npm がインストールされているか確認（`node --version`）
-2. Claude Codeがインストールされているか確認（`which claude`）
-3. 再インストール:
-   ```bash
-   npm config set prefix "$HOME/.local"
-   npm install -g @anthropic-ai/claude-code
-   ```
+### Claude Code が起動しない
+1. Claude Code がインストールされているか確認（`which claude`）
+2. `.claude/settings.local.json` が存在するか確認（`cat .claude/settings.local.json`）
+3. 上記が見つからない場合は講師に確認してください
 
-### Claude Codeでログイン画面が表示される
+### Claude Code でログイン画面が表示される
 1. `.claude/settings.local.json` が存在するか確認（`cat .claude/settings.local.json`）
-2. 存在しない場合、セットアップスクリプトを再実行（`./scripts/setup_devspaces.sh`）
+2. 存在しない場合は、資材のクローン手順（ステップ2）を再実行してください
 3. 詳細は [Claude Code セットアップガイド](CLAUDE_CODE_SETUP.md) を参照
 
-### AWS Bedrockへの接続エラー
-1. `.claude/settings.local.json` に正しいAWSアカウントIDが含まれているか確認
-2. AWS認証情報が正しく設定されているか確認（`aws sts get-caller-identity`）
-3. AWSリージョンが正しいか確認（`ap-northeast-1`）
-4. AWS Bedrockへのアクセス権限があるか確認（IAMポリシー）
-
-### 手動インストールが必要な場合
-
-スクリプトが失敗した場合の手動インストール手順：
-
-<details>
-<summary>Terraformの手動インストール</summary>
-
+### PREFIX が反映されない
 ```bash
-mkdir -p ~/.local/bin
-export PATH="$HOME/.local/bin:$PATH"
-TERRAFORM_VERSION="1.14.6"
-wget https://releases.hashicorp.com/terraform/${TERRAFORM_VERSION}/terraform_${TERRAFORM_VERSION}_linux_amd64.zip
-unzip terraform_${TERRAFORM_VERSION}_linux_amd64.zip
-mv terraform ~/.local/bin/
-chmod +x ~/.local/bin/terraform
-rm terraform_${TERRAFORM_VERSION}_linux_amd64.zip
 source ~/.bashrc
-terraform version
+echo $TF_VAR_prefix
 ```
-
-</details>
-
-<details>
-<summary>Ansibleの手動インストール</summary>
-
-```bash
-python3 -m pip install --user ansible
-ansible --version
-```
-
-</details>
-
-<details>
-<summary>AWS CLIの手動インストール</summary>
-
-```bash
-mkdir -p ~/.local/bin
-curl "https://awscli.amazonaws.com/awscli-exe-linux-x86_64.zip" -o "awscliv2.zip"
-unzip awscliv2.zip
-./aws/install --install-dir ~/.local/aws-cli --bin-dir ~/.local/bin
-rm -rf awscliv2.zip aws
-source ~/.bashrc
-aws --version
-```
-
-</details>
-
-<details>
-<summary>Claude Codeの手動インストール</summary>
-
-```bash
-npm config set prefix "$HOME/.local"
-npm install -g @anthropic-ai/claude-code
-claude --version
-```
-
-</details>
+PREFIX が表示されない場合は、`.env` ファイルの内容を確認してください。
 
 よくある問題と解決方法は [`docs/setup/FAQ.md`](FAQ.md) を参照してください。
 
 ## 📚 参考資料
 
-- [Claude Code セットアップガイド](CLAUDE_CODE_SETUP.md) — Claude Codeの詳細設定
-- [Terraform公式ドキュメント](https://www.terraform.io/docs)
+- [Claude Code セットアップガイド](CLAUDE_CODE_SETUP.md) — Claude Code の詳細設定
+- [Terraform公式ドキュメント](https://developer.hashicorp.com/terraform/docs)
 - [Ansible公式ドキュメント](https://docs.ansible.com/)
 
 ## ➡️ 次のステップ

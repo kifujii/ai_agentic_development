@@ -1,0 +1,12 @@
+{
+  "permissions": {
+    "deny": [
+      "Read(docs/session_guides/**)",
+      "Read(docs/TRAINING_MENU.md)",
+      "Read(docs/images/**)",
+      "Read(evaluation/**)",
+      "Read(scripts/check.sh)",
+      "Read(scripts/break_session.sh)"
+    ]
+  }
+}

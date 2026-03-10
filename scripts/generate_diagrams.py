@@ -91,7 +91,7 @@ def session3_diagram():
         filename=filepath,
         direction="LR",
     ):
-        with Cluster("Control Node (DevSpaces)"):
+        with Cluster("Control Node (VSCode)"):
             ansible = Ansible("Ansible")
 
         with Cluster("Target (EC2)"):
