@@ -214,9 +214,9 @@ terraform/vpc-ec2/ のEC2定義を1台構成に戻してください。
 ■ 変更内容
 1. aws_instance の count を削除（または count = 1 にする）
 2. Name タグを元の形式に戻す（"${var.prefix}-ec2"）
-3. outputs.tf を単数形に戻す
-   （instance_public_ips → instance_public_ip 等）
-   ※ ただしセッション3で追加した複数形の output は削除して構いません
+3. outputs.tf の整理
+   - セッション3で追加した複数形の output（instance_public_ips 等）を削除
+   - セッション1で作成した単数形の output（instance_public_ip 等）はそのまま維持
 
 変更後、terraform plan を実行して差分がないことを確認してください。
 ```

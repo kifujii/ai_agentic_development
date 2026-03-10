@@ -137,7 +137,7 @@ ansible/playbooks/install_ssm_agent.yml を作成してください。
 対象: webserversグループ
 タスク:
 - amazon-ssm-agent がインストール済みか確認
-- 未インストールの場合は yum でインストール
+- 未インストールの場合は dnf でインストール
 - amazon-ssm-agent サービスを起動・有効化（systemd）
 - ステータスを確認して表示
 
@@ -221,7 +221,7 @@ ansible/playbooks/install_cwagent.yml を作成してください。
 
 対象: webserversグループ
 タスク:
-- amazon-cloudwatch-agent パッケージをyumでインストール
+- amazon-cloudwatch-agent パッケージをdnfでインストール
 - インストール結果を表示
 - バージョン確認（/opt/aws/amazon-cloudwatch-agent/bin/amazon-cloudwatch-agent-ctl -a status）
 
@@ -415,7 +415,7 @@ ansible/
         msg: "{{ '既にインストール済み' if ssm_installed.rc == 0 else '未インストール → インストールします' }}"
 
     - name: SSM Agentインストール
-      yum:
+      dnf:
         name: amazon-ssm-agent
         state: present
       when: ssm_installed.rc != 0
@@ -446,7 +446,7 @@ ansible/
 
   tasks:
     - name: CloudWatch Agentインストール
-      yum:
+      dnf:
         name: amazon-cloudwatch-agent
         state: present
       register: install_result
