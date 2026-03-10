@@ -110,6 +110,8 @@ AWS CLI を使って以下の IAM リソースを作成し、EC2 に関連付け
 
 > 💡 IAMロールの反映に 1〜2分かかることがあります。
 
+> 💡 インスタンスプロファイルの作成直後に EC2 への関連付け（`associate-iam-instance-profile`）が `InvalidParameterValue` エラーで失敗する場合があります。その場合は **10〜15秒待ってから再実行** してください。
+
 ---
 
 ## Step 2: SSM Agent をインストール・確認しよう（20分）
