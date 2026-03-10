@@ -425,7 +425,8 @@ ansible/
 
 | セッション | 学んだこと | ツール |
 |-----------|-----------|-------|
-| 1 | VPC/EC2 段階的構築、Claude Code 入門 | Terraform |
+| 0 | Claude Code の基本操作・プロンプトの書き方 | Claude Code |
+| 1 | VPC/EC2 段階的構築 | Terraform |
 | 2 | Terraform ライフサイクル体験（構築・変更・再構築） | Terraform |
 | 3 | EC2 を count でスケールアウト（任意） | Terraform |
 | 4 | Ansible によるサーバー運用自動化 + 🔧 トラブルシューティング | Ansible |

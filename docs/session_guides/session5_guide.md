@@ -45,7 +45,7 @@ ANSIBLE_CONFIG=ansible/ansible.cfg ansible -i ansible/inventory.ini all -m ping
 ```
 Step 1: IAM ロールの作成（15分）
     ↓
-Step 2: SSM Agent のインストールと確認（20分）
+Step 2: SSM Agent のインストールと確認（30分）
     ↓
 Step 3: SSM Run Command の体験（15分）
     ↓
@@ -114,7 +114,7 @@ AWS CLI を使って以下の IAM リソースを作成し、EC2 に関連付け
 
 ---
 
-## Step 2: SSM Agent をインストール・確認しよう（20分）
+## Step 2: SSM Agent をインストール・確認しよう（30分）
 
 ### やること
 
@@ -468,6 +468,8 @@ ansible/
 ```
 
 ### playbooks/configure_cwagent.yml
+
+> 💡 `vars` 内の `{{ prefix }}` は Ansible のタスク実行時に展開されるため、`to_nice_json` で生成される JSON には展開済みの値（例: `user01/EC2`）が正しく入ります。
 
 ```yaml
 ---
