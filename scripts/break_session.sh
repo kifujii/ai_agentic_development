@@ -39,11 +39,9 @@ fi
 # パターンはランダムに選択されるため、このスクリプトを読んでも
 # 実際にどの障害が発生したかは分かりません
 
-issue_stop_crond() {
+issue_stop_nginx() {
   ssh $SSH_OPTS "$SSH_USER@$EC2_IP" bash -c "'
-    sudo systemctl stop crond 2>/dev/null
-    sudo cp /etc/crontab /etc/crontab.bak.break 2>/dev/null
-    echo \"INVALID_CRONTAB_ENTRY\" | sudo tee /etc/crontab >/dev/null
+    sudo systemctl stop nginx 2>/dev/null
   '" 2>/dev/null
 }
 
@@ -85,7 +83,7 @@ issue_broken_cronjob() {
 
 # --- 障害パターンのプール ---
 ISSUE_FUNCS=(
-  issue_stop_crond
+  issue_stop_nginx
   issue_log_permissions
   issue_hosts_corrupt
   issue_stop_chronyd

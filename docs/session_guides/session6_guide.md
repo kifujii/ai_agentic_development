@@ -91,6 +91,8 @@ ansible/playbooks/gather_info.yml を作成してください。
 
 情報が収集・表示されれば OK ✅
 
+> 💡 CloudWatch Agent（セッション5）を実施していない場合、CloudWatch Agentステータスのタスクでエラーが表示されますが正常です。`ignore_errors: yes` により処理は継続します。
+
 ---
 
 ## Step 2: レポートテンプレートを作ろう（15分）
@@ -219,7 +221,7 @@ ansible/
       changed_when: false
 
     - name: 実行中サービス
-      command: systemctl list-units --type=service --state=running --no-pager --plain
+      command: systemctl list-units --type=service --state=running --no-pager --plain --no-legend
       register: services_result
       changed_when: false
 
@@ -350,12 +352,12 @@ ansible/
       changed_when: false
 
     - name: ディスク使用量
-      command: df -h
+      command: df -h --output=target,size,used,avail,pcent
       register: disk_result
       changed_when: false
 
     - name: 実行中サービス
-      command: systemctl list-units --type=service --state=running --no-pager --plain
+      command: systemctl list-units --type=service --state=running --no-pager --plain --no-legend
       register: services_result
       changed_when: false
 
