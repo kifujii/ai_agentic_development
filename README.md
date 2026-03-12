@@ -17,9 +17,10 @@ Claude Code の AI Agent 機能を使って、Terraform や Ansible のコード
 | **4** | Ansible によるサーバー運用自動化 | 2h | 必須 |
 | **5** | SSM Agent & CloudWatch Agent 導入 | 2h | 必須 |
 | **6** | サーバー情報取得・運用レポート | 1h | 任意 |
-| **7** | 応用: Web アプリ構築・デプロイ | 2h | 任意 |
-| **8** | 応用: インフラの冗長化 | 2h | 任意 |
-| **9** | 応用: インフラ監視と通知の自動化 | 2h | 任意 |
+| **7** | 未知の技術を AI で攻略する | 2h | 必須 |
+| **8** | 本番リリースの設計判断 | 2h | 必須 |
+| **9** | インシデント対応とポストモーテム | 1.5h | 必須 |
+| **10** | ゼロからシステム構築チャレンジ | 2h | 任意 |
 
 ### 時間配分
 
@@ -30,13 +31,16 @@ Day 1 (4h45min + 任意45min): Claude Code 入門 & インフラ構築 (Terrafor
 ├── Session 2: Terraform でインフラを構築・変更・再構築 (2h) [必須]
 └── Session 3: EC2 を count でスケールアウト (45min)       [任意]
 
-Day 2 (4h + 任意7h): システム運用 (Ansible) & 応用
+Day 2 (4h + 任意1h): システム運用 (Ansible)
 ├── Session 4: Ansible によるサーバー運用自動化 (2h)      [必須]
 ├── Session 5: SSM Agent & CloudWatch Agent 導入 (2h)    [必須]
-├── Session 6: サーバー情報取得・レポート (1h)            [任意]
-├── Session 7: 応用: Web アプリ構築・デプロイ (2h)        [任意]
-├── Session 8: 応用: インフラの冗長化 (2h)                [任意]
-└── Session 9: 応用: インフラ監視と通知の自動化 (2h)      [任意]
+└── Session 6: サーバー情報取得・レポート (1h)            [任意]
+
+Day 3 (5.5h + 任意2h): 応用・実践 (シナリオ型)
+├── Session 7: 未知の技術を AI で攻略する (2h)            [必須]
+├── Session 8: 本番リリースの設計判断 (2h)                [必須]
+├── Session 9: インシデント対応とポストモーテム (1.5h)     [必須]
+└── Session 10: ゼロからシステム構築チャレンジ (2h)       [任意]
 ```
 
 ### セッション間のつながり
@@ -52,7 +56,12 @@ Session 5: SSM Agent & CloudWatch Agent 導入
     ↓
 Session 6: サーバー情報取得・レポート（任意）
     ↓
-Session 7〜9: 応用チャレンジ（任意・各セッション独立）
+--- Day 3: 応用・実践（各セッション独立） ---
+
+Session 7: 未知の技術を AI で攻略する（Lambda + API Gateway）
+Session 8: 本番リリースの設計判断（高可用性 + コスト最適化）
+Session 9: インシデント対応とポストモーテム（障害復旧 + 報告書）
+Session 10: ゼロからシステム構築チャレンジ（任意）
 ```
 
 ## クイックスタート
@@ -69,7 +78,7 @@ ai_agentic_development/
 ├── docs/
 │   ├── TRAINING_MENU.md         # トレーニングメニュー
 │   ├── images/                  # アーキテクチャ構成図
-│   ├── session_guides/          # セッションガイド (0〜9)
+│   ├── session_guides/          # セッションガイド (0〜10)
 │   └── setup/                   # セットアップ手順（環境構築, Tips, FAQ）
 ├── evaluation/                  # 評価チェックリスト
 ├── scripts/
@@ -88,8 +97,10 @@ ai_agentic_development/
 - ワークショップ終了後は作成したAWSリソースを **必ず以下の順序で削除** してください：
 
 ```bash
-# 1. 応用セッション（7〜9）で作成したリソース（実施した場合のみ）
+# 1. 応用セッション（7〜10）で作成したリソース（実施した場合のみ）
 # → Claude Code に「このセッションで作成したリソースをすべて削除して」と伝えてください
+# → Session 7 で Lambda/API Gateway を作成した場合:
+#    terraform -chdir=terraform/<作成したディレクトリ> destroy
 
 # 2. セッション5: IAM/CloudWatchリソース（実施した場合のみ）
 # → Claude Code に「${TF_VAR_prefix}-ec2-agent-role、${TF_VAR_prefix}-ec2-agent-profile、
