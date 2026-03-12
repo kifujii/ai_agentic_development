@@ -43,11 +43,7 @@ Step 6: 🔧 障害対応シミュレーション — EC2に障害発生！（30
 
 ## 📚 事前準備
 
-> ⚠️ **環境変数が未設定の場合**:
-> 新しいターミナルを開いた際に `$TF_VAR_prefix` が未設定の場合は、セットアップスクリプトを再実行してください。
-> ```bash
-> ./scripts/setup.sh
-> ```
+> ⚠️ **環境変数が未設定の場合**: `echo $TF_VAR_prefix` で値が表示されない場合は講師に確認してください。
 
 - セッション1のEC2が起動していること
 - あなたのターミナルで EC2 のパブリックIPを確認して **メモしておく**：
@@ -84,20 +80,11 @@ EC2に接続するための設定ファイル（`ansible.cfg` と `inventory.ini
 <summary>📝 プロンプト例</summary>
 
 ```
-ansible/ フォルダに、以下の設定ファイルを作成してください。
-SSH鍵は ~/workspace/keys/training-key にあります。パスは絶対パスで指定してください。
-
-1. ansible.cfg:
-   - インベントリ: inventory.ini
-   - リモートユーザー: ec2-user
-   - SSH秘密鍵: ~/workspace/keys/training-key（絶対パス）
-   - host_key_checking 無効
-
-2. inventory.ini:
-   - グループ名: webservers
-   - ホスト: web1 (IPアドレス: 13.xxx.xxx.xxx)  ← 実際のIPに書き換えること！
-   - SSH鍵: ~/workspace/keys/training-key（絶対パス）
-   - StrictHostKeyChecking 無効
+ansible/ フォルダに Ansible の接続設定を作成してください。
+- 接続先: <EC2のIP>（webservers グループ）
+- SSH鍵: ~/workspace/keys/training-key（絶対パス）
+- ユーザー: ec2-user
+- host_key_checking 無効
 ```
 
 </details>
@@ -684,7 +671,10 @@ ansible_ssh_common_args='-o StrictHostKeyChecking=no'
 
 ## ✅ 完了チェック
 
-あなたのターミナルで以下のコマンドを実行して、このセッションの完了状態を確認できます：
+以下のコマンドで、このセッションの完了状態を確認できます。
+
+> ⚠️ **check.sh は Claude Code の外で実行してください**。
+> `/exit` で bash に戻ってからコマンドを実行し、`claude -c` で再開できます。
 
 ```bash
 ./scripts/check.sh session4

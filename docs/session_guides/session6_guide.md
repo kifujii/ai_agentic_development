@@ -28,11 +28,7 @@ Step 3: レポートを自動生成
 
 ## 📚 事前準備
 
-> ⚠️ **環境変数が未設定の場合**:
-> 新しいターミナルを開いた際に `$TF_VAR_prefix` が未設定の場合は、セットアップスクリプトを再実行してください。
-> ```bash
-> ./scripts/setup.sh
-> ```
+> ⚠️ **環境変数が未設定の場合**: `echo $TF_VAR_prefix` で値が表示されない場合は講師に確認してください。
 
 - セッション4のAnsible環境が構築済みであること（`ANSIBLE_CONFIG=ansible/ansible.cfg ansible -i ansible/inventory.ini all -m ping` で確認）
 
@@ -65,26 +61,9 @@ Step 3: レポートを自動生成
 <summary>📝 プロンプト例</summary>
 
 ```
-ansible/playbooks/gather_info.yml を作成してください。
-
-対象: webserversグループ
-収集する情報:
-- OS情報（ansible facts: distribution, version, kernel）
-- CPU情報（コア数）
-- メモリ情報（合計、使用量、使用率）
-- ディスク使用量（df -h）
-- 稼働時間（uptime）
-- 実行中のサービス一覧
-- CloudWatch Agentのステータス（存在する場合、ignore_errors）
-- 最終ログイン情報（last -n 5）
-
-要件:
-- gather_facts: yes を使用
-- コマンド実行のタスクには changed_when: false を設定
-- 収集した情報をJSON形式で /tmp/server_info.json に保存
-- JSON情報をローカルの ansible/reports/ フォルダに取得
-
-作成後、実行してください。
+ansible/playbooks/gather_info.yml を作成・実行してください。
+EC2 から OS・メモリ・ディスク・サービス一覧などの情報を収集し、
+JSON形式でローカルの ansible/reports/ に保存してください。
 ```
 
 </details>
@@ -432,12 +411,18 @@ ansible/
 | 4 | Ansible によるサーバー運用自動化 + 🔧 トラブルシューティング | Ansible |
 | 5 | SSM Agent & CloudWatch Agent 導入 | Ansible + AWS CLI |
 | 6 | サーバー情報収集・レポート生成（任意） | Ansible |
+| 7 | 応用: Web アプリ構築・デプロイ（任意） | 全ツール |
+| 8 | 応用: インフラの冗長化（任意） | 全ツール |
+| 9 | 応用: インフラ監視と通知の自動化（任意） | 全ツール |
 
 ---
 
 ## ✅ 完了チェック
 
-あなたのターミナルで以下のコマンドを実行して、このセッションの完了状態を確認できます：
+以下のコマンドで、このセッションの完了状態を確認できます。
+
+> ⚠️ **check.sh は Claude Code の外で実行してください**。
+> `/exit` で bash に戻ってからコマンドを実行し、`claude -c` で再開できます。
 
 ```bash
 ./scripts/check.sh session6
@@ -466,3 +451,13 @@ ${TF_VAR_prefix}-ec2-agent-role、${TF_VAR_prefix}-ec2-agent-profile、${TF_VAR_
 ```bash
 terraform -chdir=terraform/vpc-ec2 destroy
 ```
+
+---
+
+## ➡️ 次のステップ
+
+余裕がある方は応用セッションに進んでください。興味のあるものを1つ選んで取り組めます：
+
+- [セッション7：Web アプリケーションの構築とデプロイ](session7_guide.md)
+- [セッション8：インフラの冗長化](session8_guide.md)
+- [セッション9：インフラ監視と通知の自動化](session9_guide.md)
