@@ -85,16 +85,18 @@ source ~/.bashrc
 
 #### 5.1 ツールの確認
 
+ハンズオンで使用する3つのツールがインストール済みか確認します。それぞれバージョン番号が表示されれば OK です。
+
 ```bash
-terraform version
+terraform version    # Terraform（インフラ構築ツール）
 ```
 
 ```bash
-ansible --version
+ansible --version    # Ansible（サーバー運用自動化ツール）
 ```
 
 ```bash
-aws --version
+aws --version        # AWS CLI（AWSをコマンドラインで操作するツール）
 ```
 
 #### 5.2 AWS 認証情報の確認
