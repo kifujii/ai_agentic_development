@@ -25,3 +25,5 @@ drawio --no-sandbox -x -f svg --embed-svg-images -o session1_target.svg session1
 ```
 
 > `.drawio` ファイルはダイアグラムのソースファイルです。SVGを再生成する際に必要なため、リポジトリに含めています。
+>
+> ⚠️ `.drawio` ファイルを更新した場合は、必ず SVG を再エクスポートしてください。現在の SVG は最新の `.drawio` から再エクスポートが必要です。

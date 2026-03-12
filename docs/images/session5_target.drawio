@@ -25,7 +25,7 @@
           <mxGeometry x="240" y="10" width="640" height="500" as="geometry"/>
         </mxCell>
         <!-- IAM -->
-        <mxCell id="iam" value="IAM Role&lt;br&gt;&lt;PREFIX&gt;-ec2-agent-role&lt;br&gt;&lt;font color=&quot;#E67E22&quot;&gt;★ AWS CLI で作成&lt;/font&gt;" style="outlineConnect=0;fontColor=#232F3E;gradientColor=none;fillColor=#DD344C;strokeColor=none;dashed=0;verticalLabelPosition=bottom;verticalAlign=top;align=center;html=1;fontSize=10;fontStyle=0;aspect=fixed;pointerEvents=1;shape=mxgraph.aws4.resourceIcon;resIcon=mxgraph.aws4.identity_and_access_management" vertex="1" parent="aws">
+        <mxCell id="iam" value="IAM Role&lt;br&gt;ec2-agent-role" style="outlineConnect=0;fontColor=#232F3E;gradientColor=none;fillColor=#DD344C;strokeColor=none;dashed=0;verticalLabelPosition=bottom;verticalAlign=top;align=center;html=1;fontSize=10;fontStyle=0;aspect=fixed;pointerEvents=1;shape=mxgraph.aws4.resourceIcon;resIcon=mxgraph.aws4.identity_and_access_management" vertex="1" parent="aws">
           <mxGeometry x="40" y="50" width="48" height="48" as="geometry"/>
         </mxCell>
         <mxCell id="policies" value="• CloudWatchAgentServerPolicy&lt;br&gt;• AmazonSSMManagedInstanceCore" style="text;html=1;strokeColor=#b85450;fillColor=#f8cecc;align=left;verticalAlign=middle;whiteSpace=wrap;rounded=1;fontSize=9;spacingLeft=5;" vertex="1" parent="aws">
@@ -42,10 +42,10 @@
           <mxGeometry x="30" y="40" width="48" height="48" as="geometry"/>
         </mxCell>
         <!-- Agents on EC2 -->
-        <mxCell id="ssmagent" value="&lt;b&gt;SSM Agent&lt;/b&gt;&lt;br&gt;&lt;font color=&quot;#E67E22&quot;&gt;★ Ansible で導入&lt;/font&gt;" style="text;html=1;strokeColor=#1565C0;fillColor=#E3F2FD;align=center;verticalAlign=middle;whiteSpace=wrap;rounded=1;fontSize=10;" vertex="1" parent="pubsub">
+        <mxCell id="ssmagent" value="&lt;b&gt;SSM Agent&lt;/b&gt;" style="text;html=1;strokeColor=#1565C0;fillColor=#E3F2FD;align=center;verticalAlign=middle;whiteSpace=wrap;rounded=1;fontSize=10;" vertex="1" parent="pubsub">
           <mxGeometry x="120" y="30" width="140" height="35" as="geometry"/>
         </mxCell>
-        <mxCell id="cwagent" value="&lt;b&gt;CloudWatch Agent&lt;/b&gt;&lt;br&gt;&lt;font color=&quot;#E67E22&quot;&gt;★ Ansible で導入&lt;/font&gt;" style="text;html=1;strokeColor=#E7157B;fillColor=#fce4ec;align=center;verticalAlign=middle;whiteSpace=wrap;rounded=1;fontSize=10;" vertex="1" parent="pubsub">
+        <mxCell id="cwagent" value="&lt;b&gt;CloudWatch Agent&lt;/b&gt;" style="text;html=1;strokeColor=#E7157B;fillColor=#fce4ec;align=center;verticalAlign=middle;whiteSpace=wrap;rounded=1;fontSize=10;" vertex="1" parent="pubsub">
           <mxGeometry x="120" y="80" width="140" height="35" as="geometry"/>
         </mxCell>
         <!-- AWS Services -->
@@ -58,7 +58,7 @@
         <mxCell id="cwdetail" value="メトリクス (CPU/Mem/Disk)&lt;br&gt;ログ (/var/log/*)" style="text;html=1;strokeColor=#E7157B;fillColor=#fce4ec;align=center;verticalAlign=middle;whiteSpace=wrap;rounded=1;fontSize=9;" vertex="1" parent="aws">
           <mxGeometry x="430" y="370" width="150" height="35" as="geometry"/>
         </mxCell>
-        <mxCell id="cwalarm" value="&lt;b&gt;CloudWatch Alarm&lt;/b&gt;&lt;br&gt;&lt;PREFIX&gt;-cpu-alarm&lt;br&gt;&lt;font color=&quot;#E67E22&quot;&gt;★ Step 7 で作成&lt;/font&gt;" style="text;html=1;strokeColor=#E7157B;fillColor=#fce4ec;align=center;verticalAlign=middle;whiteSpace=wrap;rounded=1;fontSize=9;" vertex="1" parent="aws">
+        <mxCell id="cwalarm" value="&lt;b&gt;CloudWatch Alarm&lt;/b&gt;&lt;br&gt;CPU Utilization" style="text;html=1;strokeColor=#E7157B;fillColor=#fce4ec;align=center;verticalAlign=middle;whiteSpace=wrap;rounded=1;fontSize=9;" vertex="1" parent="aws">
           <mxGeometry x="430" y="415" width="150" height="40" as="geometry"/>
         </mxCell>
         <mxCell id="ssmdetail" value="Session Manager&lt;br&gt;(リモート管理)" style="text;html=1;strokeColor=#1565C0;fillColor=#E3F2FD;align=center;verticalAlign=middle;whiteSpace=wrap;rounded=1;fontSize=9;" vertex="1" parent="aws">
