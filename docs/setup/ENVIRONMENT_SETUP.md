@@ -1,6 +1,6 @@
 # 環境セットアップガイド
 
-このドキュメントでは、ワークショップに必要な環境のセットアップ手順を説明します。
+このドキュメントでは、ワークショップ環境へのアクセス方法を説明します。
 
 ## 📋 前提条件
 
@@ -9,17 +9,12 @@
 
 ## 🖥️ ハンズオン環境について
 
-本ワークショップでは、AWS EC2 上に構築されたブラウザ版 VSCode（code-server）を使用します。参加者ごとに独立した環境が用意されており、以下のツールがプリインストールされています：
+本ワークショップでは、AWS EC2 上に構築されたブラウザ版 VSCode（code-server）を使用します。参加者ごとに独立した環境が用意されており、以下はすべて**設定済み**です：
 
-| ツール | 用途 |
-|--------|------|
-| Terraform | AWSインフラの構築・管理 |
-| Ansible | サーバーの設定・運用自動化 |
-| AWS CLI | AWSリソースの操作 |
-| Claude Code | AI Agent によるコード生成・実行 |
-| Git | バージョン管理 |
-
-また、AWS 認証情報（IAM ユーザーの AccessKey / SecretKey）と Claude Code の Bedrock 設定は**環境構築時に設定済み**です。
+- ツール（Terraform, Ansible, AWS CLI, Claude Code, Git）
+- AWS 認証情報（IAM ユーザー）
+- ハンズオン資材（GitHub からクローン済み）
+- PREFIX / 環境変数（`TF_VAR_prefix`）
 
 ## 🚀 セットアップ手順
 
@@ -30,140 +25,35 @@
 3. 配布された **パスワード** を入力してログイン
 4. ブラウザ上に VSCode が表示されます
 
-### ステップ2: ハンズオン資材の取得
+### ステップ2: ターミナルを開く
 
-1. **ターミナルを開く**
-   - VSCode のメニューから「ターミナル」→「新しいターミナル」を選択
-   - またはショートカットキー `Ctrl+Shift+C` もしくは `` Ctrl+Shift+` ``（バッククォート）を使用
+VSCode 上でターミナルを開いてください。以下のいずれかの方法で開けます：
 
-2. **ハンズオン資材をクローン**（ターミナルに以下をコピー＆ペーストして実行）
-   ```bash
-   git clone --depth 1 https://github.com/kifujii/ai_agentic_development.git tmp && cp -rn tmp/. . && rm -rf tmp
-   ```
+| 方法 | Windows / Linux | Mac |
+|------|----------------|-----|
+| ショートカット1 | `Ctrl+Shift+C` | `Cmd+Shift+C` |
+| ショートカット2 | `` Ctrl+Shift+` ``（バッククォート） | `` Cmd+Shift+` `` |
+| メニュー | 「ターミナル」→「新しいターミナル」 | 同左 |
 
-   > 💡 このコマンドは、GitHub からハンズオン資材を取得し、現在のワークスペースディレクトリ（`.claude/settings.local.json` が既にある場所）にコピーします。既存の設定ファイルは上書きされません。
+> 💡 ハンズオン中は **ターミナルを2つ開いておく** と便利です。1つは Claude Code 用、もう1つは手動コマンド実行用です。ターミナル右上の「+」ボタンで追加できます。
 
-### ステップ3: PREFIX の設定
+## ✅ セットアップ完了
 
-複数の受講者が同じ AWS 環境を使用するため、リソース名の衝突を防ぐ **PREFIX** を設定します。
+以上で環境セットアップは完了です。
 
-1. **`.env.template` から `.env` ファイルを作成**
-   ```bash
-   cp .env.template .env
-   ```
-
-2. **`.env` ファイルを編集して PREFIX を自分のユーザー名に変更**
-
-   VSCode で `.env` ファイルを開き、`PREFIX=` の値を講師から指示された自分のユーザー名に変更します：
-
-   ```bash
-   # 受講者固有の設定
-   PREFIX=user01   ← ここを自分のユーザー名に変更（例: user03）
-   ```
-
-### ステップ4: セットアップスクリプトの実行
-
-```bash
-./scripts/setup.sh
-```
-
-**スクリプトが行うこと**:
-- `.env` から PREFIX を読み取り、環境変数 `TF_VAR_prefix` として設定
-- ターミナル起動時に `.env` を自動読み込みする設定を `~/.bashrc` に追加
-- 作業ディレクトリ（`terraform/`, `ansible/`, `keys/`）の作成
-- インストール済みツールと AWS 認証の動作確認
-
-スクリプト実行後、環境変数を現在のターミナルに反映します：
-
-```bash
-source ~/.bashrc
-```
-
-> 💡 `setup.sh` は `~/.bashrc` に `.env` の自動読み込みを追加します。`source ~/.bashrc` を実行することで、**現在のターミナル**にも環境変数が反映されます。新しいターミナルを開いた場合は自動的に反映されます。
-
-### ステップ5: 動作確認
-
-#### 5.1 ツールの確認
-
-```bash
-terraform version
-```
-
-```bash
-ansible --version
-```
-
-```bash
-aws --version
-```
-
-#### 5.2 AWS 認証情報の確認
-
-```bash
-aws sts get-caller-identity
-```
-
-アカウントID と ARN が表示されれば OK です。
-
-#### 5.3 Claude Code の確認
-
-1. **Claude Code を起動**
-   ```bash
-   claude
-   ```
-
-2. **動作確認**
-   - 以下のプロンプトを入力：
-     ```
-     testフォルダに「hello.txt」というファイルを作成して、その中に「Hello, Claude Code!」と書き込んでください
-     ```
-   - Claude Code がファイル作成の承認を求めてくるので確認して承認
-   - `test/hello.txt` が作成されれば、設定は成功です
-
-## ✅ セットアップ完了チェックリスト
-
-- [ ] ブラウザから VSCode にアクセスできた
-- [ ] ハンズオン資材をクローンした
-- [ ] `.env` ファイルを作成し、PREFIX を自分のユーザー名に変更した
-- [ ] セットアップスクリプトを実行した
-- [ ] AWS 認証情報が正しく設定されていることを確認した（`aws sts get-caller-identity`）
-- [ ] Claude Code が正常に動作することを確認した（ファイル作成テスト）
+操作に困ったときは [Tips（VSCode / Claude Code の使い方）](TIPS.md) を参照してください。
 
 ## 🆘 トラブルシューティング
 
 ### ブラウザで VSCode にアクセスできない
 - URL とポート番号が正しいか確認してください
+- `https://` で始まるURLでアクセスしているか確認してください（`http://` ではアクセスできません）
 - 自己署名証明書の警告を受け入れたか確認してください
 - 講師に確認してください
 
-### AWS 認証エラー
-- 環境には認証情報が事前設定されています。エラーが出る場合は講師に確認してください
-
-### Claude Code が起動しない
-1. Claude Code がインストールされているか確認（`which claude`）
-2. `.claude/settings.local.json` が存在するか確認（`cat .claude/settings.local.json`）
-3. 上記が見つからない場合は講師に確認してください
-
-### Claude Code でログイン画面が表示される
-1. `.claude/settings.local.json` が存在するか確認（`cat .claude/settings.local.json`）
-2. 存在しない場合は、資材のクローン手順（ステップ2）を再実行してください
-3. 詳細は [Claude Code セットアップガイド](CLAUDE_CODE_SETUP.md) を参照
-
-### PREFIX が反映されない
-```bash
-source ~/.bashrc
-echo $TF_VAR_prefix
-```
-PREFIX が表示されない場合は、`.env` ファイルの内容を確認してください。
-
-よくある問題と解決方法は [`docs/setup/FAQ.md`](FAQ.md) を参照してください。
-
-## 📚 参考資料
-
-- [Claude Code セットアップガイド](CLAUDE_CODE_SETUP.md) — Claude Code の詳細設定
-- [Terraform公式ドキュメント](https://developer.hashicorp.com/terraform/docs)
-- [Ansible公式ドキュメント](https://docs.ansible.com/)
+### その他の問題
+- よくある問題と解決方法は [FAQ](FAQ.md) を参照してください
 
 ## ➡️ 次のステップ
 
-環境セットアップが完了したら、[README.md](../../README.md) に戻ってワークショップを開始してください。
+[セッション0：Claude Code に慣れよう](../session_guides/session0_guide.md) に進んでください。

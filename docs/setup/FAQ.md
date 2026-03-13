@@ -29,21 +29,18 @@ AWS EC2 上にブラウザ版 VSCode（code-server）が構築されています
 aws sts get-caller-identity
 ```
 
-## Q: ハンズオン資材はどうやって取得しますか？
-
-**A: ターミナルで Git clone コマンドを実行します。**
-
-```bash
-git clone --depth 1 https://github.com/kifujii/ai_agentic_development.git tmp && cp -rn tmp/. . && rm -rf tmp
-```
-
-このコマンドにより、既に存在する `.claude/settings.local.json` などの設定を上書きすることなく、ハンズオン資材がコピーされます。
-
-## Q: PREFIX とは何ですか？なぜ設定が必要ですか？
+## Q: PREFIX とは何ですか？
 
 **A: AWS リソース名の接頭辞です。複数人が同じ AWS 環境を使用するため、リソース名の衝突を防ぎます。**
 
-`.env` ファイルの `PREFIX=` に、講師から指示された自分のユーザー名（例: `user03`）を設定してください。Terraform では `var.prefix`、AWS CLI では `$PREFIX`（または `$TF_VAR_prefix`）として利用されます。
+PREFIX は環境構築時に自動設定されています。Terraform では `var.prefix`、AWS CLI では `$PREFIX`（または `$TF_VAR_prefix`）として利用されます。
+
+確認コマンド:
+```bash
+echo $TF_VAR_prefix
+```
+
+値が表示されない場合は講師に確認してください。
 
 ## Q: ブラウザで VSCode にアクセスできません
 
@@ -55,22 +52,44 @@ git clone --depth 1 https://github.com/kifujii/ai_agentic_development.git tmp &&
 4. 別のブラウザで試す
 5. 解決しない場合は講師に確認
 
+## Q: Claude Code 起動時に「terminal setup」の選択が表示されます
+
+**A: 「Yes, use recommended settings」を選択してください。**
+
+初回起動時に以下のようなプロンプトが表示される場合があります：
+
+```
+Use Claude Code's terminal setup?
+❯ 1. Yes, use recommended settings
+  2. No, maybe later with /terminal-setup
+```
+
+「**1. Yes, use recommended settings**」を選択してください。これは Shift+Enter で改行入力ができるようになる設定で、長いプロンプトの入力に便利です。
+
 ## Q: セットアップ完了後、どのようにトレーニングを開始すればいいですか？
 
 **A: セッション0のガイドから開始してください。**
 
-1. `docs/session_guides/session0_guide.md` を開く
-2. 手順に従って進める
-3. 各セッションのガイドを順番に参照
-
-詳細は [トレーニングメニュー](../TRAINING_MENU.md) を参照してください。
+[環境セットアップガイド](ENVIRONMENT_SETUP.md) の手順が完了したら、[セッション0：Claude Code に慣れよう](../session_guides/session0_guide.md) に進んでください。
 
 ## Q: 環境が正しく設定されているか確認する方法は？
 
-**A: セットアップスクリプトを実行してください。**
+**A: 以下のコマンドで確認できます。**
 
 ```bash
-./scripts/setup.sh
+terraform version && ansible --version && aws sts get-caller-identity && echo "TF_VAR_prefix=$TF_VAR_prefix"
 ```
 
-ツールのバージョン、AWS 認証、Claude Code 設定の状態がまとめて表示されます。
+ツールのバージョン、AWS 認証、PREFIX が表示されれば正常です。問題がある場合は講師に確認してください。
+
+## Q: check.sh はどこで実行すればいいですか？
+
+**A: Claude Code の外（bash）で実行してください。**
+
+`check.sh` は Claude Code のセッション内ではなく、通常の bash ターミナルで実行します。
+
+1. Claude Code のセッション中であれば `/exit` で bash に戻る
+2. `./scripts/check.sh session0` などを実行
+3. `claude -c` で Claude Code のセッションを再開
+
+別のターミナルタブで実行しても OK です。

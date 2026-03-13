@@ -17,11 +17,11 @@
           <mxGeometry x="40" y="50" width="420" height="200" as="geometry"/>
         </mxCell>
         <!-- EC2 #1 -->
-        <mxCell id="ec2_1" value="&lt;b&gt;EC2 [0]&lt;/b&gt;&lt;br&gt;&lt;PREFIX&gt;-ec2-1&lt;br&gt;nginx" style="outlineConnect=0;fontColor=#232F3E;gradientColor=none;fillColor=#ED7100;strokeColor=none;dashed=0;verticalLabelPosition=bottom;verticalAlign=top;align=center;html=1;fontSize=10;fontStyle=0;aspect=fixed;pointerEvents=1;shape=mxgraph.aws4.resourceIcon;resIcon=mxgraph.aws4.ec2" vertex="1" parent="pubsub">
+        <mxCell id="ec2_1" value="&lt;b&gt;EC2 [0]&lt;/b&gt;&lt;br&gt;t3.micro&lt;br&gt;nginx" style="outlineConnect=0;fontColor=#232F3E;gradientColor=none;fillColor=#ED7100;strokeColor=none;dashed=0;verticalLabelPosition=bottom;verticalAlign=top;align=center;html=1;fontSize=10;fontStyle=0;aspect=fixed;pointerEvents=1;shape=mxgraph.aws4.resourceIcon;resIcon=mxgraph.aws4.ec2" vertex="1" parent="pubsub">
           <mxGeometry x="80" y="60" width="48" height="48" as="geometry"/>
         </mxCell>
         <!-- EC2 #2 -->
-        <mxCell id="ec2_2" value="&lt;b&gt;EC2 [1]&lt;/b&gt;&lt;br&gt;&lt;PREFIX&gt;-ec2-2&lt;br&gt;nginx&lt;br&gt;&lt;font color=&quot;#E67E22&quot;&gt;★ count=2 で追加&lt;/font&gt;" style="outlineConnect=0;fontColor=#232F3E;gradientColor=none;fillColor=#ED7100;strokeColor=none;dashed=0;verticalLabelPosition=bottom;verticalAlign=top;align=center;html=1;fontSize=10;fontStyle=0;aspect=fixed;pointerEvents=1;shape=mxgraph.aws4.resourceIcon;resIcon=mxgraph.aws4.ec2" vertex="1" parent="pubsub">
+        <mxCell id="ec2_2" value="&lt;b&gt;EC2 [1]&lt;/b&gt;&lt;br&gt;t3.micro&lt;br&gt;nginx" style="outlineConnect=0;fontColor=#232F3E;gradientColor=none;fillColor=#ED7100;strokeColor=none;dashed=0;verticalLabelPosition=bottom;verticalAlign=top;align=center;html=1;fontSize=10;fontStyle=0;aspect=fixed;pointerEvents=1;shape=mxgraph.aws4.resourceIcon;resIcon=mxgraph.aws4.ec2" vertex="1" parent="pubsub">
           <mxGeometry x="260" y="60" width="48" height="48" as="geometry"/>
         </mxCell>
         <!-- SG -->

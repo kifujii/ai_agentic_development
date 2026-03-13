@@ -1,437 +1,50 @@
-# セッション6：サーバー情報取得・運用レポート作成（任意・1時間）
+# セッション6：運用レポートの自動生成（任意・45分）
 
-## 🎯 このセッションの到達状態
+> このセッションは **任意（発展課題）** です。セッション5が完了し、余裕がある方向けです。
 
-Playbookを実行するだけで、サーバー情報が自動収集され Markdown 形式の運用レポートが生成される状態になっています。
+## シナリオ
 
-![目標構成](../images/session6_target.svg)
+上司から以下の依頼がありました。
 
-| 作成するもの | 内容 |
-|-------------|------|
-| gather_info.yml | サーバー情報の自動収集 |
-| generate_report.yml | レポート生成 Playbook |
-| server_report.md.j2 | レポートテンプレート（Jinja2） |
-
-### 構築の流れ
-
-```
-Step 1: サーバー情報を収集する Playbook
-    ↓
-Step 2: レポートテンプレートを作成
-    ↓
-Step 3: レポートを自動生成
-```
-
-> ⏱️ **時間配分について**: 各 Step の所要時間は目安です。Claude Code の応答速度やエラー対応で前後することがあります。
+> 「毎月のサーバー運用状況をまとめたレポートを自動で作れるようにしてほしい。OS・CPU・メモリ・ディスク・稼働中のサービスくらいは載せたい。フォーマットは任せるから、見やすければ何でもいいよ。」
 
 ---
 
-## 📚 事前準備
+## ゴール
 
-> ⚠️ **環境変数が未設定の場合**:
-> 新しいターミナルを開いた際に `$TF_VAR_prefix` が未設定の場合は、セットアップスクリプトを再実行してください。
-> ```bash
-> ./scripts/setup.sh
-> ```
-
-- セッション4のAnsible環境が構築済みであること（`ANSIBLE_CONFIG=ansible/ansible.cfg ansible -i ansible/inventory.ini all -m ping` で確認）
-
-> ⚠️ **作業ディレクトリ**: すべての操作は **プロジェクトルート** から実行してください。
+- Ansible の Playbook を実行すると、サーバーの状態をまとめたレポートファイルが自動生成される
+- レポートにはサーバーの基本情報（OS、CPU、メモリ、ディスク、サービス）が含まれている
+- 生成されたレポートがローカルに保存されている
 
 ---
 
-## Step 1: サーバー情報を収集しよう（20分）
+## 進め方
 
-### ゴール
+このセッションには手順やプロンプト例はありません。**AI と相談しながら、自分で設計・実装してください。**
 
-`ansible/playbooks/gather_info.yml` が作成され、実行すると以下の情報が収集・表示される：
-
-- OS情報（distribution, version, kernel）
-- CPU情報（コア数）
-- メモリ情報（合計、使用量、使用率）
-- ディスク使用量
-- 稼働時間
-- 実行中のサービス一覧
-- CloudWatch Agentのステータス（セッション5を実施した場合）
-- 最終ログイン情報
-
-追加の要件：
-- 収集した情報をJSON形式で `/tmp/server_info.json` に保存
-- JSONファイルをローカルの `ansible/reports/` フォルダに取得
-
-> 💡 **ヒント**: Ansible の `gather_facts: yes` で OS 情報やメモリ情報が自動的に取得されます（`ansible_memtotal_mb` などの変数で参照可能）。`fetch` モジュールでリモートファイルをローカルに取得できます。
+1. まず Plan モード（`Shift + Tab`）で「どう作ればいいか」を相談する
+2. 方針が決まったら通常モードに戻して実装する
+3. Playbook を実行してレポートが生成されることを確認する
 
 <details>
-<summary>📝 プロンプト例</summary>
+<summary>ヒント（まず自分で考えてから開いてください）</summary>
 
-```
-ansible/playbooks/gather_info.yml を作成してください。
-
-対象: webserversグループ
-収集する情報:
-- OS情報（ansible facts: distribution, version, kernel）
-- CPU情報（コア数）
-- メモリ情報（合計、使用量、使用率）
-- ディスク使用量（df -h）
-- 稼働時間（uptime）
-- 実行中のサービス一覧
-- CloudWatch Agentのステータス（存在する場合、ignore_errors）
-- 最終ログイン情報（last -n 5）
-
-要件:
-- gather_facts: yes を使用
-- コマンド実行のタスクには changed_when: false を設定
-- 収集した情報をJSON形式で /tmp/server_info.json に保存
-- JSON情報をローカルの ansible/reports/ フォルダに取得
-
-作成後、実行してください。
-```
-
-</details>
-
-情報が収集・表示されれば OK ✅
-
-> 💡 CloudWatch Agent（セッション5）を実施していない場合、CloudWatch Agentステータスのタスクでエラーが表示されますが正常です。`ignore_errors: yes` により処理は継続します。
-
----
-
-## Step 2: レポートテンプレートを作ろう（15分）
-
-### ゴール
-
-`ansible/templates/server_report.md.j2` が作成されている。
-
-テンプレートに含まれる内容：
-- タイトル: サーバー運用レポート
-- 生成日時
-- サーバー概要テーブル（ホスト名、IP、OS、カーネル、稼働時間）
-- リソース使用状況（CPU、メモリ、ディスク）
-- メモリ使用率が80%超の場合のアラート表示
-- ディスク使用率が80%超の場合のアラート表示
-- 実行中サービス一覧（上位20件）
-- CloudWatch Agentの状態
-- サマリー（アラート件数）
-
-> 💡 **ヒント**: Jinja2 では `{% if 条件 %}...{% endif %}` で条件分岐、`{% for item in list %}...{% endfor %}` でループを書けます。Ansible の変数がそのまま使えます。
-
-<details>
-<summary>📝 プロンプト例</summary>
-
-```
-ansible/templates/server_report.md.j2 を作成してください。
-
-Jinja2テンプレートの内容:
-- タイトル: サーバー運用レポート
-- 生成日時
-- サーバー概要テーブル（ホスト名、IP、OS、カーネル、稼働時間）
-- リソース使用状況（CPU、メモリ、ディスク）
-- メモリ使用率が80%超の場合はアラート表示
-- ディスク使用率が80%超の場合はアラート表示
-- 実行中サービス一覧（上位20件）
-- CloudWatch Agentの状態
-- サマリー（アラート件数）
-```
+- 「情報を集める」と「レポートを生成する」を分けて考えると整理しやすいです
+- Ansible には `gather_facts` という仕組みがあり、OS やメモリなどの情報を自動で取得できます
+- Jinja2 テンプレートという仕組みを使うと、テンプレートに変数を埋め込んでファイルを生成できます
+- レポートの形式は Markdown がおすすめです（見やすく、他のツールでも使いやすい）
 
 </details>
 
 ---
 
-## Step 3: レポートを自動生成しよう（15分）
+## 振り返り
 
-### ゴール
+課題が終わったら、以下の点を振り返ってみましょう：
 
-`ansible/playbooks/generate_report.yml` が作成され、実行すると Step 1 の情報収集 + Step 2 のテンプレートを使ってレポートが自動生成されている。
-
-- 保存先: `ansible/reports/server_report_<ホスト名>_<日付>.md`
-
-> 💡 **ヒント**: Ansible の `template` モジュールでJinja2テンプレートからファイルを生成できます。`delegate_to: localhost` を使えばローカルにファイルを保存できます。
-
-<details>
-<summary>📝 プロンプト例</summary>
-
-```
-ansible/playbooks/generate_report.yml を作成してください。
-
-対象: webserversグループ
-処理:
-1. uptime, df, サービス一覧, CloudWatch Agent状態, 最終ログインを収集
-2. ローカルに ansible/reports/ フォルダを作成
-3. ansible/templates/server_report.md.j2 テンプレートを使ってレポート生成
-4. 保存先: ansible/reports/server_report_<ホスト名>_<日付>.md
-
-作成後、実行してください。
-```
-
-</details>
-
-### 確認（あなたがターミナルで実行）
-
-あなたのターミナルで、プロジェクトルートから確認します：
-
-```bash
-ls ansible/reports/
-```
-
-```bash
-cat ansible/reports/server_report_web1_*.md
-```
-
-> 💡 ファイルが見つからない場合は、Playbookの `dest` パスを確認してください。`playbook_dir` の値によってパスが変わることがあります。
-
-レポートが生成されていれば **セッション6完了** 🎉
-
----
-
-## ファイル構成
-
-```
-ansible/
-├── inventory.ini              # セッション4で作成済み
-├── ansible.cfg                # セッション4で作成済み
-├── playbooks/
-│   ├── gather_info.yml
-│   └── generate_report.yml
-├── templates/
-│   └── server_report.md.j2
-└── reports/                   # 生成されたレポート
-    └── server_report_web1_YYYY-MM-DD.md
-```
-
-<details>
-<summary>📝 完成形のコード例（クリックで展開）</summary>
-
-### playbooks/gather_info.yml
-
-```yaml
----
-- name: サーバー情報の自動収集
-  hosts: webservers
-  become: yes
-  gather_facts: yes
-
-  tasks:
-    - name: ディスク使用量
-      command: df -h --output=target,size,used,avail,pcent
-      register: disk_result
-      changed_when: false
-
-    - name: 稼働時間
-      command: uptime -p
-      register: uptime_result
-      changed_when: false
-
-    - name: 実行中サービス
-      command: systemctl list-units --type=service --state=running --no-pager --plain --no-legend
-      register: services_result
-      changed_when: false
-
-    - name: CloudWatch Agentステータス
-      command: /opt/aws/amazon-cloudwatch-agent/bin/amazon-cloudwatch-agent-ctl -a status
-      register: cwagent_status
-      changed_when: false
-      ignore_errors: yes
-
-    - name: 最終ログイン
-      command: last -n 5 --time-format iso
-      register: last_login
-      changed_when: false
-
-    - name: サマリー表示
-      debug:
-        msg: |
-          ホスト: {{ ansible_hostname }}
-          OS: {{ ansible_distribution }} {{ ansible_distribution_version }}
-          メモリ: {{ ansible_memtotal_mb }}MB
-          稼働: {{ uptime_result.stdout }}
-
-    - name: JSON保存
-      copy:
-        content: |
-          {{ {
-            'timestamp': ansible_date_time.iso8601,
-            'hostname': ansible_hostname,
-            'os': ansible_distribution + ' ' + ansible_distribution_version,
-            'kernel': ansible_kernel,
-            'memory_total_mb': ansible_memtotal_mb,
-            'memory_free_mb': ansible_memfree_mb,
-            'disk': disk_result.stdout_lines,
-            'uptime': uptime_result.stdout,
-            'services_count': services_result.stdout_lines | length
-          } | to_nice_json }}
-        dest: /tmp/server_info.json
-        mode: '0644'
-
-    - name: ローカルにreportsフォルダ作成
-      delegate_to: localhost
-      become: no
-      file:
-        path: "{{ playbook_dir }}/../reports"
-        state: directory
-
-    - name: JSONをローカルに取得
-      fetch:
-        src: /tmp/server_info.json
-        dest: "{{ playbook_dir }}/../reports/{{ inventory_hostname }}_info.json"
-        flat: yes
-```
-
-### templates/server_report.md.j2
-
-```jinja2
-# サーバー運用レポート
-
-**生成日時**: {{ ansible_date_time.iso8601 }}
-
----
-
-## サーバー概要
-
-| 項目 | 値 |
-|------|-----|
-| ホスト名 | {{ ansible_hostname }} |
-| IP | {{ ansible_default_ipv4.address | default('不明') }} |
-| OS | {{ ansible_distribution }} {{ ansible_distribution_version }} |
-| カーネル | {{ ansible_kernel }} |
-| 稼働時間 | {{ uptime_result.stdout }} |
-
----
-
-## リソース使用状況
-
-### メモリ
-- 合計: {{ ansible_memtotal_mb }} MB
-- 空き: {{ ansible_memfree_mb }} MB
-{% set mem_usage = ((ansible_memtotal_mb | int - ansible_memfree_mb | int) / ansible_memtotal_mb | int * 100) | round(1) %}
-- **使用率: {{ mem_usage }}%**
-
-{% if mem_usage | float > 80.0 %}
-> ⚠️ **アラート**: メモリ使用率が80%超 ({{ mem_usage }}%)
-{% endif %}
-
-### ディスク
-```
-{{ disk_result.stdout }}
-```
-
----
-
-## サービス（上位20件）
-
-{% for service in services_result.stdout_lines[:20] %}
-- {{ service }}
-{% endfor %}
-
----
-
-## CloudWatch Agent
-
-{% if cwagent_status.rc == 0 %}
-- 状態: **稼働中** ✅
-{% else %}
-- 状態: 未インストール / 停止中
-{% endif %}
-
----
-
-*Ansible自動生成レポート*
-```
-
-### playbooks/generate_report.yml
-
-```yaml
----
-- name: 運用レポート生成
-  hosts: webservers
-  become: yes
-  gather_facts: yes
-
-  tasks:
-    - name: 稼働時間
-      command: uptime -p
-      register: uptime_result
-      changed_when: false
-
-    - name: ディスク使用量
-      command: df -h --output=target,size,used,avail,pcent
-      register: disk_result
-      changed_when: false
-
-    - name: 実行中サービス
-      command: systemctl list-units --type=service --state=running --no-pager --plain --no-legend
-      register: services_result
-      changed_when: false
-
-    - name: CloudWatch Agent状態
-      command: /opt/aws/amazon-cloudwatch-agent/bin/amazon-cloudwatch-agent-ctl -a status
-      register: cwagent_status
-      changed_when: false
-      ignore_errors: yes
-
-    - name: reportsフォルダ作成
-      delegate_to: localhost
-      become: no
-      file:
-        path: "{{ playbook_dir }}/../reports"
-        state: directory
-
-    - name: レポート生成
-      delegate_to: localhost
-      become: no
-      template:
-        src: "../templates/server_report.md.j2"
-        dest: "{{ playbook_dir }}/../reports/server_report_{{ inventory_hostname }}_{{ ansible_date_time.date }}.md"
-```
-
-</details>
-
----
-
-## 📖 コードを理解しよう — Jinja2 テンプレートと Ansible の応用技法
-
-このセッションでは Jinja2 テンプレートや `delegate_to`、`fetch` など Ansible の応用的な機能を使いました。これらを理解しましょう：
-
-<details>
-<summary>📝 プロンプト例</summary>
-
-```
-このセッションで作成した Ansible Playbook とテンプレートについて、以下の内容を含む解説ドキュメントを作成してください。
-保存先: docs/session6_design.md
-
-■ 含めてほしい内容
-1. gather_info.yml の処理フロー（情報収集 → JSON保存 → ローカル取得）
-2. Jinja2 テンプレート（server_report.md.j2）の構文解説
-   - 変数の展開 {{ }}、条件分岐 {% if %}、ループ {% for %} の使い方
-   - Ansible 変数がテンプレート内でどう参照されるか
-3. delegate_to: localhost の意味と使いどころ
-4. fetch モジュールの使い方（リモート → ローカルへのファイル取得）
-5. gather_facts: yes で取得できる情報一覧（主要なもの）
-6. このレポート自動生成を実務で活用するシーン（例: 定期監査レポート）
-```
-
-</details>
-
-生成されたドキュメントを読んで、以下を確認しましょう：
-
-- [ ] Jinja2 の `{{ }}`, `{% if %}`, `{% for %}` の違いが説明できる
-- [ ] `delegate_to: localhost` を使う場面とその理由が説明できる
-- [ ] Ansible の `gather_facts` が何をしているか説明できる
-- [ ] このレポート生成の仕組みを他の人に説明できる
-
----
-
-## 🎉 ワークショップ完了
-
-お疲れ様でした！全セッションの振り返り：
-
-| セッション | 学んだこと | ツール |
-|-----------|-----------|-------|
-| 0 | Claude Code の基本操作・プロンプトの書き方 | Claude Code |
-| 1 | VPC/EC2 段階的構築 | Terraform |
-| 2 | Terraform ライフサイクル体験（構築・変更・再構築） | Terraform |
-| 3 | EC2 を count でスケールアウト（任意） | Terraform |
-| 4 | Ansible によるサーバー運用自動化 + 🔧 トラブルシューティング | Ansible |
-| 5 | SSM Agent & CloudWatch Agent 導入 | Ansible + AWS CLI |
-| 6 | サーバー情報収集・レポート生成（任意） | Ansible |
+- 情報収集とレポート出力をどう分けたか
+- テンプレートの仕組みを使うと何が嬉しいか（直接書くのと比べて）
+- この仕組みを定期実行（cron など）と組み合わせるとどうなるか
 
 ---
 
@@ -439,9 +52,30 @@ ansible/
 
 あなたのターミナルで以下のコマンドを実行して、このセッションの完了状態を確認できます：
 
+> ⚠️ **check.sh は Claude Code の外で実行してください**。
+> `/exit` で bash に戻ってからコマンドを実行し、`claude -c` で再開できます。
+
 ```bash
 ./scripts/check.sh session6
 ```
+
+---
+
+## 🎉 基礎セッション完了
+
+お疲れ様でした！ここまでの振り返り：
+
+| セッション | 学んだこと | ツール |
+|-----------|-----------|-------|
+| 0 | Claude Code の基本操作・スラッシュコマンド | Claude Code |
+| 1 | VPC/EC2 段階的構築 | Terraform |
+| 2 | Terraform ライフサイクル体験（構築・変更・再構築） | Terraform |
+| 3 | Web サーバーの冗長構成（任意） | Terraform |
+| 4 | Ansible によるサーバー運用自動化 + トラブルシューティング | Ansible |
+| 5 | SSM Agent & CloudWatch Agent 導入 | Ansible + AWS CLI |
+| 6 | サーバー情報収集・レポート自動生成（任意） | Ansible |
+
+この先のセッションでは、ここまでに身につけたスキルを使って、より実践的なシナリオに挑戦します。
 
 ---
 
@@ -449,13 +83,13 @@ ansible/
 
 ワークショップ終了後に **すべて** 削除してください。
 
-> ⚠️ **必ず以下の順序で削除**してください（依存関係があるため逆順だとエラーになります）。
+> 必ず以下の順序で削除してください（依存関係があるため逆順だとエラーになります）。
 
 プロジェクトルートから実行します：
 
 **1. セッション5: IAMリソース・CloudWatch（実施した場合のみ）**
 
-Claude Code に以下のように伝えて、削除を実行してもらいます（`<PREFIX>` は自分のプレフィックス）：
+Claude Code に以下のように伝えて、削除を実行してもらいます：
 ```
 ${TF_VAR_prefix}-ec2-agent-role、${TF_VAR_prefix}-ec2-agent-profile、${TF_VAR_prefix}-cpu-alarm、
 ロググループ /${TF_VAR_prefix}/ec2/messages と /${TF_VAR_prefix}/ec2/secure を削除してください。
@@ -466,3 +100,18 @@ ${TF_VAR_prefix}-ec2-agent-role、${TF_VAR_prefix}-ec2-agent-profile、${TF_VAR_
 ```bash
 terraform -chdir=terraform/vpc-ec2 destroy
 ```
+
+---
+
+## ➡️ 次のステップ
+
+ここからは、より実践的なシナリオに挑戦します。
+
+| セッション | 内容 | 時間 |
+|-----------|------|------|
+| 7 | 未知の技術を AI で攻略する（Lambda + API Gateway） | 1.5h |
+| 8 | 本番リリースの設計判断（高可用性 + コスト最適化） | 1.5h |
+| 9 | インシデント対応とポストモーテム | 1h |
+| 10 | ゼロからシステム構築チャレンジ（任意） | 1.5h |
+
+興味のあるセッションから取り組んでください（Session 7-9 は各セッション独立しています）。
