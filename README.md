@@ -91,21 +91,16 @@ ai_agentic_development/
 
 ## 注意事項
 
-- ワークショップ終了後は作成したAWSリソースを **必ず以下の順序で削除** してください：
+- ワークショップ終了後は作成したAWSリソースを **必ず削除** してください。Claude Code を起動して以下のプロンプトを実行するのが最も簡単です：
 
-```bash
-# 1. 応用セッション（7〜10）で作成したリソース（実施した場合のみ）
-# → Claude Code に「このセッションで作成したリソースをすべて削除して」と伝えてください
-# → Session 7 で Lambda/API Gateway を作成した場合:
-#    terraform -chdir=terraform/<作成したディレクトリ> destroy
-
-# 2. セッション5: IAM/CloudWatchリソース（実施した場合のみ）
-# → Claude Code に「${TF_VAR_prefix}-ec2-agent-role、${TF_VAR_prefix}-ec2-agent-profile、
-#   ${TF_VAR_prefix}-cpu-alarm、ロググループ /${TF_VAR_prefix}/ec2/* を削除して」と伝えてください
-
-# 3. セッション1〜3: VPC/EC2
-terraform -chdir=terraform/vpc-ec2 destroy
 ```
+ワークショップで作成したすべての AWS リソースを削除してください。
+- terraform/ 配下の各ディレクトリで terraform destroy を実行
+- AWS CLI で作成した IAM ロール・インスタンスプロファイル・CloudWatch Alarm・ロググループも削除
+- プレフィックスは環境変数 TF_VAR_prefix の値を使ってください
+```
+
+> 💡 Claude Code を使わず手動で削除する場合は、各セッションガイドの「リソースの削除」セクションを参照してください。依存関係があるため、**応用セッション → セッション5 → セッション1〜3** の順で削除してください。
 
 - AWS認証情報は安全に管理してください
 

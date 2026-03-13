@@ -32,7 +32,7 @@
 
 ### Phase 1: 設計と見積もり（30分）
 
-**Plan モード**（`Shift + Tab`）で、以下を AI と議論してください：
+**Plan モード**（`claude --plan` で起動、または対話中に `Shift + Tab` で切り替え）で、以下を AI と議論してください：
 
 - 99.9% の可用性を実現するには何が必要か
 - 使えるアーキテクチャパターンにはどんなものがあるか
@@ -92,14 +92,23 @@
 
 > ⚠️ **環境変数が未設定の場合**: `echo $TF_VAR_prefix` で値が表示されない場合は講師に確認してください。
 
-- これまでのセッションで構築した VPC/EC2 環境があること（または新規に構築する覚悟があること）
+- これまでのセッションで構築した VPC/EC2 環境があること（`terraform/vpc-ec2` ディレクトリ）、または新規に構築しても構いません
 
 ---
 
 ## ⚠️ リソースの削除
 
 このセッションで追加・変更したリソースは、完了後に削除してください。
-ALB や Auto Scaling Group を追加した場合は、依存関係に注意して削除してください。
+
+```bash
+# 既存の terraform/vpc-ec2 を拡張した場合
+terraform -chdir=terraform/vpc-ec2 destroy
+
+# 新しいディレクトリを作成した場合
+terraform -chdir=terraform/<作成したディレクトリ> destroy
+```
+
+> 💡 ALB や Auto Scaling Group は EC2 に依存しているため、`terraform destroy` がまとめて削除してくれます。手動で作成した IAM リソースがある場合は、別途 AWS CLI で削除してください。
 
 ---
 
