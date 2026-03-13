@@ -10,12 +10,12 @@ Claude Code の AI Agent 機能を使って、Terraform や Ansible のコード
 
 | セッション | 内容 | 時間 | 必須/任意 |
 |-----------|------|------|-----------|
-| **0** | Claude Code に慣れよう | 30min | 必須 |
-| **1** | VPC + EC2 を段階的に構築 | 1.5h | 必須 |
-| **2** | Terraform でインフラを構築・変更・再構築 | 1h | 必須 |
+| **0** | Claude Code に慣れよう | 20min | 必須 |
+| **1** | VPC + EC2 を段階的に構築 | 1h | 必須 |
+| **2** | Terraform でインフラを構築・変更・再構築 | 45min | 必須 |
 | **3** | Web サーバーを冗長構成にしよう | 30min | 任意 |
-| **4** | Ansible によるサーバー運用自動化 | 1.5h | 必須 |
-| **5** | SSM Agent & CloudWatch Agent 導入 | 1.5h | 必須 |
+| **4** | Ansible によるサーバー運用自動化 | 1h | 必須 |
+| **5** | SSM Agent & CloudWatch Agent 導入 | 55min | 必須 |
 | **6** | 運用レポートの自動生成 | 45min | 任意 |
 | **7** | 未知の技術を AI で攻略する | 1.5h | 必須 |
 | **8** | 本番リリースの設計判断 | 1.5h | 必須 |
@@ -25,13 +25,13 @@ Claude Code の AI Agent 機能を使って、Terraform や Ansible のコード
 ### 時間配分
 
 ```
-Day 1 (6h + 任意30min): Claude Code 入門 → Terraform → Ansible → 監視基盤
-├── Session 0: Claude Code に慣れよう (30min)                [必須]
-├── Session 1: VPC + EC2 を段階的に構築 (1.5h)              [必須]
-├── Session 2: Terraform でインフラを構築・変更・再構築 (1h)  [必須]
+Day 1 (4h + 任意30min): Claude Code 入門 → Terraform → Ansible → 監視基盤
+├── Session 0: Claude Code に慣れよう (20min)                [必須]
+├── Session 1: VPC + EC2 を段階的に構築 (1h)                [必須]
+├── Session 2: Terraform でインフラを構築・変更・再構築 (45min) [必須]
 ├── Session 3: Web サーバーを冗長構成にしよう (30min)         [任意]
-├── Session 4: Ansible によるサーバー運用自動化 (1.5h)       [必須]
-└── Session 5: SSM Agent & CloudWatch Agent 導入 (1.5h)     [必須]
+├── Session 4: Ansible によるサーバー運用自動化 (1h)         [必須]
+└── Session 5: SSM Agent & CloudWatch Agent 導入 (55min)    [必須]
 
 Day 2 (4h + 任意2h15min): 応用・実践（シナリオ型）
 ├── Session 6: 運用レポートの自動生成 (45min)                [任意]

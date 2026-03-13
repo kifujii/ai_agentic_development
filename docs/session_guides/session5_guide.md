@@ -1,4 +1,4 @@
-# セッション5：SSM Agent & CloudWatch Agent の導入（必須・1.5時間）
+# セッション5：SSM Agent & CloudWatch Agent の導入（必須・55分）
 
 ## 🎯 このセッションの到達状態
 
@@ -30,20 +30,20 @@ ANSIBLE_CONFIG=ansible/ansible.cfg ansible -i ansible/inventory.ini all -m ping
 ## 構築の流れ
 
 ```
-前半: SSM Agent を導入してリモート管理できるようにしよう    (35分)
+前半: SSM Agent を導入してリモート管理できるようにしよう    (20分)
     ↓
-後半: CloudWatch Agent で監視基盤を構築しよう              (35分)
+後半: CloudWatch Agent で監視基盤を構築しよう              (20分)
     ↓
 AWS CLI で確認                                              (10分)
     ↓
-振り返り                                                   (10分)
+振り返り                                                   (5分)
 ```
 
 > ⏱️ **時間配分について**: 各ステップの所要時間は目安です。IAMロールの反映やメトリクスの表示に数分かかることがあります。時間が足りない場合は講師に相談してください。
 
 ---
 
-## 前半: SSM Agent を導入してリモート管理できるようにしよう（35分）
+## 前半: SSM Agent を導入してリモート管理できるようにしよう（20分）
 
 ### チャレンジ
 
@@ -111,7 +111,7 @@ Run Command でサーバー情報が取得できれば前半完了 ✅
 
 ---
 
-## 後半: CloudWatch Agent で監視基盤を構築しよう（35分）
+## 後半: CloudWatch Agent で監視基盤を構築しよう（20分）
 
 ### チャレンジ
 
@@ -172,7 +172,7 @@ aws cloudwatch describe-alarms --alarm-name-prefix "${TF_VAR_prefix}" --query "M
 
 ---
 
-## 📝 振り返り（10分）
+## 📝 振り返り（5分）
 
 ### このセッションで体験したこと
 
