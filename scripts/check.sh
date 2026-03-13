@@ -524,12 +524,12 @@ check_session4() {
 }
 
 # =============================================================================
-# セッション5: SSM Agent & CloudWatch Agent 導入
+# セッション5: EC2 のリモート管理と監視基盤
 # =============================================================================
 check_session5() {
   local step="${1:-all}"
   echo ""
-  echo "🔍 セッション5: SSM Agent & CloudWatch Agent 導入"
+  echo "🔍 セッション5: EC2 のリモート管理と監視基盤"
   echo "------------------------------"
 
   local ip
@@ -537,10 +537,12 @@ check_session5() {
   local inst_id
   inst_id=$(tf_output "instance_id")
 
-  # Step 1: IAMロール
+  # 前半: SSM Agent（IAMロール + SSM Agent + フリートマネージャー）
   if [ "$step" = "all" ] || [ "$step" = "step1" ]; then
     echo ""
-    echo "📦 Step 1: IAMロール"
+    echo "📦 前半: SSH なしでサーバーを管理できるようにしよう"
+
+    # IAMロール
     local role_name="${TF_VAR_prefix}-ec2-agent-role"
     local profile_name="${TF_VAR_prefix}-ec2-agent-profile"
     local role
@@ -548,7 +550,7 @@ check_session5() {
     if [ "$role" = "$role_name" ]; then
       pass "IAMロール $role_name が存在する"
     else
-      fail "IAMロール $role_name がありません" "Step 1でIAMロールを作成してください"
+      fail "IAMロール $role_name がありません" "Claude Code に IAM ロールの作成を相談してください"
     fi
 
     local profile
@@ -559,19 +561,15 @@ check_session5() {
     else
       fail "インスタンスプロファイル $profile_name がありません"
     fi
-  fi
 
-  # Step 2: SSM Agent インストール・確認
-  if [ "$step" = "all" ] || [ "$step" = "step2" ]; then
-    echo ""
-    echo "📦 Step 2: SSM Agent インストール・確認"
+    # SSM Agent
     if [ -n "$ip" ]; then
       local ssm_status
       ssm_status=$(ssh_check_cmd "$ip" "systemctl is-active amazon-ssm-agent" 2>/dev/null || echo "")
       if [ "$ssm_status" = "active" ]; then
         pass "SSM Agent が active (running)"
       else
-        fail "SSM Agent が起動していません" "install_ssm_agent.yml を実行してください"
+        fail "SSM Agent が起動していません" "Ansible Playbook で SSM Agent をインストールしてください"
       fi
     else
       fail "EC2のIPが取得できないためスキップ"
@@ -593,17 +591,18 @@ check_session5() {
     fi
   fi
 
-  # Step 4-5: CloudWatch Agent インストール＆設定・確認
-  if [ "$step" = "all" ] || [ "$step" = "step4" ] || [ "$step" = "step5" ]; then
+  # 後半: CloudWatch Agent（Agent + メトリクス + Alarm）
+  if [ "$step" = "all" ] || [ "$step" = "step2" ]; then
     echo ""
-    echo "📦 Step 4-5: CloudWatch Agent インストール＆設定"
+    echo "📦 後半: サーバーの監視基盤を構築しよう"
+
     if [ -n "$ip" ]; then
       local cw_status
       cw_status=$(ssh_check_cmd "$ip" "sudo /opt/aws/amazon-cloudwatch-agent/bin/amazon-cloudwatch-agent-ctl -a status 2>/dev/null | grep -o 'running'" 2>/dev/null || echo "")
       if [ "$cw_status" = "running" ]; then
         pass "CloudWatch Agent が running"
       else
-        fail "CloudWatch Agent が起動していません" "configure_cwagent.yml を実行してください"
+        fail "CloudWatch Agent が起動していません" "Ansible Playbook で CloudWatch Agent をインストール・設定してください"
       fi
     else
       fail "EC2のIPが取得できないためスキップ"
@@ -619,20 +618,16 @@ check_session5() {
     else
       fail "$cw_namespace 名前空間にメトリクスがありません" "数分待ってから再確認してください"
     fi
-  fi
 
-  # Step 6: CloudWatch Alarm
-  if [ "$step" = "all" ] || [ "$step" = "step6" ]; then
-    echo ""
-    echo "📦 Step 6: CloudWatch Alarm"
-    local alarm_name="${TF_VAR_prefix}-cpu-alarm"
-    local alarm
-    alarm=$(aws cloudwatch describe-alarms --alarm-names "$alarm_name" \
-      --query 'MetricAlarms[0].StateValue' --output text 2>/dev/null || echo "")
-    if [ -n "$alarm" ] && [ "$alarm" != "None" ]; then
-      pass "$alarm_name が存在する (状態: $alarm)"
+    # CloudWatch Alarm
+    local alarm_prefix="${TF_VAR_prefix}"
+    local alarm_count
+    alarm_count=$(aws cloudwatch describe-alarms --alarm-name-prefix "$alarm_prefix" \
+      --query 'MetricAlarms | length(@)' --output text 2>/dev/null || echo "0")
+    if [ "$alarm_count" -gt 0 ] 2>/dev/null; then
+      pass "CloudWatch Alarm が存在する ($alarm_count 個)"
     else
-      fail "$alarm_name が見つかりません" "Step 6のCloudWatch Alarm作成手順を実行してください"
+      fail "CloudWatch Alarm が見つかりません" "CPU 使用率のアラームを作成してください"
     fi
   fi
 
@@ -703,7 +698,7 @@ usage() {
   echo "  session2   Terraform でインフラを構築・変更・再構築"
   echo "  session3   EC2 を count でスケールアウト"
   echo "  session4   Ansible によるサーバー運用自動化"
-  echo "  session5   SSM Agent & CloudWatch Agent 導入"
+  echo "  session5   EC2 のリモート管理と監視基盤"
   echo "  session6   サーバー情報取得・運用レポート"
   echo ""
   echo "ステップ（任意）:"

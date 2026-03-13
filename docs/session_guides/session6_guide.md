@@ -78,7 +78,7 @@
 | 2 | Terraform ライフサイクル体験（構築・変更・再構築） | Terraform |
 | 3 | Web サーバーの冗長構成（任意） | Terraform |
 | 4 | Ansible によるサーバー運用自動化 + トラブルシューティング | Ansible |
-| 5 | SSM Agent & CloudWatch Agent 導入 | Ansible + AWS CLI |
+| 5 | EC2 のリモート管理と監視基盤 | Ansible + AWS CLI |
 | 6 | サーバー情報収集・レポート自動生成（任意） | Ansible |
 
 この先のセッションでは、ここまでに身につけたスキルを使って、より実践的なシナリオに挑戦します。
