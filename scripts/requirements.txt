@@ -1,6 +1,0 @@
-# ワークショップ参加者向けのPythonパッケージは不要です
-# ワークショップでは Terraform、Ansible、AWS CLI を直接使用します
-#
-# 開発者向け（構成図生成用）:
-# scripts/generate_diagrams.py で使用。別途 Graphviz のインストールが必要です。
-diagrams>=0.23

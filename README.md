@@ -79,14 +79,11 @@ ai_agentic_development/
 │   └── setup/                   # セットアップ手順（環境構築, Tips, FAQ）
 ├── evaluation/                  # 評価チェックリスト
 ├── scripts/
-│   ├── check.sh                 # セッション完了チェックスクリプト
-│   ├── generate_diagrams.py     # 構成図の自動生成（開発者向け）
-│   └── requirements.txt         # Python依存パッケージ（開発者向け）
+│   └── check.sh                 # セッション完了チェックスクリプト
 ├── terraform/                   # Terraformコード（セッション中に作成）
 ├── ansible/                     # Ansibleコード（セッション中に作成）
 ├── keys/                        # SSH鍵（セッション1で作成、Git管理外）
 ├── .claude/                     # Claude Code設定（.gitignore対象、環境構築時に自動配置）
-├── .env.template                # PREFIX設定テンプレート（環境構築時に自動設定済み）
 └── README.md
 ```
 
