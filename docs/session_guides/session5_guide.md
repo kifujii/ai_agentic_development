@@ -348,7 +348,7 @@ ansible/
 ワークショップ終了後にあなたのターミナルで IAM リソースを削除してください。
 `<PREFIX>` の部分は自分のプレフィックスに置き換えてください（`echo $TF_VAR_prefix` で確認できます）。
 
-> 💡 Claude Code に「セッション5で作成したIAMリソース、CloudWatch Alarm、ロググループをすべて削除して。プレフィックスは ${TF_VAR_prefix} です」と伝えれば、AI Agent がまとめて実行してくれます。
+> 💡 Claude Code に「セッション5で作成した IAMリソース、CloudWatch Alarm、ロググループをすべて削除してください。プレフィックスは環境変数 TF_VAR_prefix の値を使ってください」と伝えれば、AI Agent がまとめて実行してくれます。
 
 インスタンスプロファイルからロールを削除：
 ```bash
@@ -408,4 +408,4 @@ aws logs delete-log-group --log-group-name /${TF_VAR_prefix}/ec2/secure
 
 ## ➡️ 次のステップ
 
-[セッション6：サーバー情報取得・運用レポート作成（任意）](session6_guide.md) に進んでください。
+[セッション6：運用レポートの自動生成（任意）](session6_guide.md) に進んでください。

@@ -40,7 +40,7 @@
 - `terraform/` — Terraform の設定ファイル（受講者が作成）
 - `ansible/` — Ansible の設定・Playbook（受講者が作成）
 - `keys/` — SSH鍵（Git管理外）
-- `scripts/` — セットアップ用スクリプト
+- `scripts/` — チェック・障害シミュレーション用スクリプト
 
 ## 接続情報
 
