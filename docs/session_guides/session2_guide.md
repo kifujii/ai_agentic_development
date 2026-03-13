@@ -489,5 +489,5 @@ terraform -chdir=terraform/vpc-ec2 destroy
 
 ## ➡️ 次のステップ
 
-- **任意課題に挑戦**: [セッション3：EC2 を count でスケールアウトしよう](session3_guide.md)
+- **任意課題に挑戦**: [セッション3：Webサーバーを冗長構成にしよう](session3_guide.md)
 - **次のセッションへ**: [セッション4：Ansible によるサーバー運用自動化](session4_guide.md)

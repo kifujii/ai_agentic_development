@@ -137,7 +137,7 @@ check_session0() {
     if [ -n "$caller" ]; then
       pass "AWS認証が通っている (Account: $caller)"
     else
-      fail "AWS認証が通りません" ".env の認証情報を確認してください"
+      fail "AWS認証が通りません" "講師に確認してください"
     fi
   fi
 
