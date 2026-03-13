@@ -2,22 +2,13 @@
 
 ## 🎯 このセッションの到達状態
 
-EC2に SSM Agent と CloudWatch Agent がインストール・稼働し、AWSコンソールからリモート管理と CPU/メモリの監視ができる状態になっています。このセッションでは **Terraform は使わず、Ansible + AWS CLI** で実施します。
-
-![目標構成](../images/session5_target.svg)
-
-| Step | インストールするもの | 目的 |
-|------|---------------------|------|
-| 前半 | SSM Agent | AWSコンソールからのリモート管理 |
-| 後半 | CloudWatch Agent | メトリクス・ログの収集 |
+EC2に SSM Agent と CloudWatch Agent がインストール・稼働し、AWS API 経由でのリモート管理と CPU/メモリの監視ができる状態になっています。このセッションでは **Terraform は使わず、Ansible + AWS CLI** で実施します。
 
 > 🎓 **なぜ2つのAgent（ソフトウェア）を入れるのか？**
-> - **SSM Agent**: AWSコンソールからEC2にリモートアクセス（Session Manager）。SSHなしで管理できる。
+> - **SSM Agent**: AWS API 経由でEC2にリモートアクセス（Session Manager）。SSHなしで管理できる。
 > - **CloudWatch Agent**: CPU/メモリ/ディスクのメトリクスやログをCloudWatchに送信。監視に必須。
 >
 > ⚠️ **用語の注意**: このセッションに登場する「SSM Agent」「CloudWatch Agent」は **EC2上で動くAWSのソフトウェア** です。Claude Code（AI Agent）とは別物です。
-
-> 💡 **セッション1で紹介したトラブルシューティングパターンを活用しましょう**: 何か問題が起きたら、エラーメッセージを Claude Code に共有して原因調査・修正を依頼してください。
 
 ---
 
@@ -39,237 +30,145 @@ ANSIBLE_CONFIG=ansible/ansible.cfg ansible -i ansible/inventory.ini all -m ping
 ## 構築の流れ
 
 ```
-Step 1: IAM ロールの作成（10分）
+前半: SSM Agent を導入してリモート管理できるようにしよう    (35分)
     ↓
-Step 2: SSM Agent のインストールと確認（20分）
+後半: CloudWatch Agent で監視基盤を構築しよう              (35分)
     ↓
-Step 3: SSM Run Command の体験（10分）
+AWS CLI で確認                                              (10分)
     ↓
-Step 4: CloudWatch Agent のインストール（10分）
-    ↓
-Step 5: CloudWatch Agent の設定・起動・確認（20分）
-    ↓
-Step 6: CloudWatch Alarm の作成（10分）
-    ↓
-振り返り（10分）
+振り返り                                                   (10分)
 ```
 
-> ⏱️ **時間配分について**: 各 Step の所要時間は目安です。IAMロールの反映やメトリクスの表示に数分かかることがあります。時間が足りない場合は講師に相談してください。
+> ⏱️ **時間配分について**: 各ステップの所要時間は目安です。IAMロールの反映やメトリクスの表示に数分かかることがあります。時間が足りない場合は講師に相談してください。
 
 ---
 
-## Step 1: IAM ロールを作成しよう（10分）
+## 前半: SSM Agent を導入してリモート管理できるようにしよう（35分）
+
+### チャレンジ
+
+EC2 を **Systems Manager からリモート管理できる状態** にしてください。
+
+### 達成条件
+
+- EC2 が **Systems Manager のマネージドインスタンス** として登録されている（AWS CLI で確認）
+- **SSM Run Command** で SSH を使わずに EC2 にコマンドを実行できる
 
 ### やること
 
-SSM Agent と CloudWatch Agent が AWS サービスと通信するためには、EC2 に適切な **IAM ロール（権限）** が必要です。最初にこれを準備します。
+Claude Code に「EC2 を Systems Manager で管理できるようにしたい」と伝えて、必要な作業を相談してください。何が必要かは Claude Code と一緒に考えましょう。
 
-> 💡 **なぜ IAM ロールが必要？**: EC2 上のソフトウェアが AWS サービス（Systems Manager, CloudWatch）と通信するには、「このEC2はこのサービスを使ってよい」という許可が必要です。それが IAM ロールです。
-
-### ゴール
-
-以下が完了している：
-
-- SSM と CloudWatch に必要な権限を持つ IAM ロールが作成されている
-- EC2 にインスタンスプロファイルが関連付けられている
-
-> 💡 `<PREFIX>` は自分のプレフィックスです（例: `user01`）。`echo $TF_VAR_prefix` で確認できます。環境構築時に自動設定されています。
+> 💡 **ヒント**: EC2 上のソフトウェアが AWS のサービスと通信するには「許可」が必要です。Claude Code に相談すれば、何をどういう順番で作ればいいか教えてくれます。
 
 <details>
-<summary>📝 プロンプト例</summary>
+<summary>🔍 困ったら: もう少し具体的なヒント</summary>
 
-```
-EC2 で SSM Agent と CloudWatch Agent を使えるようにするための IAM ロールを作成して、
-EC2 に関連付けてください。
-
-- プレフィックスとして環境変数 TF_VAR_prefix の値を使ってください
-- EC2のインスタンスIDは terraform -chdir=terraform/vpc-ec2 output -raw instance_id で確認できます
-- 作成後、ポリシー一覧を表示して確認してください
-```
+- EC2 が AWS サービス（Systems Manager）と通信するには **IAM ロール** が必要です
+- SSM Agent のインストールは **Ansible Playbook** で行いましょう
+- Amazon Linux 2023 には SSM Agent がプリインストールされている場合があります
+- プレフィックスとして環境変数 `TF_VAR_prefix` の値を使ってください
+- IAM の変更は反映に 1〜2 分かかることがあります
 
 </details>
 
-IAM ロールが作成され、EC2 に関連付けられれば OK ✅
+### SSM Agent の動作確認
 
-> 💡 IAMロールの反映に 1〜2分かかることがあります。
-
-> 💡 インスタンスプロファイルの作成直後に EC2 への関連付け（`associate-iam-instance-profile`）が `InvalidParameterValue` エラーで失敗する場合があります。その場合は **10〜15秒待ってから再実行** してください。
-
----
-
-## Step 2: SSM Agent をインストール・確認しよう（20分）
-
-### やること
-
-Ansible Playbook で EC2 に SSM Agent をインストールし、フリートマネージャーで管理対象として表示されることを確認します。
-
-> 💡 Amazon Linux 2023 には SSM Agent が**プリインストール**されている場合があります。Playbook では「インストール確認 → 未インストールならインストール → 起動」の流れにすると安全です。
-
-### ゴール
-
-- SSM Agent がインストールされ、起動している
-- **AWSコンソールのフリートマネージャーに EC2 が表示されている**
-
-<details>
-<summary>📝 プロンプト例</summary>
-
-```
-EC2 に SSM Agent をインストールして起動する Ansible Playbook を作成してください。
-既にインストール済みの場合はスキップするようにしてください。
-
-作成後、Playbookを実行してください。
-```
-
-</details>
-
-### フリートマネージャーで確認（あなたがAWSコンソールで操作）
-
-1. **あなたが** AWSコンソールにログインし、上部の検索バーに `Systems Manager` と入力して開く
-2. 左メニューから **「ノード管理」→「フリートマネージャー」** をクリック
-3. EC2 インスタンスが **マネージドインスタンス** として表示されていることを確認
-
-> 💡 表示されるまで **1〜2分** かかることがあります。表示されない場合はページをリロードしてください。
-
-フリートマネージャーに EC2 が表示されれば OK ✅
-
----
-
-## Step 3: SSM Run Command を体験しよう（10分）
-
-### やること
-
-SSM Agent が入ったことで、**AWSコンソール から直接コマンドを実行** できるようになりました。SSH不要のリモート管理を体験します。
-
-### 手順（あなたがAWSコンソールで操作）
-
-1. **あなたが** AWSコンソールにログインし、上部の検索バーに `Systems Manager` と入力して開く
-2. 左メニューから **「ノード管理」→「Run Command」** をクリック
-3. オレンジ色の **「コマンドを実行」** ボタンをクリック
-4. 「コマンドドキュメント」の検索欄に `AWS-RunShellScript` と入力して選択
-5. 「コマンドパラメータ」欄に以下を入力：
+SSM Agent が正しく動作しているかを AWS CLI で確認します。あなたのターミナルで以下を実行してください：
 
 ```bash
-echo "=== SSM Run Command テスト ==="
+aws ssm describe-instance-information --query "InstanceInformationList[].{ID:InstanceId,Ping:PingStatus,Agent:AgentVersion}" --output table
+```
+
+あなたの EC2 が `Online` で表示されれば、SSM Agent は正常に稼働しています。
+
+> 💡 表示されるまで **1〜2分** かかることがあります。表示されない場合は少し待ってから再実行してください。
+
+### Run Command を体験 — SSH なしでコマンド実行
+
+SSM Agent が入ったことで、**SSH を使わずに AWS API 経由でコマンドを実行** できるようになりました。Claude Code に以下のように伝えて、Run Command を体験してみましょう：
+
+```
+SSM の Run Command を使って、EC2 上で以下のコマンドを実行してください。
+結果も表示してください。SSH は使わないでください。
+
 hostname
 uptime
 free -m
 df -h
 ```
 
-6. 下にスクロールして **「ターゲット」** セクションで「インスタンスを手動で選択する」を選び、EC2 にチェック
-7. さらに下にスクロールしてオレンジ色の **「実行」** ボタンをクリック
-8. ステータスが「成功」になったら、インスタンスIDをクリックして **出力を確認**
-
-> 💡 **これが SSM の真価**: SSHポートを開けなくても、AWSコンソールからサーバー管理ができます。
+> 💡 **これが SSM の真価**: SSHポートを開けなくても、AWS API 経由でサーバー管理ができます。運用の現場では、セキュリティグループで SSH を閉じたまま管理できることが大きなメリットです。
 
 ### Ansible との比較を考えてみましょう
 
 | 項目 | SSM Run Command | Ansible |
 |------|----------------|---------|
 | 接続方式 | AWS API 経由 | SSH |
-| 実行場所 | AWSコンソール | ターミナル |
+| 実行方法 | AWS CLI / コンソール | ターミナル |
 | 適した用途 | 緊急対応、一回限りの操作 | 繰り返す定型作業、自動化 |
 
-出力にサーバー情報が表示されれば OK ✅
+Run Command でサーバー情報が取得できれば前半完了 ✅
 
 ---
 
-## Step 4: CloudWatch Agent をインストールしよう（10分）
+## 後半: CloudWatch Agent で監視基盤を構築しよう（35分）
+
+### チャレンジ
+
+EC2 の **CPU・メモリ・ディスクの使用率を CloudWatch で監視できる状態** にしてください。さらに、CPU 使用率が高くなったら **アラーム** で通知される仕組みも作ってください。
+
+### 達成条件
+
+- CloudWatch にカスタムメトリクス（CPU/メモリ/ディスク）が送信されている
+- CloudWatch Logs にシステムログが送信されている
+- **CloudWatch Alarm** で CPU 使用率のアラームが設定されている
 
 ### やること
 
-Ansible Playbook で CloudWatch Agent をインストールします。
+Claude Code に「EC2 のメトリクスとログを CloudWatch で監視できるようにしたい」と伝えて、必要な作業を相談してください。
 
-### ゴール
-
-CloudWatch Agent がインストールされている。
+> 💡 **ヒント**: 前半で SSM Agent を導入した流れを思い出してください。CloudWatch Agent も同じように「インストール → 設定 → 起動」の流れです。アラームは AWS CLI で作成できます。
 
 <details>
-<summary>📝 プロンプト例</summary>
+<summary>🔍 困ったら: もう少し具体的なヒント</summary>
 
-```
-EC2 に CloudWatch Agent をインストールする Ansible Playbook を作成してください。
-
-作成後、Playbookを実行してください。
-```
+- CloudWatch Agent のインストール・設定は **Ansible Playbook** で行いましょう
+- 設定ファイルでは収集するメトリクス（CPU、メモリ、ディスク）とログを指定します
+- プレフィックスとして環境変数 `TF_VAR_prefix` の値を使ってください
+- CloudWatch Alarm は **AWS CLI** で作成すると簡単です
+- メトリクスが CloudWatch に表示されるまで **2〜5分** かかります
 
 </details>
 
-インストール成功のメッセージが出れば OK ✅
+### AWS CLI で確認（10分）
 
----
+CloudWatch Agent 起動後、**数分待ってから** あなたのターミナルで以下を実行して確認します：
 
-## Step 5: CloudWatch Agent を設定・起動・確認しよう（20分）
+**メトリクスの確認**:
 
-### やること
-
-CloudWatch Agent の設定ファイルを配置し、CloudWatch Agent を起動します。起動後、AWSコンソールでメトリクスとログが正しく収集されていることを確認します。
-
-### ゴール
-
-- CloudWatch Agent が `running` 状態で起動している
-- AWSコンソールの CloudWatch にメトリクスが表示されている
-
-<details>
-<summary>📝 プロンプト例</summary>
-
-```
-CloudWatch Agent の設定を行い、起動する Ansible Playbook を作成してください。
-
-- CPU・メモリ・ディスクのメトリクスを収集
-- システムログを CloudWatch Logs に送信
-- プレフィックスとして環境変数 TF_VAR_prefix の値を使ってください
-
-作成後、Playbookを実行してください。
+```bash
+aws cloudwatch list-metrics --namespace "${TF_VAR_prefix}/EC2" --query "Metrics[].MetricName" --output table
 ```
 
-</details>
+CPU、メモリ、ディスク関連のメトリクス名が表示されれば OK です。
 
-### AWSコンソールで確認（あなたがAWSコンソールで操作）
+> 💡 メトリクスが表示されるまで **2〜5分** かかります。何も表示されない場合は少し待ってから再実行してください。
 
-CloudWatch Agent 起動後、**数分待ってから** 以下を確認します：
+**ロググループの確認**:
 
-1. **あなたが** CloudWatch → メトリクス → すべてのメトリクス を開く
-2. **カスタム名前空間** の一覧から `<PREFIX>/EC2` を探す（例: `user01/EC2`）
-3. メトリクス（CPU、メモリ、ディスク）が表示されていることを確認
-
-> 💡 メトリクスが表示されるまで **2〜5分** かかることがあります。表示されない場合はページをリロードしてしばらく待ってください。
-
-4. **CloudWatch → ロググループ** を開く
-5. `/<PREFIX>/ec2/messages` と `/<PREFIX>/ec2/secure` が存在することを確認
-
-> 💡 **名前空間の命名について**: カスタム名前空間（`<PREFIX>/EC2`）は大文字の `EC2`、ロググループ（`/<PREFIX>/ec2/...`）は小文字の `ec2` です。これは AWS の慣習に合わせたもので、意図的な使い分けです。
-
-メトリクスまたはロググループが表示されれば OK ✅
-
----
-
-## Step 6: CloudWatch Alarm を作成しよう（10分）
-
-### やること
-
-CloudWatch Agent が収集したメトリクスに対してアラームを設定します。Claude Code に AWS CLI で作成してもらいます。
-
-### ゴール
-
-CloudWatch Agent が収集しているメトリクスに対して、CPU 使用率のアラームが設定されている。
-
-<details>
-<summary>📝 プロンプト例</summary>
-
-```
-Step 5 で収集を始めた CPU メトリクスに対して、使用率が高くなったらアラームが上がるように
-CloudWatch Alarm を AWS CLI で作成してください。
-プレフィックスとして環境変数 TF_VAR_prefix の値を使ってください。
+```bash
+aws logs describe-log-groups --log-group-name-prefix "/${TF_VAR_prefix}/ec2" --query "logGroups[].logGroupName" --output table
 ```
 
-</details>
+**アラームの確認**:
 
-### 確認（あなたがAWSコンソールで確認）
+```bash
+aws cloudwatch describe-alarms --alarm-name-prefix "${TF_VAR_prefix}" --query "MetricAlarms[].{Name:AlarmName,State:StateValue}" --output table
+```
 
-**あなたが** AWSコンソール → CloudWatch → アラーム で `<PREFIX>-cpu-alarm` が表示されていれば OK ✅
+> 💡 現時点ではCPU使用率が低いため、アラームのステータスは「OK」のはずです。
 
-> 💡 現時点ではCPU使用率が低いため、ステータスは「OK」のはずです。
+メトリクス・ロググループ・アラームが確認できれば後半完了 ✅
 
 ---
 
@@ -279,11 +178,10 @@ CloudWatch Alarm を AWS CLI で作成してください。
 
 | 作業 | ツール | 学び |
 |------|--------|------|
-| IAMロール作成 | AWS CLI (Claude Code) | EC2がAWSサービスと通信するには **権限（IAM）** が必要 |
-| SSM Agent導入 | Ansible | パッケージ管理・サービス管理の自動化 |
-| SSM Run Command | AWSコンソール | SSH不要のリモート管理 |
-| CloudWatch Agent導入・設定 | Ansible | メトリクス・ログ収集の自動化 |
-| CW Alarm作成 | AWS CLI (Claude Code) | 監視設定も Claude Code で自動化 |
+| SSM Agent 導入 | Ansible + AWS CLI | EC2がAWSサービスと通信するには **権限（IAM）** が必要 |
+| SSM Run Command | AWS CLI (Claude Code) | SSH不要のリモート管理 |
+| CloudWatch Agent 導入 | Ansible | メトリクス・ログ収集の自動化 |
+| CloudWatch Alarm | AWS CLI (Claude Code) | 監視設定も Claude Code で自動化 |
 
 ### ツールの使い分け
 
@@ -292,100 +190,29 @@ CloudWatch Alarm を AWS CLI で作成してください。
 | Terraform | インフラの構築 | 今回は使わなかった |
 | Ansible | サーバー内の設定・ソフトウェア管理 | SSM Agent / CloudWatch Agent のインストール・設定 |
 | AWS CLI | AWSリソースの操作 | IAMロール、CloudWatch Alarm |
-| SSM | 緊急時のリモート管理 | Run Commandでサーバー操作 |
+| SSM | 緊急時のリモート管理 | Run Command で SSH なしのサーバー操作 |
 
 ### 📖 コードを理解しよう — AWS サービス連携の全体像を把握する
 
-このセッションでは IAM、SSM、CloudWatch と多くの AWS サービスが登場しました。これらの **関係性と設定の意味** を理解しましょう：
+このセッションでは IAM、SSM、CloudWatch と多くの AWS サービスが登場しました。Claude Code に以下を聞いて、**関係性と設定の意味** を理解しましょう：
 
-<details>
-<summary>📝 プロンプト例</summary>
-
-```
-このセッションで構築した AWS サービス連携について、以下の内容を含む解説ドキュメントを作成してください。
-保存先: docs/session5_design.md
-
-■ 含めてほしい内容
-1. EC2 → IAM ロール → SSM / CloudWatch の関係図（テキストベース）
-2. IAM ロール・インスタンスプロファイル・ポリシーの関係と、それぞれが何を許可しているか
-3. SSM Agent の仕組み（EC2 と Systems Manager がどう通信するか）
-4. CloudWatch Agent の設定ファイル（JSON）の各項目の意味
-   - metrics セクション: 何を収集しているか
-   - logs セクション: 何を送信しているか
-5. CloudWatch Alarm の仕組み（メトリクス → 評価 → 状態遷移）
-6. ansible/playbooks/ の各 Playbook が行っている処理の要約
-```
-
-</details>
-
-生成されたドキュメントを読んで、以下を確認しましょう：
-
-- [ ] IAMロールとインスタンスプロファイルの違いが説明できる
-- [ ] CloudWatch Agent の設定ファイルで何を収集しているか説明できる
-- [ ] SSM の Run Command が SSH と何が違うか説明できる
-- [ ] CloudWatch Alarm がどの条件で発火するか説明できる
-
----
-
-## ファイル構成
-
-```
-ansible/
-├── inventory.ini            # セッション4で作成済み
-├── ansible.cfg              # セッション4で作成済み
-└── playbooks/
-    ├── (SSM Agent インストール Playbook)
-    ├── (CloudWatch Agent インストール Playbook)
-    └── (CloudWatch Agent 設定・起動 Playbook)
-```
-
-> 💡 Playbook のファイル名やタスクの構成は Claude Code に任せて大丈夫です。
+- IAM ロール・インスタンスプロファイル・ポリシーの関係
+- SSM Agent の仕組み（EC2 と Systems Manager がどう通信するか）
+- CloudWatch Agent の設定ファイルの各項目の意味
+- CloudWatch Alarm の仕組み
 
 ---
 
 ## ⚠️ リソースの削除
 
-ワークショップ終了後にあなたのターミナルで IAM リソースを削除してください。
-`<PREFIX>` の部分は自分のプレフィックスに置き換えてください（`echo $TF_VAR_prefix` で確認できます）。
+ワークショップ終了後にリソースを削除してください。Claude Code に以下のように伝えるのが最も簡単です：
 
-> 💡 Claude Code に「セッション5で作成した IAMリソース、CloudWatch Alarm、ロググループをすべて削除してください。プレフィックスは環境変数 TF_VAR_prefix の値を使ってください」と伝えれば、AI Agent がまとめて実行してくれます。
-
-インスタンスプロファイルからロールを削除：
-```bash
-aws iam remove-role-from-instance-profile --instance-profile-name ${TF_VAR_prefix}-ec2-agent-profile --role-name ${TF_VAR_prefix}-ec2-agent-role
+```
+セッション5で作成した IAMリソース、CloudWatch Alarm、ロググループをすべて削除してください。
+プレフィックスは環境変数 TF_VAR_prefix の値を使ってください。
 ```
 
-ポリシーのデタッチ：
-```bash
-aws iam detach-role-policy --role-name ${TF_VAR_prefix}-ec2-agent-role --policy-arn arn:aws:iam::aws:policy/CloudWatchAgentServerPolicy
-```
-
-```bash
-aws iam detach-role-policy --role-name ${TF_VAR_prefix}-ec2-agent-role --policy-arn arn:aws:iam::aws:policy/AmazonSSMManagedInstanceCore
-```
-
-リソース削除：
-```bash
-aws iam delete-instance-profile --instance-profile-name ${TF_VAR_prefix}-ec2-agent-profile
-```
-
-```bash
-aws iam delete-role --role-name ${TF_VAR_prefix}-ec2-agent-role
-```
-
-CloudWatch Alarm の削除：
-```bash
-aws cloudwatch delete-alarms --alarm-names ${TF_VAR_prefix}-cpu-alarm
-```
-
-CloudWatch ロググループの削除（作成した場合のみ）：
-```bash
-aws logs delete-log-group --log-group-name /${TF_VAR_prefix}/ec2/messages
-```
-
-```bash
-aws logs delete-log-group --log-group-name /${TF_VAR_prefix}/ec2/secure
-```
+> 💡 手動で削除する場合は、IAM（インスタンスプロファイル → ポリシーデタッチ → ロール削除）、CloudWatch Alarm、ロググループの順で削除します。
 
 > CloudWatch Agent と SSM Agent は EC2 上のソフトウェアなので、EC2 削除時に一緒に消えます。
 
@@ -402,7 +229,7 @@ aws logs delete-log-group --log-group-name /${TF_VAR_prefix}/ec2/secure
 ./scripts/check.sh session5
 ```
 
-> 💡 Step 3（SSM Run Command）はAWSコンソールでの手動操作のため、自動チェックの対象外です。フリートマネージャーでの確認は各自で行ってください。
+> 💡 Run Command の実行結果は自動チェックの対象外です。`aws ssm describe-instance-information` でマネージドインスタンスの登録を各自で確認してください。
 
 ---
 
