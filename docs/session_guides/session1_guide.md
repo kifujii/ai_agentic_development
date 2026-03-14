@@ -110,7 +110,23 @@ VPC って何ですか？なぜ必要なんですか？
 インターネットゲートウェイがないとどうなりますか？
 ```
 
-4. 構成が理解できたら `/exit` で Plan モードを終了します
+4. 十分に理解できたら、Plan モードを抜けて実装に移りましょう。`Shift + Tab` でノーマルモードに戻るか、`/exit` で Claude Code を終了します。
+
+> 💡 **Plan モードで「プランを実行しますか？」と聞かれたら**
+>
+> Claude Code がプランを作成し終えると、以下のような選択肢が表示されることがあります：
+>
+> ```
+> Claude has written up a plan and is ready to execute. Would you like to proceed?
+>
+>    1. Yes, clear context (XX% used) and auto-accept edits
+>    2. Yes, auto-accept edits
+>  ❯ 3. Yes, manually approve edits
+>    4. Type here to tell Claude what to change
+> ```
+>
+> **Step 0 では実装はしないので、`4` を選んで「まだ実装しないで、次のステップで別途指示します」と伝えるか、`Ctrl+C` でキャンセルして大丈夫です。**
+> Step 1 以降で実際に実装するときは、`3. Yes, manually approve edits`（変更を1つずつ確認しながら進む）が安全でおすすめです。
 
 > 🎓 **このStepの狙い**: 「自分が何を作ろうとしているか」を理解してから構築に入ることで、Step 1 以降のプロンプトの意味が分かるようになります。AWS の知識がなくても、AI に聞きながら設計できる — これが AI 駆動開発の最大の強みです。
 
