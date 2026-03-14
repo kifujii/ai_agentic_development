@@ -31,7 +31,7 @@
 ### 時間配分
 
 ```
-Day 1 (4h45min + 任意30min): Claude Code 入門 → Terraform → Ansible → 監視基盤 → 運用レポート
+Day 1 (4h + 任意1h15min): Claude Code 入門 → Terraform → Ansible → 監視基盤 → 運用レポート
 ├── Session 0: Claude Code に慣れよう (20min)                [必須]
 ├── Session 1: VPC + EC2 を段階的に構築 (1h)                [必須]
 ├── Session 2: Terraform でインフラを構築・変更・再構築 (45min) [必須]
