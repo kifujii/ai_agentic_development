@@ -215,8 +215,8 @@ plan の内容を確認してから apply するか判断します。
 Claude Code が `terraform plan` を実行すると、以下のような差分が表示されます：
 
 ```
-  # aws_instance.training will be updated in-place
-  ~ resource "aws_instance" "training" {
+  # aws_instance.training_ec2 will be updated in-place
+  ~ resource "aws_instance" "training_ec2" {
       ~ tags = {
           + "Environment" = "training"
             "Name"        = "<prefix>-ec2"
@@ -484,11 +484,9 @@ terraform/
 
 ## ⚠️ リソースの削除
 
-> ワークショップ期間中はリソースを削除しないでください。**全セッション終了後**に削除してください。
-
-```bash
-terraform -chdir=terraform/vpc-ec2 destroy
-```
+> **ワークショップ期間中はリソースを削除しないでください。** ここで再構築した EC2 は後続セッション（セッション3〜6）でも使用します。
+>
+> 全セッション終了後の削除手順は [README](../../README.md#注意事項) を参照してください。
 
 ---
 

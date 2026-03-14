@@ -82,6 +82,23 @@ terraform version && ansible --version && aws sts get-caller-identity && echo "T
 
 ツールのバージョン、AWS 認証、PREFIX が表示されれば正常です。問題がある場合は講師に確認してください。
 
+## Q: Claude Code が起動しません
+
+**A: 以下を確認してください。**
+
+1. `which claude` でインストールされているか確認
+2. 見つからない場合は講師に確認してください
+
+## Q: Claude Code で AWS Bedrock への接続エラーが出ます
+
+**A: 以下を確認してください。**
+
+1. `aws sts get-caller-identity` で AWS 認証が正常か確認
+2. `.claude/settings.local.json` が存在するか確認（`ls .claude/settings.local.json`）
+3. 上記に問題がない場合は講師に確認してください
+
+> 💡 ハンズオン環境では Bedrock の認証情報は環境構築時に自動設定されています。手動で設定する必要はありません。
+
 ## Q: check.sh はどこで実行すればいいですか？
 
 **A: Claude Code の外（bash）で実行してください。**
