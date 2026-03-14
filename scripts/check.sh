@@ -305,20 +305,24 @@ check_session2() {
     fi
   fi
 
-  # Step 3: タグ追加確認
+  # Step 3: タグ追加確認（任意のタグが1つ以上あればOK）
   if [ "$step" = "all" ] || [ "$step" = "step3" ]; then
     echo ""
     echo "📦 Step 3: インフラ変更（タグ追加）"
     local inst_id
     inst_id=$(tf_output "instance_id")
     if [ -n "$inst_id" ]; then
-      local env_tag
-      env_tag=$(aws ec2 describe-tags --filters "Name=resource-id,Values=$inst_id" "Name=key,Values=Environment" \
-        --query 'Tags[0].Value' --output text 2>/dev/null || echo "")
-      if [ -n "$env_tag" ] && [ "$env_tag" != "None" ]; then
-        pass "EC2 に Environment タグが設定されている ($env_tag)"
+      local tag_count
+      # AWS が自動付与する "Name" タグ以外のタグが存在するか確認
+      tag_count=$(aws ec2 describe-tags --filters "Name=resource-id,Values=$inst_id" \
+        --query 'length(Tags[?Key!=`Name`])' --output text 2>/dev/null || echo "0")
+      if [ "$tag_count" -gt 0 ] 2>/dev/null; then
+        local tag_summary
+        tag_summary=$(aws ec2 describe-tags --filters "Name=resource-id,Values=$inst_id" \
+          --query 'Tags[?Key!=`Name`].[Key,Value]' --output text 2>/dev/null | head -3 | tr '\t' '=' | tr '\n' ' ')
+        pass "EC2 にタグが設定されている ($tag_summary)"
       else
-        fail "EC2 に Environment タグがありません" "Step 3のプロンプトでタグ追加を実行してください"
+        fail "EC2 に追加タグがありません" "Step 3のプロンプトでタグ追加を実行してください（タグのキーと値は自由に設定してOKです）"
       fi
     else
       fail "インスタンスIDが取得できないためスキップ"
