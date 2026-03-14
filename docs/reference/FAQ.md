@@ -64,7 +64,7 @@ Use Claude Code's terminal setup?
   2. No, maybe later with /terminal-setup
 ```
 
-「**1. Yes, use recommended settings**」を選択してください。これは Shift+Enter で改行入力ができるようになる設定で、長いプロンプトの入力に便利です。
+「**1. Yes, use recommended settings**」を選択してください。これは Alt+Enter で改行入力ができるようになる設定で、長いプロンプトの入力に便利です。
 
 ## Q: セットアップ完了後、どのようにトレーニングを開始すればいいですか？
 
