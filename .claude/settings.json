@@ -6,7 +6,8 @@
       "Read(docs/images/**)",
       "Read(evaluation/**)",
       "Read(scripts/check.sh)",
-      "Read(scripts/break_session.sh)"
+      "Read(scripts/break_session.sh)",
+      "Read(scripts/break_session9.sh)"
     ]
   }
 }

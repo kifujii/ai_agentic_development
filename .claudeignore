@@ -14,6 +14,7 @@ scripts/check.sh
 
 # 障害発生スクリプト（中身を読むと障害パターンがわかってしまう）
 scripts/break_session.sh
+scripts/break_session9.sh
 
 # トレーニングメニュー（全体構成のネタバレ防止）
 docs/TRAINING_MENU.md

@@ -49,7 +49,7 @@ Step 5: SSH 接続で動作確認                                              (
 
 > ⚠️ **環境変数が未設定の場合**: `echo $TF_VAR_prefix` で値が表示されない場合は講師に確認してください。
 
-1. [環境セットアップガイド](../setup/ENVIRONMENT_SETUP.md) が完了していること
+1. [環境セットアップガイド](../reference/ENVIRONMENT_SETUP.md) が完了していること
 2. SSH鍵ペアを生成しておくこと：
 
 ```bash

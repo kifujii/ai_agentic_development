@@ -215,8 +215,8 @@ plan の内容を確認してから apply するか判断します。
 Claude Code が `terraform plan` を実行すると、以下のような差分が表示されます：
 
 ```
-  # aws_instance.training will be updated in-place
-  ~ resource "aws_instance" "training" {
+  # aws_instance.training_ec2 will be updated in-place
+  ~ resource "aws_instance" "training_ec2" {
       ~ tags = {
           + "Environment" = "training"
             "Name"        = "<prefix>-ec2"
