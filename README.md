@@ -92,7 +92,21 @@ ai_agentic_development/
 
 ## 注意事項
 
-- ワークショップ終了後は作成したAWSリソースを **必ず削除** してください。Claude Code を起動して以下のプロンプトを実行するのが最も簡単です：
+### ⚠️ ワークショップ期間中はリソースを削除しないでください
+
+セッション1〜6で作成したリソースは後続セッションで使用します。各セッションガイドの「⚠️ リソースの削除」セクションに記載があっても、**ワークショップ終了まで削除しないでください**。
+
+唯一の例外は **セッション2 の Step 4**（`terraform destroy` → 再構築）で、これは IaC の学習ステップとして意図的に含まれています。
+
+---
+
+### 🗑️ ワークショップ終了後のリソース削除手順
+
+**全セッション終了後**に、以下の手順でリソースを削除してください。
+
+#### 方法1: Claude Code に依頼する（推奨）
+
+Claude Code を起動して以下のプロンプトを実行するのが最も簡単です：
 
 ```
 ワークショップで作成したすべての AWS リソースを削除してください。
@@ -101,7 +115,48 @@ ai_agentic_development/
 - プレフィックスは環境変数 TF_VAR_prefix の値を使ってください
 ```
 
-> 💡 Claude Code を使わず手動で削除する場合は、各セッションガイドの「リソースの削除」セクションを参照してください。依存関係があるため、**応用セッション → セッション5 → セッション1〜3** の順で削除してください。
+#### 方法2: 手動で削除する
+
+依存関係があるため、**以下の順序で削除**してください（逆順にするとエラーになります）。
+
+**① 応用セッション（7〜10）で作成したリソース**（実施した場合のみ）
+
+```bash
+# Terraform で作成したリソースを削除
+# ディレクトリ名は ls terraform/ で確認
+terraform -chdir=terraform/<作成したディレクトリ> destroy
+```
+
+**② セッション5: IAM ロール・CloudWatch**（実施した場合のみ）
+
+```bash
+PREFIX=$TF_VAR_prefix
+
+# CloudWatch Alarm
+aws cloudwatch delete-alarms --alarm-names "${PREFIX}-high-cpu"
+
+# CloudWatch ロググループ
+aws logs delete-log-group --log-group-name "/aws/ec2/${PREFIX}"
+
+# IAM インスタンスプロファイルからロールをデタッチ・削除
+aws iam remove-role-from-instance-profile \
+  --instance-profile-name "${PREFIX}-ec2-profile" \
+  --role-name "${PREFIX}-ec2-role"
+aws iam delete-instance-profile --instance-profile-name "${PREFIX}-ec2-profile"
+aws iam detach-role-policy \
+  --role-name "${PREFIX}-ec2-role" \
+  --policy-arn arn:aws:iam::aws:policy/AmazonSSMManagedInstanceCore
+aws iam detach-role-policy \
+  --role-name "${PREFIX}-ec2-role" \
+  --policy-arn arn:aws:iam::aws:policy/CloudWatchAgentServerPolicy
+aws iam delete-role --role-name "${PREFIX}-ec2-role"
+```
+
+**③ セッション1〜3: VPC・EC2**
+
+```bash
+terraform -chdir=terraform/vpc-ec2 destroy
+```
 
 - AWS認証情報は安全に管理してください
 
