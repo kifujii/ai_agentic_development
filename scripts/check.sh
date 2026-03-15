@@ -69,6 +69,80 @@ tf_output_exists() {
   [ -n "$val" ]
 }
 
+# --- PREFIX ベースの AWS CLI フォールバックヘルパー ---
+# tf_output で取得できない場合に PREFIX のタグで AWS リソースを検索する
+
+# VPC: Name タグに PREFIX を含む VPC を検索
+find_vpc_id() {
+  local val
+  val=$(tf_output "vpc_id")
+  if [ -n "$val" ]; then echo "$val"; return; fi
+  aws ec2 describe-vpcs \
+    --filters "Name=tag:Name,Values=*${TF_VAR_prefix}*" "Name=state,Values=available" \
+    --query 'Vpcs[0].VpcId' --output text 2>/dev/null | grep -v "^None$" || echo ""
+}
+
+# サブネット: まず tf_output、なければ VPC 内のサブネットを検索
+find_subnet_id() {
+  local val
+  # よくある output 名を順番に試す
+  for name in subnet_id public_subnet_id main_subnet_id subnet; do
+    val=$(tf_output "$name")
+    if [ -n "$val" ]; then echo "$val"; return; fi
+  done
+  # フォールバック: VPC 内のサブネットを検索
+  local vpc_id
+  vpc_id=$(find_vpc_id)
+  if [ -n "$vpc_id" ]; then
+    aws ec2 describe-subnets \
+      --filters "Name=vpc-id,Values=$vpc_id" \
+      --query 'Subnets[0].SubnetId' --output text 2>/dev/null | grep -v "^None$" || echo ""
+  fi
+}
+
+# セキュリティグループ: まず tf_output、なければ PREFIX タグで検索
+find_sg_id() {
+  local val
+  for name in security_group_id sg_id; do
+    val=$(tf_output "$name")
+    if [ -n "$val" ]; then echo "$val"; return; fi
+  done
+  local vpc_id
+  vpc_id=$(find_vpc_id)
+  if [ -n "$vpc_id" ]; then
+    aws ec2 describe-security-groups \
+      --filters "Name=vpc-id,Values=$vpc_id" "Name=tag:Name,Values=*${TF_VAR_prefix}*" \
+      --query 'SecurityGroups[?GroupName!=`default`] | [0].GroupId' --output text 2>/dev/null | grep -v "^None$" || echo ""
+  fi
+}
+
+# EC2 インスタンスID: まず tf_output、なければ PREFIX タグ + running で検索
+find_instance_id() {
+  local val
+  for name in instance_id ec2_instance_id; do
+    val=$(tf_output "$name")
+    if [ -n "$val" ]; then echo "$val"; return; fi
+  done
+  aws ec2 describe-instances \
+    --filters "Name=tag:Name,Values=*${TF_VAR_prefix}*" "Name=instance-state-name,Values=running,stopped" \
+    --query 'Reservations[].Instances[0].InstanceId' --output text 2>/dev/null | head -1 | grep -v "^None$" || echo ""
+}
+
+# EC2 パブリックIP: まず tf_output、なければインスタンスIDから取得
+find_instance_ip() {
+  local val
+  for name in instance_public_ip public_ip ec2_public_ip; do
+    val=$(tf_output "$name")
+    if [ -n "$val" ]; then echo "$val"; return; fi
+  done
+  local inst_id
+  inst_id=$(find_instance_id)
+  if [ -n "$inst_id" ]; then
+    aws ec2 describe-instances --instance-ids "$inst_id" \
+      --query 'Reservations[0].Instances[0].PublicIpAddress' --output text 2>/dev/null | grep -v "^None$" || echo ""
+  fi
+}
+
 # --- SSH ヘルパー ---
 ssh_check_cmd() {
   local ip="$1"
@@ -158,7 +232,7 @@ check_session1() {
     echo ""
     echo "📦 Step 1: VPC作成"
     local vpc_id
-    vpc_id=$(tf_output "vpc_id")
+    vpc_id=$(find_vpc_id)
     if [ -n "$vpc_id" ]; then
       pass "VPC が作成されている ($vpc_id)"
     else
@@ -171,7 +245,7 @@ check_session1() {
     echo ""
     echo "📦 Step 2: サブネット＆インターネット接続"
     local subnet_id
-    subnet_id=$(tf_output "subnet_id")
+    subnet_id=$(find_subnet_id)
     if [ -n "$subnet_id" ]; then
       pass "サブネットが作成されている ($subnet_id)"
     else
@@ -184,10 +258,9 @@ check_session1() {
     echo ""
     echo "📦 Step 3: キーペア＆セキュリティグループ"
     local sg_id
-    sg_id=$(tf_output "security_group_id")
+    sg_id=$(find_sg_id)
     if [ -n "$sg_id" ]; then
       pass "セキュリティグループが作成されている ($sg_id)"
-      # SSH(22) ルールの確認
       local ssh_rule
       ssh_rule=$(aws ec2 describe-security-groups --group-ids "$sg_id" \
         --query 'SecurityGroups[0].IpPermissions[?FromPort==`22`]' \
@@ -198,7 +271,7 @@ check_session1() {
         fail "SSH(22) のインバウンドルールがありません" "セキュリティグループにSSHルールを追加してください"
       fi
     else
-      fail "セキュリティグループが見つかりません（output名: security_group_id）" "output名が security_group_id になっているか確認してください"
+      fail "セキュリティグループが見つかりません" "セキュリティグループを作成してください"
     fi
   fi
 
@@ -206,14 +279,13 @@ check_session1() {
   if [ "$step" = "all" ] || [ "$step" = "step4" ]; then
     echo ""
     echo "📦 Step 4: EC2インスタンス"
-    local ip
-    ip=$(tf_output "instance_public_ip")
     local inst_id
-    inst_id=$(tf_output "instance_id")
+    inst_id=$(find_instance_id)
+    local ip
+    ip=$(find_instance_ip)
     if [ -n "$ip" ] && [ -n "$inst_id" ]; then
       pass "EC2 インスタンスが作成されている ($inst_id)"
       pass "パブリックIPが割り当てられている ($ip)"
-      # running 状態の確認
       local state
       state=$(aws ec2 describe-instances --instance-ids "$inst_id" \
         --query 'Reservations[0].Instances[0].State.Name' --output text 2>/dev/null || echo "")
@@ -223,11 +295,11 @@ check_session1() {
         fail "インスタンスの状態: ${state:-不明}" "AWSコンソールでインスタンスの状態を確認してください"
       fi
     else
-      if [ -z "$ip" ]; then
-        fail "パブリックIPが見つかりません（output名: instance_public_ip）" "output名が instance_public_ip になっているか確認してください"
-      fi
       if [ -z "$inst_id" ]; then
-        fail "インスタンスIDが見つかりません（output名: instance_id）" "output名が instance_id になっているか確認してください"
+        fail "EC2 インスタンスが見つかりません" "EC2 を作成してください"
+      fi
+      if [ -z "$ip" ]; then
+        fail "パブリックIPが取得できません" "EC2 にパブリックIPが割り当てられているか確認してください"
       fi
     fi
   fi
@@ -237,7 +309,7 @@ check_session1() {
     echo ""
     echo "📦 Step 5: SSH接続確認"
     local ip
-    ip=$(tf_output "instance_public_ip")
+    ip=$(find_instance_ip)
     if [ -n "$ip" ]; then
       local result
       result=$(ssh_check_cmd "$ip" "echo ok" 2>/dev/null || echo "")
@@ -264,7 +336,7 @@ check_session2() {
   echo "------------------------------"
 
   local ip
-  ip=$(tf_output "instance_public_ip")
+  ip=$(find_instance_ip)
   if [ -z "$ip" ]; then
     fail "EC2のIPが取得できません" "セッション1を完了してください（またはStep 5の再構築を実行してください）"
     summary
@@ -276,7 +348,7 @@ check_session2() {
     echo ""
     echo "📦 Step 1: セキュリティグループにHTTP追加"
     local sg_id
-    sg_id=$(tf_output "security_group_id")
+    sg_id=$(find_sg_id)
     if [ -n "$sg_id" ]; then
       local http_rule
       http_rule=$(aws ec2 describe-security-groups --group-ids "$sg_id" \
@@ -288,7 +360,7 @@ check_session2() {
         fail "HTTP(80) のインバウンドルールがありません" "Agentに「SGにHTTP(80)を追加して」と指示してください"
       fi
     else
-      fail "セキュリティグループIDが取得できません"
+      fail "セキュリティグループが見つかりません"
     fi
   fi
 
@@ -310,10 +382,9 @@ check_session2() {
     echo ""
     echo "📦 Step 3: インフラ変更（タグ追加）"
     local inst_id
-    inst_id=$(tf_output "instance_id")
+    inst_id=$(find_instance_id)
     if [ -n "$inst_id" ]; then
       local tag_count
-      # AWS が自動付与する "Name" タグ以外のタグが存在するか確認
       tag_count=$(aws ec2 describe-tags --filters "Name=resource-id,Values=$inst_id" \
         --query 'length(Tags[?Key!=`Name`])' --output text 2>/dev/null || echo "0")
       if [ "$tag_count" -gt 0 ] 2>/dev/null; then
@@ -333,9 +404,8 @@ check_session2() {
   if [ "$step" = "all" ] || [ "$step" = "step5" ]; then
     echo ""
     echo "📦 Step 5: user_data による再構築"
-    # user_data が設定されているか確認
     local inst_id
-    inst_id=$(tf_output "instance_id")
+    inst_id=$(find_instance_id)
     if [ -n "$inst_id" ]; then
       local user_data
       user_data=$(aws ec2 describe-instance-attribute --instance-id "$inst_id" --attribute userData \
@@ -376,24 +446,19 @@ check_session3() {
   echo "------------------------------"
 
   local ip
-  ip=$(tf_output "instance_public_ip")
+  ip=$(find_instance_ip)
   if [ -z "$ip" ]; then
     fail "EC2のIPが取得できません" "セッション2を完了してください"
     summary
     return
   fi
 
-  # セッション3は最終的に1台構成に戻すため、完了後は以下を確認:
-  # - EC2が1台で running
-  # - nginx が動作中
-  # - terraform plan で差分なし
-
   # Step 1-2: EC2の状態確認（最終状態は1台）
   if [ "$step" = "all" ] || [ "$step" = "step1" ] || [ "$step" = "step2" ]; then
     echo ""
     echo "📦 Step 1-2: EC2 状態確認"
     local inst_id
-    inst_id=$(tf_output "instance_id")
+    inst_id=$(find_instance_id)
     if [ -n "$inst_id" ]; then
       local state
       state=$(aws ec2 describe-instances --instance-ids "$inst_id" \
@@ -407,7 +472,6 @@ check_session3() {
       fail "インスタンスIDが取得できません"
     fi
 
-    # nginx アクセス確認
     local http_code
     http_code=$(curl -s -o /dev/null -w "%{http_code}" --connect-timeout 5 "http://$ip" 2>/dev/null || echo "000")
     if [ "$http_code" = "200" ] || [ "$http_code" = "301" ] || [ "$http_code" = "302" ]; then
@@ -537,33 +601,49 @@ check_session5() {
   echo "------------------------------"
 
   local ip
-  ip=$(tf_output "instance_public_ip")
+  ip=$(find_instance_ip)
   local inst_id
-  inst_id=$(tf_output "instance_id")
+  inst_id=$(find_instance_id)
 
   # 前半: SSM Agent（IAMロール + SSM Agent + フリートマネージャー）
   if [ "$step" = "all" ] || [ "$step" = "step1" ]; then
     echo ""
     echo "📦 前半: SSH なしでサーバーを管理できるようにしよう"
 
-    # IAMロール
-    local role_name="${TF_VAR_prefix}-ec2-agent-role"
-    local profile_name="${TF_VAR_prefix}-ec2-agent-profile"
-    local role
-    role=$(aws iam get-role --role-name "$role_name" --query 'Role.RoleName' --output text 2>/dev/null || echo "")
-    if [ "$role" = "$role_name" ]; then
-      pass "IAMロール $role_name が存在する"
+    # IAMロール: PREFIX を含むロールを検索
+    local role_name
+    role_name=$(aws iam list-roles --query "Roles[?contains(RoleName, '${TF_VAR_prefix}') && contains(RoleName, 'ec2')].RoleName | [0]" \
+      --output text 2>/dev/null | grep -v "^None$" || echo "")
+    if [ -z "$role_name" ]; then
+      role_name=$(aws iam list-roles --query "Roles[?contains(RoleName, '${TF_VAR_prefix}')].RoleName | [0]" \
+        --output text 2>/dev/null | grep -v "^None$" || echo "")
+    fi
+    if [ -n "$role_name" ]; then
+      pass "IAMロールが存在する ($role_name)"
     else
-      fail "IAMロール $role_name がありません" "Claude Code に IAM ロールの作成を相談してください"
+      fail "${TF_VAR_prefix} を含む IAM ロールがありません" "Claude Code に IAM ロールの作成を相談してください"
     fi
 
-    local profile
-    profile=$(aws iam get-instance-profile --instance-profile-name "$profile_name" \
-      --query 'InstanceProfile.InstanceProfileName' --output text 2>/dev/null || echo "")
-    if [ "$profile" = "$profile_name" ]; then
-      pass "インスタンスプロファイル $profile_name が存在する"
+    # インスタンスプロファイル: EC2 に関連付けられているか確認
+    if [ -n "$inst_id" ]; then
+      local assoc_profile
+      assoc_profile=$(aws ec2 describe-instances --instance-ids "$inst_id" \
+        --query 'Reservations[0].Instances[0].IamInstanceProfile.Arn' --output text 2>/dev/null | grep -v "^None$" || echo "")
+      if [ -n "$assoc_profile" ]; then
+        pass "EC2 にインスタンスプロファイルが関連付けられている"
+      else
+        fail "EC2 にインスタンスプロファイルが関連付けられていません"
+      fi
     else
-      fail "インスタンスプロファイル $profile_name がありません"
+      local profile_name
+      profile_name=$(aws iam list-instance-profiles \
+        --query "InstanceProfiles[?contains(InstanceProfileName, '${TF_VAR_prefix}')].InstanceProfileName | [0]" \
+        --output text 2>/dev/null | grep -v "^None$" || echo "")
+      if [ -n "$profile_name" ]; then
+        pass "インスタンスプロファイルが存在する ($profile_name)"
+      else
+        fail "${TF_VAR_prefix} を含むインスタンスプロファイルがありません"
+      fi
     fi
 
     # SSM Agent
@@ -612,26 +692,33 @@ check_session5() {
       fail "EC2のIPが取得できないためスキップ"
     fi
 
-    # メトリクス確認
-    local cw_namespace="${TF_VAR_prefix}/EC2"
-    local metrics
-    metrics=$(aws cloudwatch list-metrics --namespace "$cw_namespace" \
-      --query 'Metrics | length(@)' --output text 2>/dev/null || echo "0")
-    if [ "$metrics" -gt 0 ] 2>/dev/null; then
-      pass "$cw_namespace 名前空間にメトリクスが存在する ($metrics 個)"
+    # メトリクス確認: PREFIX を含む名前空間を検索
+    local found_ns=""
+    local metrics=0
+    for ns_candidate in "${TF_VAR_prefix}/EC2" "${TF_VAR_prefix}/ec2" "${TF_VAR_prefix}" "CWAgent"; do
+      local count
+      count=$(aws cloudwatch list-metrics --namespace "$ns_candidate" \
+        --query 'Metrics | length(@)' --output text 2>/dev/null || echo "0")
+      if [ "$count" -gt 0 ] 2>/dev/null; then
+        found_ns="$ns_candidate"
+        metrics="$count"
+        break
+      fi
+    done
+    if [ -n "$found_ns" ]; then
+      pass "$found_ns 名前空間にメトリクスが存在する ($metrics 個)"
     else
-      fail "$cw_namespace 名前空間にメトリクスがありません" "数分待ってから再確認してください"
+      fail "${TF_VAR_prefix} を含む名前空間にメトリクスがありません" "数分待ってから再確認してください"
     fi
 
-    # CloudWatch Alarm
-    local alarm_prefix="${TF_VAR_prefix}"
+    # CloudWatch Alarm: PREFIX を含むアラームを検索
     local alarm_count
-    alarm_count=$(aws cloudwatch describe-alarms --alarm-name-prefix "$alarm_prefix" \
+    alarm_count=$(aws cloudwatch describe-alarms --alarm-name-prefix "${TF_VAR_prefix}" \
       --query 'MetricAlarms | length(@)' --output text 2>/dev/null || echo "0")
     if [ "$alarm_count" -gt 0 ] 2>/dev/null; then
       pass "CloudWatch Alarm が存在する ($alarm_count 個)"
     else
-      fail "CloudWatch Alarm が見つかりません" "CPU 使用率のアラームを作成してください"
+      fail "${TF_VAR_prefix} を含む CloudWatch Alarm が見つかりません" "CPU 使用率のアラームを作成してください"
     fi
   fi
 
