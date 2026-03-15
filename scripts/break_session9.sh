@@ -87,13 +87,22 @@ fi
 # --- Instance ID ---
 INSTANCE_ID=$(tf_output_try instance_id ec2_instance_id)
 if [ -z "$INSTANCE_ID" ]; then
-  # フォールバック: PREFIX タグで検索
+  # フォールバック1: PREFIX タグで検索
   INSTANCE_ID=$(aws ec2 describe-instances \
     --filters "Name=tag:Name,Values=*${TF_VAR_prefix}*" "Name=instance-state-name,Values=running,stopped" \
     --query 'Reservations[].Instances[0].InstanceId' --output text 2>/dev/null | head -1 | grep -v "^None$" || echo "")
 fi
+if [ -z "$INSTANCE_ID" ] && [ -n "$SG_ID" ]; then
+  # フォールバック2: SG が分かっている場合、同じ SG を使っているインスタンスを検索
+  # （前回実行で Name タグが改ざんされていても見つかる）
+  INSTANCE_ID=$(aws ec2 describe-instances \
+    --filters "Name=instance.group-id,Values=$SG_ID" "Name=instance-state-name,Values=running,stopped" \
+    --query 'Reservations[].Instances[0].InstanceId' --output text 2>/dev/null | head -1 | grep -v "^None$" || echo "")
+fi
 if [ -z "$INSTANCE_ID" ]; then
   echo "[ERROR] instance_id の取得に失敗しました"
+  echo "  前回のスクリプト実行で Name タグが改ざんされた可能性があります。"
+  echo "  terraform -chdir=terraform/vpc-ec2 output でインスタンスIDを確認してください。"
   exit 1
 fi
 
