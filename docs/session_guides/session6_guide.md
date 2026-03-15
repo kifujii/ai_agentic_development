@@ -21,6 +21,12 @@
 - レポートにはサーバーの基本情報（OS、CPU、メモリ、ディスク、サービス）が含まれている
 - 生成されたレポートが `ansible/reports/` にローカル保存されている
 
+> ⚠️ **ファイルパスについて**: 完了チェック（`check.sh`）は以下のファイルを確認します。自由に設計して構いませんが、ファイルの保存先と名前は以下に合わせてください。
+> - 情報収集 Playbook: `ansible/playbooks/gather_info.yml`
+> - レポートテンプレート: `ansible/templates/` ディレクトリ内（`.j2` 拡張子）
+> - レポート生成 Playbook: `ansible/playbooks/generate_report.yml`
+> - 生成されたレポート: `ansible/reports/` ディレクトリ内（`.md` 拡張子）
+
 ---
 
 ## 進め方
