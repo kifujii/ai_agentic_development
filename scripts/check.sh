@@ -8,6 +8,7 @@
 # =============================================================================
 
 set -euo pipefail
+export AWS_PAGER=""
 
 # --- プレフィックス取得 ---
 if [ -z "${TF_VAR_prefix:-}" ]; then
@@ -605,61 +606,27 @@ check_session5() {
   local inst_id
   inst_id=$(find_instance_id)
 
-  # 前半: SSM Agent（IAMロール + SSM Agent + フリートマネージャー）
+  # 前半: SSH なしでサーバーを管理できるようにしよう
+  # ※ 何を使うか（IAMロール、SSM等）は受講者が AI と考えるため、
+  #    「結果として動いているか」だけをチェックする
   if [ "$step" = "all" ] || [ "$step" = "step1" ]; then
     echo ""
     echo "📦 前半: SSH なしでサーバーを管理できるようにしよう"
 
-    # IAMロール: PREFIX を含むロールを検索
-    local role_name
-    role_name=$(aws iam list-roles --query "Roles[?contains(RoleName, '${TF_VAR_prefix}') && contains(RoleName, 'ec2')].RoleName | [0]" \
-      --output text 2>/dev/null | grep -v "^None$" || echo "")
-    if [ -z "$role_name" ]; then
-      role_name=$(aws iam list-roles --query "Roles[?contains(RoleName, '${TF_VAR_prefix}')].RoleName | [0]" \
-        --output text 2>/dev/null | grep -v "^None$" || echo "")
-    fi
-    if [ -n "$role_name" ]; then
-      pass "IAMロールが存在する ($role_name)"
-    else
-      fail "${TF_VAR_prefix} を含む IAM ロールがありません" "Claude Code に IAM ロールの作成を相談してください"
-    fi
-
-    # インスタンスプロファイル: EC2 に関連付けられているか確認
-    if [ -n "$inst_id" ]; then
-      local assoc_profile
-      assoc_profile=$(aws ec2 describe-instances --instance-ids "$inst_id" \
-        --query 'Reservations[0].Instances[0].IamInstanceProfile.Arn' --output text 2>/dev/null | grep -v "^None$" || echo "")
-      if [ -n "$assoc_profile" ]; then
-        pass "EC2 にインスタンスプロファイルが関連付けられている"
-      else
-        fail "EC2 にインスタンスプロファイルが関連付けられていません"
-      fi
-    else
-      local profile_name
-      profile_name=$(aws iam list-instance-profiles \
-        --query "InstanceProfiles[?contains(InstanceProfileName, '${TF_VAR_prefix}')].InstanceProfileName | [0]" \
-        --output text 2>/dev/null | grep -v "^None$" || echo "")
-      if [ -n "$profile_name" ]; then
-        pass "インスタンスプロファイルが存在する ($profile_name)"
-      else
-        fail "${TF_VAR_prefix} を含むインスタンスプロファイルがありません"
-      fi
-    fi
-
-    # SSM Agent
+    # SSM Agent が起動しているか
     if [ -n "$ip" ]; then
       local ssm_status
       ssm_status=$(ssh_check_cmd "$ip" "systemctl is-active amazon-ssm-agent" 2>/dev/null || echo "")
       if [ "$ssm_status" = "active" ]; then
         pass "SSM Agent が active (running)"
       else
-        fail "SSM Agent が起動していません" "Ansible Playbook で SSM Agent をインストールしてください"
+        fail "SSM Agent が起動していません" "Claude Code に相談して導入してください"
       fi
     else
       fail "EC2のIPが取得できないためスキップ"
     fi
 
-    # フリートマネージャー確認
+    # Systems Manager にインスタンスが登録されているか
     if [ -n "$inst_id" ]; then
       local ssm_info
       ssm_info=$(aws ssm describe-instance-information \
@@ -668,57 +635,61 @@ check_session5() {
       if [ "$ssm_info" = "Online" ]; then
         pass "Systems Manager でインスタンスが Online"
       else
-        fail "Systems Manager にインスタンスが登録されていません（${ssm_info:-不明}）" "IAMロールの関連付けとSSM Agentの再起動を確認してください"
+        fail "Systems Manager にインスタンスが登録されていません（${ssm_info:-不明}）" "必要な設定がすべて揃っているか Claude Code に確認してください"
       fi
     else
       fail "インスタンスIDが取得できないためスキップ"
     fi
   fi
 
-  # 後半: CloudWatch Agent（Agent + メトリクス + Alarm）
+  # 後半: サーバーの監視基盤を構築しよう
+  # ※ インスタンスIDベースでチェックし、名前空間名や命名規則は問わない
   if [ "$step" = "all" ] || [ "$step" = "step2" ]; then
     echo ""
     echo "📦 後半: サーバーの監視基盤を構築しよう"
 
+    # CloudWatch Agent が起動しているか
     if [ -n "$ip" ]; then
       local cw_status
       cw_status=$(ssh_check_cmd "$ip" "sudo /opt/aws/amazon-cloudwatch-agent/bin/amazon-cloudwatch-agent-ctl -a status 2>/dev/null | grep -o 'running'" 2>/dev/null || echo "")
       if [ "$cw_status" = "running" ]; then
         pass "CloudWatch Agent が running"
       else
-        fail "CloudWatch Agent が起動していません" "Ansible Playbook で CloudWatch Agent をインストール・設定してください"
+        fail "CloudWatch Agent が起動していません" "Claude Code に相談して導入してください"
       fi
     else
       fail "EC2のIPが取得できないためスキップ"
     fi
 
-    # メトリクス確認: PREFIX を含む名前空間を検索
-    local found_ns=""
-    local metrics=0
-    for ns_candidate in "${TF_VAR_prefix}/EC2" "${TF_VAR_prefix}/ec2" "${TF_VAR_prefix}" "CWAgent"; do
-      local count
-      count=$(aws cloudwatch list-metrics --namespace "$ns_candidate" \
-        --query 'Metrics | length(@)' --output text 2>/dev/null || echo "0")
-      if [ "$count" -gt 0 ] 2>/dev/null; then
-        found_ns="$ns_candidate"
-        metrics="$count"
-        break
+    # カスタムメトリクスが存在するか（インスタンスIDの Dimension で突き合わせ）
+    if [ -n "$inst_id" ]; then
+      local custom_metrics
+      custom_metrics=$(aws cloudwatch list-metrics \
+        --dimensions "Name=InstanceId,Value=$inst_id" \
+        --query 'length(Metrics[?Namespace!=`AWS/EC2`])' \
+        --output text 2>/dev/null || echo "0")
+      if [ "$custom_metrics" -gt 0 ] 2>/dev/null; then
+        pass "カスタムメトリクスが存在する ($custom_metrics 個)"
+      else
+        fail "この EC2 のカスタムメトリクスが見つかりません" "メトリクスの反映には数分かかります。しばらく待ってから再実行してください"
       fi
-    done
-    if [ -n "$found_ns" ]; then
-      pass "$found_ns 名前空間にメトリクスが存在する ($metrics 個)"
     else
-      fail "${TF_VAR_prefix} を含む名前空間にメトリクスがありません" "数分待ってから再確認してください"
+      fail "インスタンスIDが取得できないためスキップ"
     fi
 
-    # CloudWatch Alarm: PREFIX を含むアラームを検索
-    local alarm_count
-    alarm_count=$(aws cloudwatch describe-alarms --alarm-name-prefix "${TF_VAR_prefix}" \
-      --query 'MetricAlarms | length(@)' --output text 2>/dev/null || echo "0")
-    if [ "$alarm_count" -gt 0 ] 2>/dev/null; then
-      pass "CloudWatch Alarm が存在する ($alarm_count 個)"
+    # CloudWatch Alarm が存在するか（インスタンスIDの Dimension で突き合わせ）
+    if [ -n "$inst_id" ]; then
+      local alarm_count
+      alarm_count=$(aws cloudwatch describe-alarms \
+        --query "length(MetricAlarms[?Dimensions[?Name=='InstanceId' && Value=='$inst_id']])" \
+        --output text 2>/dev/null || echo "0")
+      if [ "$alarm_count" -gt 0 ] 2>/dev/null; then
+        pass "CloudWatch Alarm が存在する ($alarm_count 個)"
+      else
+        fail "この EC2 を対象とした CloudWatch Alarm が見つかりません" "CPU 使用率のアラームを作成してください"
+      fi
     else
-      fail "${TF_VAR_prefix} を含む CloudWatch Alarm が見つかりません" "CPU 使用率のアラームを作成してください"
+      fail "インスタンスIDが取得できないためスキップ"
     fi
   fi
 

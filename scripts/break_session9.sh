@@ -18,14 +18,14 @@
 #   ./scripts/break_session9.sh
 #
 # 前提:
-#   - terraform/vpc-ec2 に Terraform の state が存在すること
-#   - output に security_group_id, instance_id, instance_public_ip が定義されていること
+#   - terraform/vpc-ec2 に Terraform の state が存在すること（または PREFIX タグ付きリソースが存在）
 #   - keys/training-key で EC2 に SSH 接続できること
 #   - AWS CLI が設定済みであること
 #   - Python 3 がインストールされていること（count=2 対応に使用）
 # =============================================================================
 
 set -uo pipefail
+export AWS_PAGER=""
 
 echo "========================================="
 echo " セッション9：複合障害シミュレーション"
@@ -42,34 +42,77 @@ fi
 
 echo "[1/4] Terraform output からリソース情報を取得中..."
 
-# count=2（セッション3未解消）の場合、output がリスト型になることがある。
-# -raw で取得できなければ -json で取得して最初の要素を使う。
+# Terraform output を取得（スカラー値・リスト型の両方に対応）
 tf_output_scalar() {
   local key="$1"
   local val
-  # まず -raw で試みる（スカラー値の場合）
   val=$(terraform -chdir="$TF_DIR" output -raw "$key" 2>/dev/null)
   if [ $? -ne 0 ] || [ -z "$val" ]; then
-    # リスト型の場合：-json で取得して最初の要素を抽出
     val=$(terraform -chdir="$TF_DIR" output -json "$key" 2>/dev/null \
           | python3 -c "import sys,json; v=json.load(sys.stdin); print(v[0] if isinstance(v,list) else v)" 2>/dev/null)
   fi
   echo "$val"
 }
 
-SG_ID=$(tf_output_scalar security_group_id)
+# 複数の output 名を順に試す
+tf_output_try() {
+  local val
+  for name in "$@"; do
+    val=$(tf_output_scalar "$name")
+    if [ -n "$val" ]; then echo "$val"; return; fi
+  done
+  echo ""
+}
+
+TF_VAR_prefix="${TF_VAR_prefix:-training}"
+
+# --- Security Group ID ---
+SG_ID=$(tf_output_try security_group_id sg_id)
+if [ -z "$SG_ID" ]; then
+  # フォールバック: PREFIX タグで VPC → SG を検索
+  _vpc=$(aws ec2 describe-vpcs \
+    --filters "Name=tag:Name,Values=*${TF_VAR_prefix}*" "Name=state,Values=available" \
+    --query 'Vpcs[0].VpcId' --output text 2>/dev/null | grep -v "^None$" || echo "")
+  if [ -n "$_vpc" ]; then
+    SG_ID=$(aws ec2 describe-security-groups \
+      --filters "Name=vpc-id,Values=$_vpc" "Name=tag:Name,Values=*${TF_VAR_prefix}*" \
+      --query 'SecurityGroups[?GroupName!=`default`] | [0].GroupId' --output text 2>/dev/null | grep -v "^None$" || echo "")
+  fi
+fi
 if [ -z "$SG_ID" ]; then
   echo "[ERROR] security_group_id の取得に失敗しました"
   exit 1
 fi
 
-INSTANCE_ID=$(tf_output_scalar instance_id)
+# --- Instance ID ---
+INSTANCE_ID=$(tf_output_try instance_id ec2_instance_id)
+if [ -z "$INSTANCE_ID" ]; then
+  # フォールバック1: PREFIX タグで検索
+  INSTANCE_ID=$(aws ec2 describe-instances \
+    --filters "Name=tag:Name,Values=*${TF_VAR_prefix}*" "Name=instance-state-name,Values=running,stopped" \
+    --query 'Reservations[].Instances[0].InstanceId' --output text 2>/dev/null | head -1 | grep -v "^None$" || echo "")
+fi
+if [ -z "$INSTANCE_ID" ] && [ -n "$SG_ID" ]; then
+  # フォールバック2: SG が分かっている場合、同じ SG を使っているインスタンスを検索
+  # （前回実行で Name タグが改ざんされていても見つかる）
+  INSTANCE_ID=$(aws ec2 describe-instances \
+    --filters "Name=instance.group-id,Values=$SG_ID" "Name=instance-state-name,Values=running,stopped" \
+    --query 'Reservations[].Instances[0].InstanceId' --output text 2>/dev/null | head -1 | grep -v "^None$" || echo "")
+fi
 if [ -z "$INSTANCE_ID" ]; then
   echo "[ERROR] instance_id の取得に失敗しました"
+  echo "  前回のスクリプト実行で Name タグが改ざんされた可能性があります。"
+  echo "  terraform -chdir=terraform/vpc-ec2 output でインスタンスIDを確認してください。"
   exit 1
 fi
 
-INSTANCE_IP=$(tf_output_scalar instance_public_ip)
+# --- Instance Public IP ---
+INSTANCE_IP=$(tf_output_try instance_public_ip public_ip ec2_public_ip)
+if [ -z "$INSTANCE_IP" ]; then
+  # フォールバック: インスタンスIDから取得
+  INSTANCE_IP=$(aws ec2 describe-instances --instance-ids "$INSTANCE_ID" \
+    --query 'Reservations[0].Instances[0].PublicIpAddress' --output text 2>/dev/null | grep -v "^None$" || echo "")
+fi
 if [ -z "$INSTANCE_IP" ]; then
   echo "[ERROR] instance_public_ip の取得に失敗しました"
   exit 1
